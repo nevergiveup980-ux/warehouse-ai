@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Runlu Warehouse AI V1</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f3f5f8;color:#172033}
+header{background:#172033;color:#fff;padding:16px;position:sticky;top:0}
+main{max-width:760px;margin:auto;padding:14px 14px 90px}
+.card{background:#fff;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 5px #0001}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:12px;padding:12px;font:inherit}
+.big{min-height:92px;background:#fff;text-align:left;font-weight:700;box-shadow:0 1px 5px #0001}
+.big b{display:block;font-size:28px;margin-bottom:8px}
+.primary{background:#2764d8;color:#fff}
+.hidden{display:none}
+label{display:block;font-size:12px;color:#6f7785;margin:9px 0 5px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #e3e7ee;border-radius:10px;font:inherit;box-sizing:border-box}
+.item{padding:12px 0;border-top:1px solid #e3e7ee}
+.item:first-child{border-top:0}
+.name{font-weight:800;font-size:17px}
+.meta{font-size:13px;color:#6f7785;line-height:1.5}
+.qty{font-size:24px;font-weight:800;margin:6px 0}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ddd;padding:8px}
+.nav{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.nav button{background:#fff;font-size:12px}
+</style>
+</head>
+<body>
+<header><h2 style="margin:0">Runlu Warehouse AI</h2><div style="font-size:12px;opacity:.75">V1 · Start entering real warehouse data</div></header>
+<main>
+<section id="home" class="page">
+<div class="grid">
+<button class="big" onclick="newItem()"><b>＋</b>Add Product</button>
+<button class="big" onclick="show('search')"><b>🔍</b>Search</button>
+<button class="big" onclick="show('inventory')"><b>📋</b>Inventory</button>
+<button class="big" onclick="show('locations')"><b>🏷️</b>Locations</button>
+</div>
+</section>
+
+<section id="editor" class="page hidden">
+<div class="card"><button onclick="show('home')">‹ Back</button><h3>Add / Edit Product</h3>
+<label>Product Name / Color</label><input id="name" placeholder="Magnolia Bluff">
+<label>SKU / Product Number</label><input id="sku">
+<label>Brand / Series</label><input id="series">
+<label>Category</label><select id="category"><option>Luxury Vinyl</option><option>Carpet</option><option>Rolled Mat</option><option>Underlayment</option><option>Tile</option><option>Other</option></select>
+<label>Location Type</label><select id="locationType"><option>Rack</option><option>Floor Stack</option><option>Temporary Area</option></select>
+<label>Rack / Location</label><input id="location" placeholder="15A or Green Floor Stack">
+<label>Quantity</label><input id="quantity" type="number" min="0" step=".01">
+<label>Unit</label><select id="unit"><option>Box</option><option>Roll</option><option>Pallet</option><option>Piece</option><option>Foot</option><option>Approx.</option></select>
+<label>Product / Label Photo</label><input id="photo" type="file" accept="image/*" capture="environment">
+<label>Notes</label><textarea id="notes"></textarea>
+<div class="actions" style="margin-top:10px"><button class="primary" onclick="saveItem()">Save</button><button onclick="clearForm()">Clear</button></div>
+</div>
+</section>
+
+<section id="search" class="page hidden">
+<div class="card"><button onclick="show('home')">‹ Back</button><h3>Search Inventory</h3><input id="query" placeholder="Name, SKU, color or location" oninput="renderSearch()"></div>
+<div id="searchList" class="card"></div>
+</section>
+
+<section id="inventory" class="page hidden">
+<div class="card"><button onclick="show('home')">‹ Back</button><h3>Inventory</h3></div>
+<div id="inventoryList" class="card"></div>
+</section>
+
+<section id="locations" class="page hidden">
+<div class="card"><button onclick="show('home')">‹ Back</button><h3>Locations</h3><div id="locationList"></div></div>
+</section>
+</main>
+
+<footer><div class="nav"><button onclick="show('home')">Home</button><button onclick="newItem()">Add</button><button onclick="show('search')">Search</button><button onclick="show('inventory')">Inventory</button></div></footer>
+
+<script>
+const DB='runlu_inventory_v1'; let editId=null,photoData=''; const $=x=>document.getElementById(x);
+function load(){try{return JSON.parse(localStorage.getItem(DB))||[]}catch{return[]}}
+function save(v){localStorage.setItem(DB,JSON.stringify(v))}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='inventory')renderInventory();if(id==='search')renderSearch();if(id==='locations')renderLocations();scrollTo(0,0)}
+$('photo').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>photoData=r.result;r.readAsDataURL(f)}
+function clearForm(){editId=null;photoData='';['name','sku','series','location','quantity','notes'].forEach(x=>$(x).value='');$('category').value='Luxury Vinyl';$('locationType').value='Rack';$('unit').value='Box';$('photo').value=''}
+function newItem(){clearForm();show('editor')}
+function saveItem(){let n=$('name').value.trim(),l=$('location').value.trim(),q=Number($('quantity').value);if(!n||!l||Number.isNaN(q)){alert('Please enter Product Name, Location and Quantity.');return}let a=load(),old=a.find(x=>x.id===editId),r={id:editId||Date.now(),name:n,sku:$('sku').value.trim(),series:$('series').value.trim(),category:$('category').value,locationType:$('locationType').value,location:l,quantity:q,unit:$('unit').value,photo:photoData||old?.photo||'',notes:$('notes').value.trim(),updated:new Date().toLocaleString()};let i=a.findIndex(x=>x.id===editId);if(i>=0)a[i]=r;else a.unshift(r);save(a);clearForm();show('inventory')}
+function editItem(id){let x=load().find(v=>v.id===id);if(!x)return;editId=id;photoData=x.photo||'';['name','sku','series','location','quantity','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category;$('locationType').value=x.locationType;$('unit').value=x.unit;show('editor')}
+function adj(id,d){let a=load(),x=a.find(v=>v.id===id);if(!x)return;x.quantity=Math.max(0,Number((x.quantity+d).toFixed(2)));x.updated=new Date().toLocaleString();save(a);renderInventory();renderSearch()}
+function delItem(id){let a=load(),x=a.find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+'?'))return;save(a.filter(v=>v.id!==id));renderInventory()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function card(x){return `<div class="item"><div class="name">${esc(x.name)}</div><div class="meta">${esc(x.series)}${x.sku?' · SKU '+esc(x.sku):''}<br>${esc(x.category)} · ${esc(x.locationType)} ${esc(x.location)}</div><div class="qty">${x.quantity} ${esc(x.unit)}</div><div class="meta">Updated: ${esc(x.updated)}${x.notes?'<br>'+esc(x.notes):''}</div><div class="actions"><button onclick="adj(${x.id},-1)">−1</button><button onclick="adj(${x.id},1)">+1</button><button onclick="editItem(${x.id})">Edit</button><button onclick="delItem(${x.id})">Delete</button></div></div>`}
+function renderInventory(){let a=load();$('inventoryList').innerHTML=a.length?a.map(card).join(''):'<div class="meta">No products yet.</div>'}
+function renderSearch(){let q=($('query').value||'').toLowerCase(),a=load().filter(x=>[x.name,x.sku,x.series,x.category,x.location,x.notes].join(' ').toLowerCase().includes(q));$('searchList').innerHTML=a.length?a.map(card).join(''):'<div class="meta">No matches.</div>'}
+function renderLocations(){let g={};load().forEach(x=>{let k=x.locationType+' · '+x.location;(g[k]??=[]).push(x)});$('locationList').innerHTML=Object.keys(g).sort().map(k=>`<div class="item"><div class="name">${esc(k)}</div>${g[k].map(x=>`<div class="meta">${esc(x.name)} — <b>${x.quantity} ${esc(x.unit)}</b></div>`).join('')}</div>`).join('')||'<div class="meta">No locations.</div>'}
+</script>
+</body></html>
