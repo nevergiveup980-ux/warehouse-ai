@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#172033">
+<link rel="manifest" href="manifest.json">
+<title>Runlu Warehouse AI V1.2</title>
+<style>
+:root{--navy:#172033;--blue:#2764d8;--bg:#f3f5f8;--card:#fff;--text:#172033;--muted:#6f7785;--line:#e3e7ee;--green:#18864b;--red:#bb2d3b;--amber:#b86a00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--text)}
+header{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding:15px 16px 13px}
+header h1{font-size:20px;margin:0} header p{font-size:12px;margin:5px 0 0;opacity:.75}
+main{max-width:760px;margin:auto;padding:14px 14px 100px}
+.card{background:var(--card);border-radius:17px;padding:14px;margin-bottom:12px;box-shadow:0 1px 5px rgba(20,31,52,.07)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bigbtn{min-height:98px;border:0;border-radius:17px;padding:14px;text-align:left;background:#fff;box-shadow:0 1px 5px rgba(20,31,52,.07);font-size:16px;font-weight:700}
+.bigbtn span{display:block;font-size:29px;margin-bottom:9px}
+button{font:inherit;border:0;border-radius:11px;padding:11px 13px;background:#e9edf3;color:var(--text)}
+button.primary{background:var(--blue);color:#fff} button.green{background:var(--green);color:#fff}
+button.red{background:#fce8ea;color:var(--red)} button.amber{background:#fff1dd;color:var(--amber)}
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
+input,select,textarea{width:100%;font:inherit;border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff}
+textarea{min-height:72px;resize:vertical}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
+.hidden{display:none!important}.titlebar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.titlebar h2{font-size:18px;margin:0}
+.item{border-top:1px solid var(--line);padding:13px 0}.item:first-child{border-top:0}.name{font-size:17px;font-weight:750}
+.sku,.meta{font-size:13px;color:var(--muted);line-height:1.55;margin-top:4px}.qty{font-size:25px;font-weight:800;margin-top:7px}
+.badge{display:inline-block;font-size:11px;padding:4px 8px;border-radius:99px;margin-right:5px;margin-top:6px;background:#edf2ff;color:#244da0}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.thumb{display:block;width:86px;height:86px;object-fit:cover;border-radius:10px;margin-top:9px}.empty{text-align:center;color:var(--muted);padding:27px 5px}
+.back{background:transparent;color:var(--blue);padding:5px 0}.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:#f6f8fb;border-radius:12px;padding:11px;text-align:center}.stat strong{display:block;font-size:20px}.stat small{color:var(--muted)}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.notice{font-size:12px;color:#9a5b00;background:#fff5e9;border-radius:10px;padding:9px;margin-top:10px}
+footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:9px 13px calc(9px + env(safe-area-inset-bottom));z-index:20}
+footer .nav{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px} footer button{padding:9px 4px;font-size:12px;background:#fff} footer button b{display:block;font-size:20px;margin-bottom:2px}
+
+/* Photo count */
+.photoStage{position:relative;border-radius:14px;overflow:hidden;background:#111;min-height:240px;touch-action:manipulation}
+.photoStage img{display:block;width:100%;height:auto;max-height:62vh;object-fit:contain;background:#111}
+.marker{position:absolute;width:30px;height:30px;border-radius:50%;transform:translate(-50%,-50%);background:#2764d8;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;box-shadow:0 1px 4px #0008;pointer-events:none}
+.counter{font-size:44px;font-weight:900;text-align:center;line-height:1;margin:12px 0 3px}.counterLabel{text-align:center;color:var(--muted);font-size:13px}
+.countControls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}.countControls button{font-size:20px;font-weight:800}
+.photoTabs{display:flex;gap:8px;overflow-x:auto;padding:5px 0 9px}.photoTab{min-width:70px;padding:8px}.photoTab.active{background:var(--blue);color:#fff}
+.sessionPhoto{width:90px;height:70px;object-fit:cover;border-radius:8px;margin-right:6px}
+.scanResult{background:#f6f8fb;border-radius:12px;padding:11px;margin-top:10px}
+@media(max-width:430px){.formgrid,.toolbar{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><h1>Runlu Warehouse AI</h1><p>V1.2 · Photo Count added</p></header>
+<main>
+<section id="home" class="page">
+  <div class="statrow card"><div class="stat"><strong id="statProducts">0</strong><small>Products</small></div><div class="stat"><strong id="statBoxes">0</strong><small>Boxes</small></div><div class="stat"><strong id="statSessions">0</strong><small>Photo Counts</small></div></div>
+  <div class="grid2">
+    <button class="bigbtn" onclick="showPage('photoCount')"><span>📸</span>Photo Count</button>
+    <button class="bigbtn" onclick="showPage('searchPage')"><span>🔍</span>Find Inventory</button>
+    <button class="bigbtn" onclick="startNew('Receive Stock')"><span>📦</span>Receive Stock</button>
+    <button class="bigbtn" onclick="showPage('inventory')"><span>📋</span>Inventory</button>
+    <button class="bigbtn" onclick="showPage('locations')"><span>🏷️</span>Locations</button>
+    <button class="bigbtn" onclick="showPage('historyPage')"><span>🕘</span>Recent Activity</button>
+    <button class="bigbtn" onclick="showPage('countHistory')"><span>🖼️</span>Count Photos</button>
+    <button class="bigbtn" onclick="showPage('backupPage')"><span>💾</span>Backup & Restore</button>
+  </div>
+</section>
+
+<section id="photoCount" class="page hidden">
+ <div class="card">
+  <button class="back" onclick="showPage('home')">‹ Back</button>
+  <div class="titlebar"><h2>Photo Count</h2><button onclick="resetCountSession()">New Session</button></div>
+  <label>Product</label>
+  <input id="countProduct" list="productNames" placeholder="Select or type product name">
+  <datalist id="productNames"></datalist>
+  <div class="toolbar">
+   <div><label>Location</label><input id="countLocation" placeholder="Example: 15A or Floor Stack"></div>
+   <div><label>Unit</label><select id="countUnit"><option>Box</option><option>Roll</option><option>Pallet</option><option>Piece</option></select></div>
+  </div>
+  <label style="margin-top:10px">Take photos or choose from library</label>
+  <input id="countPhotos" type="file" accept="image/*" capture="environment" multiple>
+  <div class="notice">Tap each visible box or roll in the photo. A numbered marker will appear. Use a second photo for hidden sides, but avoid counting the same item twice.</div>
+ </div>
+
+ <div id="photoWork" class="card hidden">
+  <div id="photoTabs" class="photoTabs"></div>
+  <div id="photoStage" class="photoStage"></div>
+  <div class="counter" id="tapCount">0</div><div class="counterLabel">Marked items in all photos</div>
+  <div class="countControls">
+   <button onclick="undoMarker()">↶ Undo</button>
+   <button onclick="manualAdjust(-1)">− 1</button>
+   <button onclick="manualAdjust(1)">＋ 1</button>
+  </div>
+  <div class="scanResult">
+   <label>Final Confirmed Quantity</label>
+   <input id="confirmedCount" type="number" min="0" step="1" value="0">
+   <div class="actions"><button onclick="tryBarcode()">Scan Barcode</button><button class="green" onclick="saveCountSession()">Confirm & Update Inventory</button></div>
+   <div id="barcodeResult" class="meta"></div>
+  </div>
+ </div>
+</section>
+
+<section id="editor" class="page hidden">
+ <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2 id="editorTitle">Product Record</h2>
+  <div class="formgrid">
+   <div class="full"><label>Product Name / Color Name</label><input id="name" placeholder="Example: Magnolia Bluff"></div>
+   <div><label>SKU / Product Number</label><input id="sku"></div><div><label>Brand / Series</label><input id="series"></div>
+   <div><label>Category</label><select id="category"><option>Luxury Vinyl</option><option>Carpet</option><option>Rolled Mat</option><option>Tile</option><option>Other</option></select></div>
+   <div><label>Location Type</label><select id="locationType"><option>Rack</option><option>Floor Stack</option><option>Temporary Area</option></select></div>
+   <div><label>Rack / Location</label><input id="location"></div><div><label>Current Quantity</label><input id="quantity" type="number" min="0" step=".01"></div>
+   <div><label>Unit</label><select id="unit"><option>Box</option><option>Roll</option><option>Pallet</option><option>Piece</option><option>Foot</option></select></div>
+   <div class="full"><label>Product Photo</label><input id="photo" type="file" accept="image/*" capture="environment"></div>
+   <div class="full"><label>Notes</label><textarea id="notes"></textarea></div>
+  </div>
+  <div class="actions"><button class="green" onclick="saveProduct()">Save</button><button onclick="clearEditor()">Clear</button></div>
+ </div>
+</section>
+
+<section id="searchPage" class="page hidden"><div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Find Inventory</h2><input id="searchInput" placeholder="Name, SKU, color or location" oninput="renderSearch()"></div><div class="card" id="searchResults"></div></section>
+<section id="inventory" class="page hidden"><div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><div class="titlebar"><h2>Inventory</h2><button class="primary" onclick="startNew('New Product')">＋ New</button></div></div><div class="card" id="inventoryList"></div></section>
+<section id="locations" class="page hidden"><div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Locations</h2><div id="locationList"></div></div></section>
+<section id="historyPage" class="page hidden"><div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Recent Activity</h2><div id="historyList"></div></div></section>
+<section id="countHistory" class="page hidden"><div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Photo Count History</h2><div id="countHistoryList"></div></div></section>
+<section id="backupPage" class="page hidden"><div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Backup & Restore</h2><div class="actions"><button class="primary" onclick="exportCSV()">Export CSV</button><button onclick="exportJSON()">Export Full Backup</button></div><label style="margin-top:15px">Restore Full Backup</label><input id="restoreFile" type="file" accept=".json,application/json"><div class="actions"><button class="amber" onclick="restoreJSON()">Restore</button></div></div></section>
+</main>
+
+<footer><div class="nav"><button onclick="showPage('home')"><b>🏠</b>Home</button><button onclick="showPage('photoCount')"><b>📸</b>Count</button><button onclick="showPage('searchPage')"><b>🔍</b>Search</button><button onclick="showPage('inventory')"><b>📋</b>Inventory</button></div></footer>
+
+<script>
+const DB='deerfoot_inventory_v12',H='deerfoot_history_v12',C='deerfoot_count_sessions_v12';
+let editId=null,currentPhoto='',countImages=[],activePhoto=0,markers=[],manualDelta=0;
+const $=id=>document.getElementById(id);
+const load=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}},save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+function log(t){let a=load(H);a.unshift({t,d:new Date().toLocaleString()});save(H,a.slice(0,300))}
+function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='home')renderStats();if(id==='inventory')renderInventory();if(id==='searchPage')renderSearch();if(id==='locations')renderLocations();if(id==='historyPage')renderHistory();if(id==='countHistory')renderCountHistory();if(id==='photoCount')refreshProductList();scrollTo(0,0)}
+function readFile(f){return new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
+$('photo').onchange=async()=>{if($('photo').files[0])currentPhoto=await readFile($('photo').files[0])};
+function startNew(title){clearEditor();$('editorTitle').textContent=title;showPage('editor')}
+function clearEditor(){editId=null;currentPhoto='';['name','sku','series','location','quantity','notes'].forEach(x=>$(x).value='');$('category').value='Luxury Vinyl';$('locationType').value='Rack';$('unit').value='Box';$('photo').value=''}
+function saveProduct(){let n=$('name').value.trim(),l=$('location').value.trim(),q=Number($('quantity').value);if(!n||!l||Number.isNaN(q))return alert('Enter Product Name, Location and Quantity.');let a=load(DB),old=a.find(x=>x.id===editId),r={id:editId||Date.now(),name:n,sku:$('sku').value.trim(),series:$('series').value.trim(),category:$('category').value,locationType:$('locationType').value,location:l,quantity:q,unit:$('unit').value,photo:currentPhoto||old?.photo||'',notes:$('notes').value.trim(),updated:new Date().toLocaleString()};let i=a.findIndex(x=>x.id===editId);if(i>=0)a[i]=r;else a.unshift(r);save(DB,a);log((i>=0?'Updated ':'Added ')+n+': '+q+' '+r.unit);clearEditor();showPage('inventory')}
+function editProduct(id){let x=load(DB).find(v=>v.id===id);if(!x)return;editId=id;currentPhoto=x.photo||'';['name','sku','series','location','quantity','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category;$('locationType').value=x.locationType;$('unit').value=x.unit;$('editorTitle').textContent='Update Product';showPage('editor')}
+function adjust(id,d){let a=load(DB),x=a.find(v=>v.id===id);if(!x)return;let o=x.quantity;x.quantity=Math.max(0,x.quantity+d);x.updated=new Date().toLocaleString();save(DB,a);log(x.name+': '+o+' → '+x.quantity+' '+x.unit);renderInventory();renderSearch()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function itemHTML(x){return `<div class="item"><div class="name">${esc(x.name)}</div><div class="sku">${esc(x.series)}${x.sku?' · SKU '+esc(x.sku):''}</div><span class="badge">${esc(x.category)}</span><span class="badge">${esc(x.locationType)} ${esc(x.location)}</span><div class="qty">${x.quantity} ${esc(x.unit)}</div><div class="meta">Updated: ${esc(x.updated)}${x.notes?'<br>'+esc(x.notes):''}</div>${x.photo?`<img class="thumb" src="${x.photo}">`:''}<div class="quick"><button onclick="adjust(${x.id},-1)">−1</button><button onclick="adjust(${x.id},1)">+1</button><button onclick="editProduct(${x.id})">Edit</button><button onclick="deleteProduct(${x.id})">Delete</button></div></div>`}
+function deleteProduct(id){let a=load(DB),x=a.find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+'?'))return;save(DB,a.filter(v=>v.id!==id));log('Deleted '+x.name);renderInventory()}
+function renderInventory(){let a=load(DB);$('inventoryList').innerHTML=a.length?a.map(itemHTML).join(''):'<div class="empty">No inventory records.</div>'}
+function renderSearch(){let q=($('searchInput').value||'').toLowerCase(),a=load(DB).filter(x=>[x.name,x.sku,x.series,x.location,x.notes].join(' ').toLowerCase().includes(q));$('searchResults').innerHTML=a.length?a.map(itemHTML).join(''):'<div class="empty">No matches.</div>'}
+function renderLocations(){let g={};load(DB).forEach(x=>{let k=x.locationType+' · '+x.location;(g[k]??=[]).push(x)});$('locationList').innerHTML=Object.keys(g).sort().map(k=>`<div class="item"><div class="name">${esc(k)}</div>${g[k].map(x=>`<div class="meta">${esc(x.name)} — <b>${x.quantity} ${esc(x.unit)}</b></div>`).join('')}</div>`).join('')||'<div class="empty">No locations.</div>'}
+function renderHistory(){$('historyList').innerHTML=load(H).map(x=>`<div class="item"><strong>${esc(x.t)}</strong><div class="meta">${esc(x.d)}</div></div>`).join('')||'<div class="empty">No activity.</div>'}
+function renderStats(){let a=load(DB);$('statProducts').textContent=a.length;$('statBoxes').textContent=a.filter(x=>x.unit==='Box').reduce((s,x)=>s+Number(x.quantity),0);$('statSessions').textContent=load(C).length}
+function refreshProductList(){$('productNames').innerHTML=load(DB).map(x=>`<option value="${esc(x.name)}"></option>`).join('')}
+
+/* Photo Count */
+$('countPhotos').onchange=async e=>{let fs=[...e.target.files];if(!fs.length)return;countImages=await Promise.all(fs.map(readFile));activePhoto=0;markers=countImages.map(()=>[]);manualDelta=0;$('photoWork').classList.remove('hidden');renderPhotoTabs();renderActivePhoto();updateCount()};
+function resetCountSession(){countImages=[];markers=[];manualDelta=0;activePhoto=0;$('countPhotos').value='';$('photoWork').classList.add('hidden');$('countProduct').value='';$('countLocation').value='';$('confirmedCount').value=0;$('barcodeResult').textContent=''}
+function renderPhotoTabs(){$('photoTabs').innerHTML=countImages.map((_,i)=>`<button class="photoTab ${i===activePhoto?'active':''}" onclick="switchPhoto(${i})">Photo ${i+1}<br><small>${markers[i].length} marks</small></button>`).join('')}
+function switchPhoto(i){activePhoto=i;renderPhotoTabs();renderActivePhoto()}
+function renderActivePhoto(){let st=$('photoStage');st.innerHTML=`<img id="activeCountImage" src="${countImages[activePhoto]}" alt="Count photo">`;markers[activePhoto].forEach((m,i)=>addMarkerEl(st,m,i));st.onclick=addMarkerFromTap}
+function addMarkerFromTap(e){let img=$('activeCountImage'),r=img.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom)return;let x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;markers[activePhoto].push({x,y});renderActivePhoto();renderPhotoTabs();updateCount()}
+function addMarkerEl(st,m,i){let d=document.createElement('div');d.className='marker';d.style.left=(m.x*100)+'%';d.style.top=(m.y*100)+'%';d.textContent=i+1;st.appendChild(d)}
+function undoMarker(){for(let i=activePhoto;i>=0;i--){if(markers[i]?.length){markers[i].pop();activePhoto=i;renderPhotoTabs();renderActivePhoto();updateCount();return}}}
+function manualAdjust(d){manualDelta+=d;updateCount()}
+function totalMarked(){return markers.reduce((s,a)=>s+a.length,0)+manualDelta}
+function updateCount(){let n=Math.max(0,totalMarked());$('tapCount').textContent=n;$('confirmedCount').value=n}
+async function tryBarcode(){let out=$('barcodeResult');if(!countImages.length)return;out.textContent='Checking barcode…';if(!('BarcodeDetector' in window)){out.textContent='Barcode scanning is not supported by this browser yet. The photo is still saved.';return}try{let det=new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e']});let img=new Image();img.src=countImages[activePhoto];await img.decode();let codes=await det.detect(img);out.textContent=codes.length?'Barcode: '+codes.map(x=>x.rawValue).join(', '):'No barcode detected in this photo.'}catch(e){out.textContent='Barcode scan could not be completed.'}}
+function saveCountSession(){let product=$('countProduct').value.trim(),loc=$('countLocation').value.trim(),qty=Number($('confirmedCount').value),unit=$('countUnit').value;if(!product||!loc||Number.isNaN(qty))return alert('Enter Product, Location and Confirmed Quantity.');let inv=load(DB),x=inv.find(v=>v.name.toLowerCase()===product.toLowerCase());if(x){let old=x.quantity;x.quantity=qty;x.location=loc;x.unit=unit;x.updated=new Date().toLocaleString();save(DB,inv);log('Photo count '+product+': '+old+' → '+qty+' '+unit)}else{inv.unshift({id:Date.now(),name:product,sku:'',series:'',category:unit==='Roll'?'Rolled Mat':'Luxury Vinyl',locationType:'Floor Stack',location:loc,quantity:qty,unit,photo:countImages[0]||'',notes:'Created from Photo Count',updated:new Date().toLocaleString()});save(DB,inv);log('Photo count created '+product+': '+qty+' '+unit)}
+ let sessions=load(C);sessions.unshift({id:Date.now(),product,location:loc,quantity:qty,unit,date:new Date().toLocaleString(),photos:countImages,marks:markers.map(a=>a.length),manualDelta});save(C,sessions.slice(0,40));alert('Photo count saved and inventory updated.');resetCountSession();showPage('countHistory')}
+function renderCountHistory(){let a=load(C);$('countHistoryList').innerHTML=a.length?a.map(s=>`<div class="item"><div class="name">${esc(s.product)}</div><div class="qty">${s.quantity} ${esc(s.unit)}</div><div class="meta">${esc(s.location)} · ${esc(s.date)}<br>Photos: ${s.photos.length} · Marks: ${s.marks.reduce((a,b)=>a+b,0)}${s.manualDelta?' · Manual adjustment: '+s.manualDelta:''}</div><div>${s.photos.map(p=>`<img class="sessionPhoto" src="${p}">`).join('')}</div></div>`).join(''):'<div class="empty">No photo count sessions.</div>'}
+
+/* Backup */
+function download(content,name,type){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportCSV(){let rows=[['Product','SKU','Series','Category','Location Type','Location','Quantity','Unit','Notes','Updated']];load(DB).forEach(x=>rows.push([x.name,x.sku,x.series,x.category,x.locationType,x.location,x.quantity,x.unit,x.notes,x.updated]));let csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');download(csv,'Deerfoot_Inventory.csv','text/csv')}
+function exportJSON(){download(JSON.stringify({version:'1.2',inventory:load(DB),history:load(H),countSessions:load(C)},null,2),'Runlu_Warehouse_Backup.json','application/json')}
+function restoreJSON(){let f=$('restoreFile').files[0];if(!f)return alert('Choose a backup file.');let r=new FileReader();r.onload=()=>{try{let b=JSON.parse(r.result);if(!confirm('Replace all current data?'))return;save(DB,b.inventory||[]);save(H,b.history||[]);save(C,b.countSessions||[]);alert('Restored.');renderStats()}catch{alert('Invalid backup.')}};r.readAsText(f)}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+renderStats();
+</script>
+</body></html>
