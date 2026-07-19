@@ -1,0 +1,7 @@
+{
+  "version": "5.17.2",
+  "published": "2026-07-18",
+  "channel": "stable",
+  "name": "Product Picker & Update Center",
+  "notes": "Searchable tap-to-move product picker, improved inventory repair workflow, and Software Update in Settings."
+}
