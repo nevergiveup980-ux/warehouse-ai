@@ -1,0 +1,7 @@
+{
+  "version": "5.18.4",
+  "published": "2026-07-18",
+  "channel": "stable",
+  "name": "Product Picker & Update Center",
+  "notes": "Final Fix: cache-busted RUNLU logo loading and full Edit Record controls for inventory location, quantity, unit, lot/roll, PO and notes."
+}
