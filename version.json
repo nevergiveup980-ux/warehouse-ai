@@ -1,0 +1,5 @@
+{
+  "version": "5.2",
+  "published": "2026-07-19",
+  "notes": "Operation First: five-library linked workflow. Completed Operations automatically update regular inventory, carpet roll inventory, customer orders, dashboard, Digital Cutting Log and event history."
+}
