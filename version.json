@@ -1,6 +1,6 @@
 {
-  "version": "5.2.2",
-  "name": "Mobile Operation Controls",
-  "build": "2026-07-20-mobile-operation-edit-delete-complete-1",
-  "notes": "Adds visible mobile task cards with Start, Complete, Edit and Delete controls, completion confirmation before linked inventory impact, and locked-state protection after completion."
+  "version": "5.2.5",
+  "name": "Flexible Work Entry",
+  "build": "2026-07-20-progressive-operation-validation-1",
+  "notes": "Waiting and In Progress work can be saved with any useful identifying detail. Strict Product Master and quantity checks are deferred until completion when inventory will actually change."
 }
