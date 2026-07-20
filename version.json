@@ -1,6 +1,6 @@
 {
-  "version": "5.2.7",
-  "name": "Carpet Cut Auto-Sync Repair",
-  "build": "2026-07-20-carpet-cut-auto-sync-repair-1",
-  "notes": "Carpet Cutting and Carpet Receiving now always use Stock handling. Completed carpet cuts that were saved without inventory impact are repaired once, updating roll balances and Cutting History without duplicating linked cuts."
+  "version": "5.2.9",
+  "name": "Warehouse-to-Store Inventory Sync",
+  "build": "2026-07-20-stock-transfer-inventory-sync-1",
+  "notes": "Stock Order Transfer & Storage work now deducts warehouse inventory. Completed legacy transfers that were recorded or locked without a quantity change are matched to Product Master and synchronized once."
 }

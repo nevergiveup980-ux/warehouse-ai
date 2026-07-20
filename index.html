@@ -614,7 +614,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="qrcode.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.2.7', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52';
+const APP_VERSION='5.2.9', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,SETTINGS,COUNTDB];
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[];
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1154,7 +1154,7 @@ function setOperationEntryMode(source){$('operationSource').value=source==='Manu
 function openOperationScanner(source){sessionStorage.setItem('runlu_operation_scan_type',$('operationType').value);sessionStorage.setItem('runlu_operation_scan_source',source);$('operationSource').value=source==='Photo Import'?'AI Scan':source;showPage('scan');}
 function updateOperationForm(){
  const type=$('operationType').value,showRoll=['Carpet Cutting','Carpet Receiving'].includes(type);$('operationRollWrap').style.display=showRoll?'block':'none';$('operationLotWrap').style.display=showRoll?'block':'none';$('operationWidthWrap').style.display=type==='Carpet Receiving'?'block':'none';
- const inventoryMode=$('operationInventoryMode');if(inventoryMode){if(showRoll){inventoryMode.value='Stock';inventoryMode.disabled=true}else inventoryMode.disabled=false}
+ const inventoryMode=$('operationInventoryMode');if(inventoryMode){if(showRoll){inventoryMode.value='Stock';inventoryMode.disabled=true}else{inventoryMode.disabled=false;if(type==='Order Transfer & Storage'&&inventoryMode.value==='Record Only')inventoryMode.value='Stock'}}
  if(type==='Carpet Cutting'){$('operationUnit').value='Foot';$('operationQty').placeholder=`Cut length — example: 51'6"`;}
  else if(type==='Carpet Receiving'){$('operationUnit').value='Foot';$('operationQty').placeholder=`Full roll length — example: 150'4"`;}
  else if(type.includes('Receiving')){$('operationQty').placeholder='Received quantity';}
@@ -1187,8 +1187,8 @@ function newCarpetOperation(){newOperation();$('operationType').value='Carpet Re
 function editOperation(id){const x=operationRecords().find(r=>r.id===Number(id));if(!x||x.impactApplied){alert('This completed linked operation is locked to protect inventory accuracy.');return}operationEditId=x.id;$('operationEditorTitle').textContent='Edit Operation';$('operationDate').value=x.date;$('operationTime').value=x.time;$('operationStatus').value=x.status;$('operationType').value=x.type;$('operationInventoryMode').value=x.inventoryMode||'Record Only';$('operationOperator').value=x.operator;$('operationSource').value=x.source;$('operationPO').value=x.po;$('operationCustomer').value=x.customer||'';$('operationSupplier').value=x.supplier||'';$('operationProduct').value=x.product;$('operationProduct').dataset.productId=x.productId||'';$('operationCollection').value=x.collection;$('operationColour').value=x.colour;$('operationLot').value=x.lot||'';$('operationRoll').value=x.roll;$('operationWidth').value=x.width||'';$('operationUnit').value=x.unit||'Box';$('operationQty').value=x.unit==='Foot'?feetLabel(x.quantity):(x.quantity||'');$('operationLocation').value=x.location;$('operationNotes').value=x.notes;refreshOperationMemory();updateOperationForm();operationProductChanged();showPage('operationEditor')}
 function validateOperationForImpact(r){
  if(['Carpet Receiving','Carpet Cutting'].includes(r.type)&&!r.roll)return 'Enter a Roll Number.';
- if(['Carpet Receiving','Carpet Cutting','Order Picking & Preparation','Supplier Pickup / Receiving / Put-away','Supplier Return'].includes(r.type)&&!(r.quantity>0))return 'Enter a quantity greater than zero.';
- if(['Order Picking & Preparation','Supplier Pickup / Receiving / Put-away','Supplier Return'].includes(r.type)&&!r.productId)return 'Choose an exact Product Master suggestion for this linked operation.';
+ if(['Carpet Receiving','Carpet Cutting','Order Picking & Preparation','Supplier Pickup / Receiving / Put-away','Supplier Return','Order Transfer & Storage'].includes(r.type)&&!(r.quantity>0))return 'Enter a quantity greater than zero.';
+ if(['Order Picking & Preparation','Supplier Pickup / Receiving / Put-away','Supplier Return','Order Transfer & Storage'].includes(r.type)&&!r.productId)return 'Choose an exact Product Master suggestion for this linked operation.';
  return '';
 }
 function applyInventoryDelta(r,delta){
@@ -1209,25 +1209,51 @@ function applyOperationImpact(r){
   let result='Operation recorded';
   if(r.type==='Supplier Pickup / Receiving / Put-away'){applyInventoryDelta(r,r.quantity);result=`Inventory +${r.quantity} ${r.unit}`;}
   else if(r.type==='Order Picking & Preparation'){applyInventoryDelta(r,-r.quantity);updateLinkedOrder(r,'Ready');result=`Inventory -${r.quantity} ${r.unit}; order Ready`;}
+  else if(r.type==='Order Transfer & Storage'){applyInventoryDelta(r,-r.quantity);updateLinkedOrder(r,'Ready');result=`Warehouse inventory -${r.quantity} ${r.unit}; transferred to store`;}
   else if(r.type==='Supplier Return'){applyInventoryDelta(r,-r.quantity);result=`Inventory -${r.quantity} ${r.unit}; supplier return`;}
   else if(r.type==='Shipping'){updateLinkedOrder(r,'Shipped');result='Order Shipped';}
   else if(r.type==='Carpet Receiving'){
    const a=carpetRecords();if(a.some(x=>normKey(x.roll)===normKey(r.roll)))throw new Error('This roll number already exists.');a.unshift({id:Date.now()+Math.random(),roll:r.roll,lot:r.lot||'',collection:r.collection||r.product,colour:r.colour,length:r.quantity,originalLength:r.quantity,width:r.width||'',location:r.location||'Receiving',status:r.quantity<3?'Used Up':'Active',po:r.po,supplier:r.supplier||'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});save(CARPETDB,a);result=`Carpet roll received: ${r.quantity} ft`;}
   else if(r.type==='Carpet Cutting'){
-   const a=carpetRecords(),roll=a.find(x=>normKey(x.roll)===normKey(r.roll));if(!roll)throw new Error('Roll not found in Carpet Inventory. Receive or import the roll first.');if(roll.length<r.quantity)throw new Error(`Not enough carpet remaining. Current balance: ${roll.length} ft.`);const before=roll.length;roll.length=Number((roll.length-r.quantity).toFixed(2));roll.status=roll.length<3?'Used Up':'Active';roll.updatedAt=new Date().toISOString();save(CARPETDB,a);const cuts=cuttingRecords();cuts.unshift({id:Date.now()+Math.random(),operationId:r.id,date:r.date,time:r.time,roll:r.roll,collection:r.collection||roll.collection,colour:r.colour||roll.colour,po:r.po,customer:r.customer||'',cutLength:r.quantity,beforeLength:before,remainingLength:roll.length,operator:r.operator,notes:r.notes,createdAt:new Date().toISOString()});save(CUTDB,cuts);updateLinkedOrder(r,'Ready');result=`Roll ${r.roll}: ${before} → ${roll.length} ft`;}
+   const a=carpetRecords(),roll=a.find(x=>normKey(x.roll)===normKey(r.roll));if(!roll)throw new Error('Roll not found in Carpet Inventory. Receive or import the roll first.');if(roll.length<r.quantity)throw new Error(`Not enough carpet remaining. Current balance: ${roll.length} ft.`);const before=roll.length;roll.length=Number((roll.length-r.quantity).toFixed(2));roll.measure='CAL';roll.status=roll.length<3?'Used Up':'Active';roll.updatedAt=new Date().toISOString();save(CARPETDB,a);const cuts=cuttingRecords();cuts.unshift({id:Date.now()+Math.random(),operationId:r.id,date:r.date,time:r.time,roll:r.roll,collection:r.collection||roll.collection,colour:r.colour||roll.colour,po:r.po,customer:r.customer||'',cutLength:r.quantity,beforeLength:before,remainingLength:roll.length,operator:r.operator,notes:r.notes,createdAt:new Date().toISOString()});save(CUTDB,cuts);updateLinkedOrder(r,'Ready');result=`Roll ${r.roll}: ${before} → ${roll.length} ft; measure CAL`;}
   const events=load(EVENTDB);events.unshift({id:Date.now()+Math.random(),operationId:r.id,time:new Date().toISOString(),type:r.type,reference:r.po||r.roll||r.product,result});save(EVENTDB,events);r.impactApplied=true;r.impactResult=result;r.appliedAt=new Date().toISOString();return true;
  }catch(e){alert('Linked update stopped: '+e.message);return false}
 }
 function repairCompletedCarpetOperations(showMessage=false){
- const operations=operationRecords(),cuts=cuttingRecords();let repaired=0;
+ const operations=operationRecords(),cuts=cuttingRecords();let repaired=0,measureUpdated=0;
  for(const operation of operations){
   if(operation.type!=='Carpet Cutting'||operation.status!=='Completed'||operation.impactApplied)continue;
   if(cuts.some(c=>String(c.operationId)===String(operation.id))){operation.inventoryMode='Stock';operation.impactApplied=true;operation.impactResult='Existing carpet cut link restored';operation.appliedAt=operation.appliedAt||new Date().toISOString();repaired++;continue}
   if(!operation.roll||!(operation.quantity>0)||!carpetRecords().some(roll=>normKey(roll.roll)===normKey(operation.roll)))continue;
   operation.inventoryMode='Stock';if(applyOperationImpact(operation))repaired++;
  }
- if(repaired){save(LOGDB,operations);localStorage.setItem('runlu_v527_carpet_cut_repair',new Date().toISOString());if(showMessage)alert(`${repaired} completed carpet cutting record(s) were linked to Carpet Inventory. Roll balances and Cutting History are now updated.`)}
+ if(repaired)save(LOGDB,operations);
+ const latestCuts=cuttingRecords(),carpets=carpetRecords();for(const roll of carpets){if(latestCuts.some(c=>normKey(c.roll)===normKey(roll.roll))&&String(roll.measure||'').toUpperCase()!=='CAL'){roll.measure='CAL';roll.updatedAt=new Date().toISOString();measureUpdated++}}
+ if(measureUpdated)save(CARPETDB,carpets);
+ if(repaired||measureUpdated){localStorage.setItem('runlu_v528_carpet_cut_measure_repair',new Date().toISOString());if(showMessage)alert(`${repaired} completed carpet cutting record(s) were linked and ${measureUpdated} cut roll measure type(s) were changed to CAL. Roll balances and Cutting History are synchronized.`)}
  return repaired;
+}
+function resolveOperationMaster(operation){
+ const masters=loadMasters();if(operation.productId){const linked=masters.find(m=>String(m.id)===String(operation.productId));if(linked)return linked}
+ const colour=normKey(operation.colour),description=normKey([operation.product,operation.collection].filter(Boolean).join(' '));let candidates=colour?masters.filter(m=>normKey(m.color)===colour):[];
+ if(candidates.length>1&&description)candidates=candidates.filter(m=>{const name=normKey(m.name),series=normKey(m.series);return(name&&description.includes(name))||(name&&name.includes(description))||(series&&description.includes(series))});
+ if(candidates.length===1)return candidates[0];
+ const named=masters.filter(m=>{const name=normKey(m.name),series=normKey(m.series);return description&&(description===name||description===series||description.includes(name)||(series&&description.includes(series)))&&( !colour||!m.color||normKey(m.color)===colour)});
+ return named.length===1?named[0]:null;
+}
+function repairCompletedStockTransfers(showMessage=false){
+ const operations=operationRecords(),events=load(EVENTDB);let repaired=0,unresolved=0;
+ for(const operation of operations){
+  if(operation.type!=='Order Transfer & Storage'||operation.status!=='Completed'||!(operation.quantity>0))continue;
+  const event=events.find(e=>String(e.operationId)===String(operation.id)),wasNotApplied=!operation.impactApplied||event?.result==='Operation recorded';if(!wasNotApplied)continue;
+  const master=resolveOperationMaster(operation);if(!master){unresolved++;continue}
+  operation.productId=master.id;operation.inventoryMode='Stock';try{applyInventoryDelta(operation,-operation.quantity)}catch(error){unresolved++;continue}
+  operation.impactApplied=true;operation.impactResult=`Warehouse inventory -${operation.quantity} ${operation.unit}; transferred to store`;operation.appliedAt=new Date().toISOString();
+  if(event){event.result=operation.impactResult;event.reference=operation.po||operation.product||master.name}else events.unshift({id:Date.now()+Math.random(),operationId:operation.id,time:new Date().toISOString(),type:operation.type,reference:operation.po||operation.product||master.name,result:operation.impactResult});repaired++;
+ }
+ if(repaired){save(LOGDB,operations);save(EVENTDB,events);localStorage.setItem('runlu_v529_stock_transfer_repair',new Date().toISOString())}
+ if(showMessage&&repaired)alert(`${repaired} completed warehouse-to-store transfer(s) were synchronized with inventory.${unresolved?` ${unresolved} transfer(s) still need an exact Product Master match.`:''}`);
+ return {repaired,unresolved};
 }
 function saveOperation(){
  const date=$('operationDate').value||todayISO(),type=$('operationType').value,productText=$('operationProduct').value.trim(),customer=$('operationCustomer').value.trim(),supplier=$('operationSupplier').value.trim(),parsedQuantity=operationQuantityInput();if(!Number.isFinite(parsedQuantity)){alert(`Enter a valid quantity. Carpet lengths can use 51'6" or 51.5.`);return}const record={date,time:$('operationTime').value,status:$('operationStatus').value,type,source:$('operationSource').value,operator:$('operationOperator').value.trim()||'John',po:$('operationPO').value.trim(),customer,supplier,name:isSupplierOperationType(type)?supplier:customer,inventoryMode:$('operationInventoryMode').value||'Record Only',productId:$('operationProduct').dataset.productId||'',product:productText,collection:$('operationCollection').value.trim(),colour:$('operationColour').value.trim(),lot:$('operationLot').value.trim(),roll:$('operationRoll').value.trim(),width:$('operationWidth').value.trim(),quantity:parsedQuantity||0,unit:$('operationUnit').value,location:$('operationLocation').value.trim(),notes:$('operationNotes').value.trim()};
@@ -1742,7 +1768,7 @@ function restoreConversationOrders(showMessage=false){
 function autoInitializeSeed(){initializeSeedDatabase(false)}
 
 if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
-migrateV13();migrateToV21();migrateOperationsV52();migrateLegacyCarpetData(false);repairCompletedCarpetOperations(true);recoverOrderLibraries(false);restoreConversationOrders(false);autoInitializeSeed();applyV516WarehouseDataset(false);automaticDailySnapshot();renderDashboard();renderProducts();renderInventory();renderOrders();renderReceivingHistory();renderTasks();renderMap();refreshMemory();loadSettings();renderOrderDataStatus();runDatabaseHealth(false);openCarpetFromURL();
+migrateV13();migrateToV21();migrateOperationsV52();migrateLegacyCarpetData(false);repairCompletedCarpetOperations(true);recoverOrderLibraries(false);restoreConversationOrders(false);autoInitializeSeed();applyV516WarehouseDataset(false);repairCompletedStockTransfers(true);automaticDailySnapshot();renderDashboard();renderProducts();renderInventory();renderOrders();renderReceivingHistory();renderTasks();renderMap();refreshMemory();loadSettings();renderOrderDataStatus();runDatabaseHealth(false);openCarpetFromURL();
 </script>
 </body>
 </html>
