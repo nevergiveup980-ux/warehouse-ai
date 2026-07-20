@@ -1,6 +1,6 @@
 {
-  "version": "5.2",
-  "name": "Warehouse Command Center",
-  "build": "2026-07-20-embedded-carpet-workbench-1",
-  "notes": "Adds a native embedded Carpet Workbench with unified roll detail and editing, QR deep links, double-sided labels, Word download, browser duplex printing, CSV export, cutting history and direct Command Center cutting."
+  "version": "5.2.2",
+  "name": "Mobile Operation Controls",
+  "build": "2026-07-20-mobile-operation-edit-delete-complete-1",
+  "notes": "Adds visible mobile task cards with Start, Complete, Edit and Delete controls, completion confirmation before linked inventory impact, and locked-state protection after completion."
 }
