@@ -1,6 +1,6 @@
 {
   "version": "5.2",
   "name": "Warehouse Command Center",
-  "build": "2026-07-19-command-center-1",
-  "notes": "Command Center quick actions, protected operation workflow, embedded scan entry modes, and Lot / Roll# / Width fields for carpet receiving."
+  "build": "2026-07-20-embedded-carpet-workbench-1",
+  "notes": "Adds a native embedded Carpet Workbench with unified roll detail and editing, QR deep links, double-sided labels, Word download, browser duplex printing, CSV export, cutting history and direct Command Center cutting."
 }
