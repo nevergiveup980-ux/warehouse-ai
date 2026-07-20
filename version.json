@@ -1,6 +1,6 @@
 {
-  "version": "5.2.6",
-  "name": "Any-Field Work Records",
-  "build": "2026-07-20-any-field-record-only-1",
-  "notes": "Allows work to be saved or completed using any available fields. Product matching and quantity validation apply only when Stock inventory handling is explicitly selected."
+  "version": "5.2.7",
+  "name": "Carpet Cut Auto-Sync Repair",
+  "build": "2026-07-20-carpet-cut-auto-sync-repair-1",
+  "notes": "Carpet Cutting and Carpet Receiving now always use Stock handling. Completed carpet cuts that were saved without inventory impact are repaired once, updating roll balances and Cutting History without duplicating linked cuts."
 }
