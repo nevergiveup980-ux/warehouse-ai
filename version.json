@@ -1,6 +1,6 @@
 {
-  "version": "5.2.5",
-  "name": "Flexible Work Entry",
-  "build": "2026-07-20-progressive-operation-validation-1",
-  "notes": "Waiting and In Progress work can be saved with any useful identifying detail. Strict Product Master and quantity checks are deferred until completion when inventory will actually change."
+  "version": "5.2.6",
+  "name": "Any-Field Work Records",
+  "build": "2026-07-20-any-field-record-only-1",
+  "notes": "Allows work to be saved or completed using any available fields. Product matching and quantity validation apply only when Stock inventory handling is explicitly selected."
 }
