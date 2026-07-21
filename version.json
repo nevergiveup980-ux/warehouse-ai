@@ -1,6 +1,6 @@
 {
-  "version": "5.4.0",
-  "name": "Secure Cloud Sync Foundation",
-  "build": "2026-07-20-supabase-cloud-sync-1",
-  "notes": "Adds authenticated Supabase cloud synchronization, offline-first local storage, protected per-user datasets, private photo storage, initial upload/download controls and replacement-phone recovery. Run supabase_setup.sql once before first sign-in."
+  "version": "5.4.1",
+  "name": "Colour-First Universal Tags",
+  "build": "2026-07-20-colour-first-tags-1",
+  "notes": "Retains the secure cloud-sync foundation and updates Universal Tags so colour is the dominant name, product/type is secondary, and long colour names resize automatically."
 }
