@@ -1,6 +1,6 @@
 {
-  "version": "5.4.1",
-  "name": "Colour-First Universal Tags",
-  "build": "2026-07-20-colour-first-tags-1",
-  "notes": "Retains the secure cloud-sync foundation and updates Universal Tags so colour is the dominant name, product/type is secondary, and long colour names resize automatically."
+  "version": "5.5.0",
+  "name": "Multi-Item Orders, Low Stock & RAM",
+  "build": "2026-07-21-command-center-multi-item-1",
+  "notes": "Adds one-order multi-product and multi-roll entry, supplier-grouped pickup items, automatic draft recovery, red low-stock warnings, FULL to CAL to TM carpet workflow, and RAM/remnant transfer tracking."
 }
