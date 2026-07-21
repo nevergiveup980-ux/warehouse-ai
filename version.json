@@ -1,6 +1,6 @@
 {
-  "version": "5.2.9",
-  "name": "Warehouse-to-Store Inventory Sync",
-  "build": "2026-07-20-stock-transfer-inventory-sync-1",
-  "notes": "Stock Order Transfer & Storage work now deducts warehouse inventory. Completed legacy transfers that were recorded or locked without a quantity change are matched to Product Master and synchronized once."
+  "version": "5.3.0",
+  "name": "Returns Workflow and Universal Tag Center",
+  "build": "2026-07-20-returns-universal-tags-1",
+  "notes": "Separates Customer Return from Return to Supplier with correct Stock and Non-stock behavior. Adds QR product, pallet, customer-order, non-stock, return-hold, supplier-return and transfer tags with 4x6 or Letter two-up printing, copies and print history."
 }
