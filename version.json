@@ -1,6 +1,6 @@
 {
-  "version": "5.3.0",
-  "name": "Returns Workflow and Universal Tag Center",
-  "build": "2026-07-20-returns-universal-tags-1",
-  "notes": "Separates Customer Return from Return to Supplier with correct Stock and Non-stock behavior. Adds QR product, pallet, customer-order, non-stock, return-hold, supplier-return and transfer tags with 4x6 or Letter two-up printing, copies and print history."
+  "version": "5.4.0",
+  "name": "Secure Cloud Sync Foundation",
+  "build": "2026-07-20-supabase-cloud-sync-1",
+  "notes": "Adds authenticated Supabase cloud synchronization, offline-first local storage, protected per-user datasets, private photo storage, initial upload/download controls and replacement-phone recovery. Run supabase_setup.sql once before first sign-in."
 }

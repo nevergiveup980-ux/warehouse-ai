@@ -471,6 +471,12 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="settings" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Settings</h2>
+<div class="settingRow"><div class="name">Cloud Sync</div><div class="meta">Sign in to keep this device's warehouse data synchronized with the Runlu Supabase project. Local storage remains active for offline work.</div>
+<div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
+<label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
+<label>Cloud login password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password">
+<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="cloudUploadAll()">Upload This Device</button><button class="purple" onclick="cloudDownloadAll()">Download Cloud Data</button><button onclick="cloudSignOut()">Sign Out</button></div>
+<div class="meta" style="margin-top:9px">First device: sign in, then choose Upload This Device. A replacement phone should sign in and choose Download Cloud Data. Never enter the Supabase dashboard password here unless you intentionally use the same password for the app login.</div></div>
 <div class="settingRow"><div class="name">Carpet Management Link</div><div class="meta">Paste the GitHub Pages address of the original carpet system. V2.0 opens it without changing or deleting its data.</div>
 <label>Carpet System URL</label><input id="carpetUrl" placeholder="https://username.github.io/carpet-system/">
 <div class="actions"><button class="primary" onclick="saveCarpetUrl()">Save Link</button><button onclick="openCarpetModule()">Test Open</button></div></div>
@@ -634,7 +640,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="qrcode.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.3.0', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53';
+const APP_VERSION='5.4.0', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,SETTINGS,COUNTDB];
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[];
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -644,7 +650,7 @@ const $=id=>document.getElementById(id);
 function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
 function loadObj(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch{return{}}}
 function save(k,v){
- try{localStorage.setItem(k,JSON.stringify(v));return true;}
+ try{localStorage.setItem(k,JSON.stringify(v));queueCloudSave(k,v);return true;}
  catch(err){
   console.error('Storage save failed:',err);
   if(err&&(err.name==='QuotaExceededError'||err.code===22)) alert('Storage is full. The selected photo may be too large. Please export a backup, remove unnecessary photos, or choose a smaller image.');
@@ -652,6 +658,32 @@ function save(k,v){
   return false;
  }
 }
+
+const CLOUD_URL='https://ekrnknlawekeoszzkamd.supabase.co';
+const CLOUD_KEY='sb_publishable_Jr12gnQ7UrU6Wv9xz4L1aA_bcTZiGqn';
+const CLOUD_SESSION_KEY='runlu_cloud_session_v54', CLOUD_ENABLED_KEY='runlu_cloud_sync_enabled_v54';
+let cloudApplying=false,cloudSaveTimers={},cloudPollTimer=null;
+function cloudSession(){try{return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY)||'null')}catch{return null}}
+function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'Bearer '+token};if(json)h['Content-Type']='application/json';return h}
+async function cloudRequest(path,options={}){const res=await fetch(CLOUD_URL+path,options);let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));return data}
+function dataURLToBlob(dataURL){const parts=dataURL.split(','),mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'image/jpeg',bytes=atob(parts[1]||''),arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime})}
+async function cloudStorePhoto(dataURL,path,s){const blob=dataURLToBlob(dataURL),res=await fetch(CLOUD_URL+'/storage/v1/object/runlu-files/'+path,{method:'POST',headers:{apikey:CLOUD_KEY,Authorization:'Bearer '+s.access_token,'Content-Type':blob.type,'x-upsert':'true'},body:blob});if(!res.ok)throw new Error('Photo upload failed ('+res.status+')');return {__cloud_file:path,__mime:blob.type}}
+async function cloudPreparePayload(value,key,s,path=[]){if(typeof value==='string'&&value.startsWith('data:image/')&&value.length>500){const safe=(path.join('-')||'photo').replace(/[^a-z0-9_-]/gi,'_'),file=`${s.user.id}/${encodeURIComponent(key)}/${safe}.jpg`;return cloudStorePhoto(value,file,s)}if(Array.isArray(value)){const out=[];for(let i=0;i<value.length;i++)out.push(await cloudPreparePayload(value[i],key,s,path.concat(String(value[i]?.id||i))));return out}if(value&&typeof value==='object'){const out={};for(const [k,v] of Object.entries(value))out[k]=await cloudPreparePayload(v,key,s,path.concat(k));return out}return value}
+async function cloudLoadPhoto(ref,s){const res=await fetch(CLOUD_URL+'/storage/v1/object/authenticated/runlu-files/'+ref.__cloud_file,{headers:cloudHeaders(s.access_token,false)});if(!res.ok)return '';const blob=await res.blob();return new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>resolve('');reader.readAsDataURL(blob)})}
+async function cloudHydratePayload(value,s){if(Array.isArray(value)){const out=[];for(const v of value)out.push(await cloudHydratePayload(v,s));return out}if(value&&typeof value==='object'){if(value.__cloud_file)return cloudLoadPhoto(value,s);const out={};for(const [k,v] of Object.entries(value))out[k]=await cloudHydratePayload(v,s);return out}return value}
+async function cloudEnsureSession(){let s=cloudSession();if(!s)return null;const expires=Number(s.expires_at||0)*1000;if(expires>Date.now()+60000)return s;if(!s.refresh_token)return null;try{const n=await cloudRequest('/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({refresh_token:s.refresh_token})});localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(n));return n}catch(e){localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);renderCloudStatus(e.message);return null}}
+function renderCloudStatus(message=''){const el=$('cloudStatus');if(!el)return;const s=cloudSession(),enabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='1';el.innerHTML=message?esc(message):(s?`Signed in as <b>${esc(s.user?.email||'cloud user')}</b> · Automatic sync: <b>${enabled?'On':'Waiting for initial upload/download'}</b>`:'Not signed in. Local/offline data is still available on this device.');if($('cloudEmail')&&!$('cloudEmail').value&&s?.user?.email)$('cloudEmail').value=s.user.email}
+async function cloudSignUp(){const email=normalizeText($('cloudEmail').value),password=$('cloudPassword').value;if(!email||password.length<8){alert('Enter an email and a password of at least 8 characters.');return}try{const data=await cloudRequest('/auth/v1/signup',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({email,password})});if(data.access_token){localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));renderCloudStatus();alert('App login created. Choose Upload This Device to make this phone the initial cloud copy.')}else alert('App login created. Check the email inbox, confirm the address, then return and tap Sign In.')}catch(e){alert(e.message)}}
+async function cloudSignIn(){const email=normalizeText($('cloudEmail').value),password=$('cloudPassword').value;if(!email||!password){alert('Enter the cloud login email and password.');return}try{const data=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({email,password})});localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));$('cloudPassword').value='';renderCloudStatus();startCloudPolling();alert('Cloud sign-in succeeded. On the first device choose Upload This Device; on a new phone choose Download Cloud Data.')}catch(e){alert(e.message)}}
+function cloudSignOut(){localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);if(cloudPollTimer)clearInterval(cloudPollTimer);renderCloudStatus();alert('Signed out. Local data remains on this device.')}
+async function cloudPutDataset(key,value){if(cloudApplying||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!DATA_KEYS.includes(key))return;const s=await cloudEnsureSession();if(!s)return;const payload=await cloudPreparePayload(value,key,s);await cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})})}
+function queueCloudSave(key,value){if(cloudApplying||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!DATA_KEYS.includes(key))return;clearTimeout(cloudSaveTimers[key]);cloudSaveTimers[key]=setTimeout(()=>cloudPutDataset(key,value).catch(e=>renderCloudStatus('Sync pending: '+e.message)),700)}
+function cloudDeviceId(){let id=localStorage.getItem('runlu_cloud_device_id_v54');if(!id){id=(crypto.randomUUID?.()||('device-'+Date.now()+'-'+Math.random()));localStorage.setItem('runlu_cloud_device_id_v54',id)}return id}
+async function cloudUploadAll(){const s=await cloudEnsureSession();if(!s){alert('Sign in first.');return}if(!confirm('Use this device as the current source and upload all warehouse data to the cloud?'))return;try{for(const key of DATA_KEYS){let value;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{value=null}if(value!==null)await cloudPutDatasetInitial(key,value,s)}localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem('runlu_cloud_last_pull_v54',new Date().toISOString());renderCloudStatus();startCloudPolling();alert('Initial cloud upload completed. Future changes will synchronize automatically.')}catch(e){alert('Cloud upload failed: '+e.message)}}
+async function cloudPutDatasetInitial(key,value,s){const payload=await cloudPreparePayload(value,key,s);return cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})})}
+async function cloudFetchRows(){const s=await cloudEnsureSession();if(!s)throw new Error('Sign in first.');return cloudRequest('/rest/v1/user_datasets?select=dataset_key,payload,updated_at&order=updated_at.asc',{headers:cloudHeaders(s.access_token,false)})}
+async function cloudDownloadAll(silent=false){if(!silent&&!confirm('Replace this device’s synchronized datasets with the current cloud copy? A local safety snapshot will be created first.'))return;try{const rows=await cloudFetchRows();if(!rows.length){if(!silent)alert('No cloud data exists yet. On the original phone choose Upload This Device.');return}const newest=rows.reduce((m,r)=>Math.max(m,new Date(r.updated_at||0).getTime()),0),last=new Date(localStorage.getItem('runlu_cloud_last_pull_v54')||0).getTime();if(silent&&newest<=last)return;const s=await cloudEnsureSession();createLocalSnapshot(false);cloudApplying=true;for(const row of rows){if(DATA_KEYS.includes(row.dataset_key)){const payload=await cloudHydratePayload(row.payload,s);localStorage.setItem(row.dataset_key,JSON.stringify(payload))}}cloudApplying=false;localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem('runlu_cloud_last_pull_v54',new Date(newest||Date.now()).toISOString());if(!silent){alert('Cloud data downloaded. The app will reload now.');location.reload()}else{renderCloudStatus();location.reload()}}catch(e){cloudApplying=false;if(!silent)alert('Cloud download failed: '+e.message);else renderCloudStatus('Cloud refresh pending: '+e.message)}}
+function startCloudPolling(){if(cloudPollTimer)clearInterval(cloudPollTimer);if(!cloudSession()||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1')return;cloudPollTimer=setInterval(()=>cloudDownloadAll(true),60000)}
 function migrateLegacyCarpetData(showMessage=false){
  const seed=window.RUNLU_LEGACY_CARPET_DATA;
  if(!seed||!Array.isArray(seed.inventory)||!Array.isArray(seed.cuts)){if(showMessage)alert('The built-in carpet migration data is unavailable. Please confirm carpet_seed.js was uploaded.');return {addedRolls:0,addedCuts:0}}
@@ -1342,7 +1374,7 @@ function showRack(k){const masters=loadMasters(),inv=loadInventoryRecords().filt
 }
 function totalSFcalc(x){return x.unit==='Box'&&Number(x.sfPerBox)?Number(x.quantity||0)*Number(x.sfPerBox):0}
 
-function loadSettings(){const s=loadObj(SETTINGS);$('carpetUrl').value=s.carpetUrl||''}
+function loadSettings(){const s=loadObj(SETTINGS);$('carpetUrl').value=s.carpetUrl||'';renderCloudStatus()}
 function saveCarpetUrl(){const s=loadObj(SETTINGS);s.carpetUrl=$('carpetUrl').value.trim();save(SETTINGS,s);alert('Carpet system link saved.')}
 function openCarpetModule(){const url=loadObj(SETTINGS).carpetUrl;if(!url){alert('Please add the original Carpet Management URL in Settings first.');showPage('settings');return}window.open(url,'_blank')}
 function buildBackupPayload(){
@@ -1802,6 +1834,7 @@ function autoInitializeSeed(){initializeSeedDatabase(false)}
 
 if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
 migrateV13();migrateToV21();migrateOperationsV52();migrateLegacyCarpetData(false);repairCompletedCarpetOperations(true);recoverOrderLibraries(false);restoreConversationOrders(false);autoInitializeSeed();applyV516WarehouseDataset(false);repairCompletedStockTransfers(true);automaticDailySnapshot();renderDashboard();renderProducts();renderInventory();renderOrders();renderReceivingHistory();renderTasks();renderMap();refreshMemory();loadSettings();renderOrderDataStatus();runDatabaseHealth(false);openCarpetFromURL();openInventoryFromURL();
+startCloudPolling();
 </script>
 </body>
 </html>
