@@ -1,6 +1,6 @@
 {
-  "version": "5.5.0",
-  "name": "Multi-Item Orders, Low Stock & RAM",
-  "build": "2026-07-21-command-center-multi-item-1",
-  "notes": "Adds one-order multi-product and multi-roll entry, supplier-grouped pickup items, automatic draft recovery, red low-stock warnings, FULL to CAL to TM carpet workflow, and RAM/remnant transfer tracking."
+  "version": "5.5.1",
+  "name": "Stable Mobile Order Entry",
+  "build": "2026-07-21-mobile-entry-lock-1",
+  "notes": "Prevents automatic cloud refresh and fixed footer navigation from interrupting any active input screen. Keeps V5.5 multi-item orders, low-stock warnings, carpet status automation and RAM tracking."
 }
