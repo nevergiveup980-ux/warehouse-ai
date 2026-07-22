@@ -1,6 +1,6 @@
 {
-  "version": "5.5.11",
-  "name": "Protected Record Deletion",
-  "build": "2026-07-22-protected-record-deletion-1",
-  "notes": "Adds confirmed, snapshot-protected deletion for editable Customer and Special Orders and for Receiving records that have not changed inventory, while locking linked or completed records."
+  "version": "5.5.12",
+  "name": "Smart Conditional Search",
+  "build": "2026-07-22-smart-conditional-search-1",
+  "notes": "Understands carpet length, FULL/CAL/TM, low-stock and operation status/type phrases such as carpet under 15, Frosted Honey under 50, CAL carpet and waiting pickup while preserving normal keyword search."
 }
