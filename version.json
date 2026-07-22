@@ -1,6 +1,6 @@
 {
-  "version": "5.5.6",
-  "name": "Signed-In App Password Change",
-  "build": "2026-07-21-app-password-change-1",
-  "notes": "Adds a Settings backup control that lets an already signed-in device set and confirm a new Warehouse App login password without changing warehouse data or other account passwords."
+  "version": "5.5.7",
+  "name": "Clean Header Logo and REM Naming",
+  "build": "2026-07-22-logo-remnant-rem-1",
+  "notes": "Removes the gray block from the header logo and changes the Remnant abbreviation from RAM to REM while keeping earlier remnant records compatible."
 }
