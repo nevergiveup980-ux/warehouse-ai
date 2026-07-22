@@ -1,6 +1,6 @@
 {
-  "version": "5.5.7",
-  "name": "Clean Header Logo and REM Naming",
-  "build": "2026-07-22-logo-remnant-rem-1",
-  "notes": "Removes the gray block from the header logo and changes the Remnant abbreviation from RAM to REM while keeping earlier remnant records compatible."
+  "version": "5.5.9",
+  "name": "Multi-Item Visibility and Completion Review",
+  "build": "2026-07-22-multi-item-review-1",
+  "notes": "Shows every product, roll, supplier and item status in multi-item operations; searches nested items; and previews each inventory effect with a warning for Waiting items before completion."
 }
