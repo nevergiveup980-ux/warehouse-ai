@@ -1,6 +1,6 @@
 {
-  "version": "5.5.9",
-  "name": "Multi-Item Visibility and Completion Review",
-  "build": "2026-07-22-multi-item-review-1",
-  "notes": "Shows every product, roll, supplier and item status in multi-item operations; searches nested items; and previews each inventory effect with a warning for Waiting items before completion."
+  "version": "5.5.11",
+  "name": "Protected Record Deletion",
+  "build": "2026-07-22-protected-record-deletion-1",
+  "notes": "Adds confirmed, snapshot-protected deletion for editable Customer and Special Orders and for Receiving records that have not changed inventory, while locking linked or completed records."
 }
