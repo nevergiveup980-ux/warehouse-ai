@@ -1,6 +1,6 @@
 {
-  "version": "5.5.13",
-  "name": "Zero-Length Carpet Migration Cleanup",
-  "build": "2026-07-22-zero-length-carpet-cleanup-1",
-  "notes": "Adds a backup-first cleanup tool that removes zero-length migration carpet rolls and their linked cuts, REM records, tag references, operations and events, while preventing zero-length seed records from returning."
+  "version": "5.5.15",
+  "name": "Field Products, Sales and Sample Transfer",
+  "build": "2026-07-23-field-products-sales-sample-transfer-1",
+  "notes": "Creates searchable Heather Choice, Platinum and Spill Blocker inventory entries; adds Sales, exact inventory-record selection, From/To locations, Store Samples transfers, physical-count-pending status and clearer before/after stock protection."
 }
