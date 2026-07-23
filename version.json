@@ -1,6 +1,6 @@
 {
-  "version": "5.5.12",
-  "name": "Smart Conditional Search",
-  "build": "2026-07-22-smart-conditional-search-1",
-  "notes": "Understands carpet length, FULL/CAL/TM, low-stock and operation status/type phrases such as carpet under 15, Frosted Honey under 50, CAL carpet and waiting pickup while preserving normal keyword search."
+  "version": "5.5.13",
+  "name": "Zero-Length Carpet Migration Cleanup",
+  "build": "2026-07-22-zero-length-carpet-cleanup-1",
+  "notes": "Adds a backup-first cleanup tool that removes zero-length migration carpet rolls and their linked cuts, REM records, tag references, operations and events, while preventing zero-length seed records from returning."
 }

@@ -511,6 +511,10 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <div class="actions"><button class="purple" onclick="migrateLegacyCarpetData(true)">Check Carpet Migration</button></div>
 <div id="carpetImportStatus" class="notice" style="margin-top:10px">Checking unified carpet records...</div></div>
 
+<div class="settingRow"><div class="name">Zero-Length Carpet Cleanup</div><div class="meta">Removes impossible 0-foot migration rolls and every directly linked cutting, REM, tag, operation and operation-event record. A safety snapshot is created before deletion, and unrelated warehouse data is preserved.</div>
+<div id="zeroCarpetCleanupStatus" class="notice" style="margin-top:10px">Ready to scan zero-length carpet migration records.</div>
+<div class="actions"><button onclick="previewZeroCarpetCleanup()">Scan Zero-Length Data</button><button class="red" onclick="runZeroCarpetCleanup()">Delete All Linked Zero-Length Data</button></div></div>
+
 <div class="settingRow"><div class="name">Warehouse Seed Database</div><div class="meta">Adds the documented warehouse products and inventory records without overwriting existing records or quantities.</div><div class="actions"><button class="green" onclick="initializeSeedDatabase(true)">Check Documented Warehouse Data</button></div></div>
 
 <div class="settingRow"><div class="name">Order Data Center</div><div class="meta">Checks the current and earlier Customer Orders and Special Orders storage, safely merges missing records, and lets you copy a record into the correct library without deleting the original.</div>
@@ -661,7 +665,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="qrcode.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.5.12', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55';
+const APP_VERSION='5.5.13', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', ZERO_CARPET_CLEANUP_KEY='runlu_zero_length_carpet_cleanup_v5513';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB];
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -712,13 +716,77 @@ function migrateLegacyCarpetData(showMessage=false){
  if(!seed||!Array.isArray(seed.inventory)||!Array.isArray(seed.cuts)){if(showMessage)alert('The built-in carpet migration data is unavailable. Please confirm carpet_seed.js was uploaded.');return {addedRolls:0,addedCuts:0}}
  const carpets=load(CARPETDB),cuts=load(CUTDB);let addedRolls=0,addedCuts=0;
  const legacyRollKeys=new Set(carpets.map(x=>x.legacyKey).filter(Boolean)),rollKeys=new Set(carpets.map(x=>normKey(x.roll)));
- for(const row of seed.inventory){if(legacyRollKeys.has(row.legacyKey)||rollKeys.has(normKey(row.roll)))continue;carpets.push({...row});legacyRollKeys.add(row.legacyKey);rollKeys.add(normKey(row.roll));addedRolls++}
+ const validSeedRolls=new Set(seed.inventory.filter(row=>Number(row.length)>0).map(row=>normKey(row.roll)).filter(Boolean));
+ for(const row of seed.inventory){if(!(Number(row.length)>0)||legacyRollKeys.has(row.legacyKey)||rollKeys.has(normKey(row.roll)))continue;carpets.push({...row});legacyRollKeys.add(row.legacyKey);rollKeys.add(normKey(row.roll));addedRolls++}
  const legacyCutKeys=new Set(cuts.map(x=>x.legacyKey).filter(Boolean));
- for(const row of seed.cuts){if(legacyCutKeys.has(row.legacyKey))continue;cuts.push({...row});legacyCutKeys.add(row.legacyKey);addedCuts++}
+ for(const row of seed.cuts){if((row.roll||row.sourceRoll)&&!validSeedRolls.has(normKey(row.roll||row.sourceRoll)))continue;if(legacyCutKeys.has(row.legacyKey))continue;cuts.push({...row});legacyCutKeys.add(row.legacyKey);addedCuts++}
  save(CARPETDB,carpets);save(CUTDB,cuts);localStorage.setItem('runlu_carpet_xlsx_20260720_migrated',new Date().toISOString());
  const status=$('carpetImportStatus');if(status)status.innerHTML=`Unified carpet database active: <b>${carpets.length} roll record(s)</b> and <b>${cuts.length} cutting record(s)</b>.`;
  if(showMessage)alert(addedRolls||addedCuts?`Carpet migration completed. Added ${addedRolls} roll record(s) and ${addedCuts} cutting record(s). Existing V5.2 records were not overwritten.`:`Carpet migration is already complete. ${carpets.length} roll record(s) and ${cuts.length} cutting record(s) are available.`);
  return {addedRolls,addedCuts};
+}
+
+function zeroCarpetCleanupPlan(){
+ const carpets=load(CARPETDB),zeroCarpets=carpets.filter(x=>Number(x.length)===0),rollKeys=new Set(zeroCarpets.map(x=>normKey(x.roll)).filter(Boolean));
+ const matchesRoll=x=>rollKeys.has(normKey(x?.roll||x?.sourceRoll||''));
+ const cuts=load(CUTDB),remnants=load(RAMDB),tags=load(TAGPRINTDB),operations=load(LOGDB),events=load(EVENTDB);
+ const removedOperations=[],updatedOperations=[];
+ for(const operation of operations){
+  const items=Array.isArray(operation.items)&&operation.items.length?operation.items:null;
+  if(items){
+   const kept=items.filter(item=>!matchesRoll(item));
+   if(kept.length===items.length)updatedOperations.push(operation);
+   else if(!kept.length)removedOperations.push(operation);
+   else updatedOperations.push({...operation,items:kept,updatedAt:new Date().toISOString()});
+  }else if(matchesRoll(operation))removedOperations.push(operation);
+  else updatedOperations.push(operation);
+ }
+ const removedOperationIds=new Set(removedOperations.map(x=>String(x.id)));
+ return {
+  zeroCarpets,rollKeys,
+  carpets:carpets.filter(x=>!rollKeys.has(normKey(x.roll))),
+  cuts:cuts.filter(x=>!matchesRoll(x)),
+  remnants:remnants.filter(x=>!matchesRoll(x)),
+  tags:tags.filter(x=>!matchesRoll(x)),
+  operations:updatedOperations,
+  events:events.filter(x=>!removedOperationIds.has(String(x.operationId))),
+  counts:{
+   carpets:zeroCarpets.length,
+   cuts:cuts.filter(matchesRoll).length,
+   remnants:remnants.filter(matchesRoll).length,
+   tags:tags.filter(matchesRoll).length,
+   operations:removedOperations.length,
+   operationItems:operations.reduce((n,x)=>n+(Array.isArray(x.items)?x.items.filter(matchesRoll).length:0),0),
+   events:events.filter(x=>removedOperationIds.has(String(x.operationId))).length
+  }
+ };
+}
+function zeroCarpetCleanupSummary(plan){
+ const c=plan.counts,rolls=plan.zeroCarpets.map(x=>x.roll||'(unnamed)').join(', ');
+ return `${c.carpets} zero-length roll(s); ${c.cuts} cut record(s); ${c.remnants} REM record(s); ${c.tags} tag record(s); ${c.operations} operation(s); ${c.operationItems} operation item(s); ${c.events} event record(s).${rolls?`\n\nRolls: ${rolls}`:''}`;
+}
+function previewZeroCarpetCleanup(showMessage=true){
+ const plan=zeroCarpetCleanupPlan(),el=$('zeroCarpetCleanupStatus');
+ if(!plan.counts.carpets){if(el)el.innerHTML='<b>No zero-length carpet rolls found.</b> The active carpet database is clean.';return}
+ if(el)el.innerHTML=`<b>${plan.counts.carpets} zero-length roll(s) found.</b><br>${plan.counts.cuts} cuts · ${plan.counts.remnants} REM · ${plan.counts.operations} whole operations · ${plan.counts.operationItems} operation items · ${plan.counts.events} events`;
+ if(showMessage)alert(zeroCarpetCleanupSummary(plan));
+}
+function runZeroCarpetCleanup(){
+ const plan=zeroCarpetCleanupPlan();
+ if(!plan.counts.carpets){previewZeroCarpetCleanup();return}
+ if(!confirm(`Delete all zero-length carpet migration data?\n\n${zeroCarpetCleanupSummary(plan)}\n\nUnrelated products, carpet rolls and orders will not be changed.`))return;
+ if(!confirm('Final confirmation: create a safety snapshot, then permanently remove these zero-length carpet records and their linked data from this synchronized database?'))return;
+ if(!createLocalSnapshot(false,'before zero-length carpet cleanup')){alert('Cleanup stopped because the safety snapshot could not be created. Download an Upgrade Backup and try again.');return}
+ const before={carpets:load(CARPETDB),cuts:load(CUTDB),remnants:load(RAMDB),tags:load(TAGPRINTDB),operations:load(LOGDB),events:load(EVENTDB)};
+ try{
+  if(!save(CARPETDB,plan.carpets)||!save(CUTDB,plan.cuts)||!save(RAMDB,plan.remnants)||!save(TAGPRINTDB,plan.tags)||!save(LOGDB,plan.operations)||!save(EVENTDB,plan.events))throw new Error('One or more datasets could not be saved.');
+  localStorage.setItem(ZERO_CARPET_CLEANUP_KEY,JSON.stringify({completedAt:new Date().toISOString(),rolls:[...plan.rollKeys],counts:plan.counts}));
+  activeCarpetId=null;renderCarpetInventory();renderDashboard();previewZeroCarpetCleanup(false);
+  alert(`Zero-length carpet cleanup completed.\n\n${zeroCarpetCleanupSummary(plan)}\n\nAutomatic cloud synchronization will send the cleaned datasets to your other signed-in devices.`);
+ }catch(err){
+  save(CARPETDB,before.carpets);save(CUTDB,before.cuts);save(RAMDB,before.remnants);save(TAGPRINTDB,before.tags);save(LOGDB,before.operations);save(EVENTDB,before.events);
+  alert('Cleanup was rolled back. No zero-length data was intentionally removed because the save did not finish: '+err.message);
+ }
 }
 function migrateV13(){
  if(localStorage.getItem('runlu_v13_migrated')) return;
@@ -1454,7 +1522,7 @@ function showRack(k){const masters=loadMasters(),inv=loadInventoryRecords().filt
 }
 function totalSFcalc(x){return x.unit==='Box'&&Number(x.sfPerBox)?Number(x.quantity||0)*Number(x.sfPerBox):0}
 
-function loadSettings(){const s=loadObj(SETTINGS);$('carpetUrl').value=s.carpetUrl||'';renderCloudStatus()}
+function loadSettings(){const s=loadObj(SETTINGS);$('carpetUrl').value=s.carpetUrl||'';renderCloudStatus();setTimeout(()=>previewZeroCarpetCleanup(false),0)}
 function saveCarpetUrl(){const s=loadObj(SETTINGS);s.carpetUrl=$('carpetUrl').value.trim();save(SETTINGS,s);alert('Carpet system link saved.')}
 function openCarpetModule(){const url=loadObj(SETTINGS).carpetUrl;if(!url){alert('Please add the original Carpet Management URL in Settings first.');showPage('settings');return}window.open(url,'_blank')}
 function buildBackupPayload(){
@@ -1463,7 +1531,8 @@ function buildBackupPayload(){
   exportedAt:new Date().toISOString(),sourceUrl:location.origin+location.pathname,
   productMaster:loadMasters(),inventory:loadInventoryRecords(),orders:load(ODB),
   receiving:load(RCVDB),tasks:load(TASKDB),specialOrders:load(SPODB),operationsLog:load(LOGDB),
-  carpetInventory:load(CARPETDB),cuttingLog:load(CUTDB),
+  carpetInventory:load(CARPETDB),cuttingLog:load(CUTDB),remnants:load(RAMDB),
+  operationEvents:load(EVENTDB),tagPrintHistory:load(TAGPRINTDB),
   countSessions:load(COUNTDB),settings:loadObj(SETTINGS)
  };
 }
@@ -1503,6 +1572,7 @@ function applyBackupData(d){
  else throw new Error('Missing product data');
  save(ODB,d.orders||[]);save(RCVDB,d.receiving||[]);save(TASKDB,d.tasks||[]);save(LOGDB,d.operationsLog||d.operations||[]);
  if(d.carpetInventory)save(CARPETDB,d.carpetInventory||[]);if(d.cuttingLog)save(CUTDB,d.cuttingLog||[]);
+ if(Object.prototype.hasOwnProperty.call(d,'remnants'))save(RAMDB,d.remnants||[]);if(Object.prototype.hasOwnProperty.call(d,'operationEvents'))save(EVENTDB,d.operationEvents||[]);if(Object.prototype.hasOwnProperty.call(d,'tagPrintHistory'))save(TAGPRINTDB,d.tagPrintHistory||[]);
  save(SPODB,d.specialOrders||[]);save(COUNTDB,d.countSessions||[]);save(SETTINGS,d.settings||{});
 }
 function restoreLatestSnapshot(){
