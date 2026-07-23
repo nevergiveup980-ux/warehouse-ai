@@ -1,6 +1,6 @@
 {
-  "version": "5.5.15",
-  "name": "Field Products, Sales and Sample Transfer",
-  "build": "2026-07-23-field-products-sales-sample-transfer-1",
-  "notes": "Creates searchable Heather Choice, Platinum and Spill Blocker inventory entries; adds Sales, exact inventory-record selection, From/To locations, Store Samples transfers, physical-count-pending status and clearer before/after stock protection."
+  "version": "5.5.16",
+  "name": "Emergency Carpet Receiving Link Repair",
+  "build": "2026-07-23-emergency-carpet-receiving-link-repair-1",
+  "notes": "Automatically restores missing carpet inventory rolls from completed and locked Carpet Receiving records. Fixes cases such as RC2183 where receiving history exists but batch cutting reports that the roll is missing."
 }

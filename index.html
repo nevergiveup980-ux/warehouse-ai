@@ -666,7 +666,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="qrcode.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.5.15', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55';
+const APP_VERSION='5.5.16', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB];
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1376,6 +1376,29 @@ function applyOperationImpact(r){
  const backup={inv:load(INVDB),carpet:load(CARPETDB),cuts:load(CUTDB),ram:load(RAMDB),orders:load(ODB),events:load(EVENTDB)};const results=[];
  try{for(let i=0;i<items.length;i++){const child={...r,...items[i],id:Number(r.id)+((i+1)/1000),items:[],impactApplied:false,status:'Completed',po:r.po,customer:r.customer,operator:r.operator,type:r.type};if(!applySingleOperationImpact(child))throw new Error(`Item ${i+1} could not be completed.`);results.push(child.impactResult)}r.impactApplied=true;r.impactResult=results.join(' | ');r.appliedAt=new Date().toISOString();return true}catch(e){save(INVDB,backup.inv);save(CARPETDB,backup.carpet);save(CUTDB,backup.cuts);save(RAMDB,backup.ram);save(ODB,backup.orders);save(EVENTDB,backup.events);alert('No inventory was changed. '+e.message);return false}
 }
+function repairMissingCarpetRollsFromReceiving(showMessage=false){
+ const marker='runlu_v5516_missing_receiving_roll_repair';
+ if(localStorage.getItem(marker))return 0;
+ const operations=operationRecords(),carpets=carpetRecords(),events=load(EVENTDB),now=new Date().toISOString();let repaired=0;
+ createLocalSnapshot(false);
+ for(const operation of operations){
+  if(operation.type!=='Carpet Receiving'||operation.status!=='Completed')continue;
+  const items=Array.isArray(operation.items)&&operation.items.length?operation.items:[operation];
+  for(let i=0;i<items.length;i++){
+   const item=items[i],roll=normalizeText(item.roll||operation.roll),quantity=Number(item.quantity||operation.quantity||0);
+   if(!roll||!(quantity>0)||carpets.some(x=>normKey(x.roll)===normKey(roll)))continue;
+   const collection=normalizeText(item.collection||item.product||operation.collection||operation.product),colour=normalizeText(item.colour||operation.colour);
+   carpets.unshift({id:Date.now()+Math.random(),roll,lot:normalizeText(item.lot||operation.lot),collection,colour,length:quantity,originalLength:quantity,width:normalizeText(item.width||operation.width),location:normalizeText(item.location||operation.location)||'Receiving',measure:'FULL',status:quantity<3?'Used Up':'Active',po:operation.po||'',supplier:item.supplier||operation.supplier||'',createdAt:operation.completedAt||operation.appliedAt||now,updatedAt:now,repairedFromReceiving:true,sourceOperationId:operation.id});
+   events.unshift({id:Date.now()+Math.random(),operationId:operation.id,time:now,type:'Carpet Receiving Repair',reference:roll,result:`Missing carpet roll restored from completed receiving: ${roll} · ${quantity} ft · FULL`});
+   repaired++;
+  }
+ }
+ if(repaired){save(CARPETDB,carpets);save(EVENTDB,events)}
+ localStorage.setItem(marker,JSON.stringify({time:now,repaired}));
+ renderCarpetInventory();renderDashboard();
+ if(showMessage)alert(repaired?`${repaired} missing carpet roll(s) were restored from completed receiving records. You can retry the cutting order now.`:'No missing carpet rolls were found in completed receiving records.');
+ return repaired;
+}
 function repairCompletedCarpetOperations(showMessage=false){
  const operations=operationRecords(),cuts=cuttingRecords();let repaired=0,measureUpdated=0;
  for(const operation of operations){
@@ -1953,7 +1976,7 @@ function autoInitializeSeed(){initializeSeedDatabase(false)}
 if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
 document.querySelectorAll('#operationEditor input,#operationEditor select,#operationEditor textarea').forEach(el=>{el.addEventListener('input',scheduleOperationDraft);el.addEventListener('change',scheduleOperationDraft)});
 window.addEventListener('beforeunload',()=>{if(!$('operationEditor').classList.contains('hidden'))saveOperationDraftNow()});
-migrateV13();migrateToV21();migrateOperationsV52();migrateLegacyCarpetData(false);repairCompletedCarpetOperations(true);recoverOrderLibraries(false);restoreConversationOrders(false);autoInitializeSeed();applyV516WarehouseDataset(false);applyV5515FieldProducts(false);repairCompletedStockTransfers(true);automaticDailySnapshot();renderDashboard();renderProducts();renderInventory();renderOrders();renderReceivingHistory();renderTasks();renderMap();refreshMemory();loadSettings();renderOrderDataStatus();runDatabaseHealth(false);openCarpetFromURL();openInventoryFromURL();
+migrateV13();migrateToV21();migrateOperationsV52();migrateLegacyCarpetData(false);repairMissingCarpetRollsFromReceiving(true);repairCompletedCarpetOperations(true);recoverOrderLibraries(false);restoreConversationOrders(false);autoInitializeSeed();applyV516WarehouseDataset(false);applyV5515FieldProducts(false);repairCompletedStockTransfers(true);automaticDailySnapshot();renderDashboard();renderProducts();renderInventory();renderOrders();renderReceivingHistory();renderTasks();renderMap();refreshMemory();loadSettings();renderOrderDataStatus();runDatabaseHealth(false);openCarpetFromURL();openInventoryFromURL();
 startCloudPolling();
 </script>
 </body>
