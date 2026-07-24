@@ -1,6 +1,6 @@
 {
-  "version": "5.5.16",
-  "name": "Emergency Carpet Receiving Link Repair",
-  "build": "2026-07-23-emergency-carpet-receiving-link-repair-1",
-  "notes": "Automatically restores missing carpet inventory rolls from completed and locked Carpet Receiving records. Fixes cases such as RC2183 where receiving history exists but batch cutting reports that the roll is missing."
+  "version": "5.5.17",
+  "name": "Cut Piece Return and Child Roll",
+  "build": "2026-07-23-cut-piece-return-child-roll-1",
+  "notes": "Adds Cut Piece Return: creates 2250A/2250B child rolls without increasing the physical parent roll, preserves source and cutting history, and supports size-change corrections."
 }
