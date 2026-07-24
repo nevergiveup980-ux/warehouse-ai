@@ -1,6 +1,6 @@
 {
-  "version": "5.5.17",
-  "name": "Cut Piece Return and Child Roll",
-  "build": "2026-07-23-cut-piece-return-child-roll-1",
-  "notes": "Adds Cut Piece Return: creates 2250A/2250B child rolls without increasing the physical parent roll, preserves source and cutting history, and supports size-change corrections."
+  "version": "5.5.19",
+  "name": "Automatic Carpet Rack Capacity",
+  "build": "2026-07-24-automatic-carpet-capacity-1",
+  "notes": "Warehouse Map now calculates carpet rack usage automatically from live inventory using a 120-foot standard-roll equivalent. Receiving, cutting, transfers, returned child rolls, REM transfers and Used Up changes immediately refresh rack status, available capacity and over-capacity warnings."
 }
