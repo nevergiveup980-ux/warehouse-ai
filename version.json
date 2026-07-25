@@ -1,6 +1,6 @@
 {
-  "version": "5.5.22",
+  "version": "5.5.23",
   "name": "Cutting Allowance & Underlayment Calculator",
   "build": "2026-07-24-cutting-underlayment-calculator-1",
-  "notes": "Adds an automatic 3-inch allowance to each stock-carpet cut while preserving the customer-requested size. Adds SY-to-roll conversion, coverage and weight calculations for Heather Choice, Spill Blocker and Platinum."
+  "notes": "Adds contextual AI Scan entry points across Product Master, Inventory, Customer Orders, Special Orders, Receiving, Carpet Inventory, carpet roll editing and Command Center work. Scan results return to the originating module and prefill recognized fields for review before any inventory update."
 }

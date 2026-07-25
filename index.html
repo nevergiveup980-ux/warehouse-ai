@@ -148,7 +148,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
     <button class="module" onclick="showPage('products')"><span class="icon">📦</span><strong>Products</strong><small>Master product information and packaging specifications</small></button>
     <button class="module" onclick="showPage('inventory')"><span class="icon">📋</span><strong>Inventory</strong><small>Quantities, locations, coverage and weight</small></button>
     <button class="module carpet" onclick="showPage('carpetInventory')"><span class="icon">🟩</span><strong>Carpet Inventory</strong><small>One shared roll list for receiving, cutting, balances and Digital Cutting Log</small></button>
-    <button class="module scan" onclick="showPage('scan')"><span class="icon">📷</span><strong>AI Scan</strong><small>Camera-first inventory counting and confirmation</small></button>
+    <button class="module scan" onclick="openAIScan({target:'inventory',returnPage:'inventory',label:'Inventory Review'})"><span class="icon">📷</span><strong>AI Scan</strong><small>Camera-first inventory counting and confirmation</small></button>
     <button class="module orders" onclick="showPage('ordersHub')"><span class="icon">🚚</span><strong>Customer Orders</strong><small>Receive, ship and review order history</small></button>
     <button class="module receive" onclick="showPage('specialOrders')"><span class="icon">🏷️</span><strong>Special Orders</strong><small>Supplier-direct orders, staging and pickup tracking</small></button>
     <button class="module receive" onclick="showPage('receivingHub')"><span class="icon">📥</span><strong>Receiving & Pickup</strong><small>Supplier pickup, receiving, put-away and allocation</small></button>
@@ -221,7 +221,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="carpetInventory" class="page hidden">
   <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><div class="dayHeader"><div><h2>Carpet Inventory</h2><div class="meta">The original carpet list and Command Center now use this shared roll database. Completed receiving and cutting work updates it automatically.</div></div><button class="green" onclick="newCarpetOperation()">＋ New Roll Work</button></div>
-  <div class="carpetTools"><button class="primary" onclick="openCarpetLabelMaker()">🏷️ Double-Sided Tags</button><button class="purple" onclick="showPage('scan')">📷 Scan Inventory Sheet</button><button onclick="exportCarpetCSV()">⬇️ Export Carpet List</button><button onclick="startCommandOperation('REM / Remnant Transfer')">🧩 Create REM</button></div>
+  <div class="carpetTools"><button class="primary" onclick="openCarpetLabelMaker()">🏷️ Double-Sided Tags</button><button class="purple" onclick="openAIScan({target:'carpet',returnPage:'carpetInventory',label:'Carpet Inventory'})">📷 Scan Inventory Sheet</button><button onclick="exportCarpetCSV()">⬇️ Export Carpet List</button><button onclick="startCommandOperation('REM / Remnant Transfer')">🧩 Create REM</button></div>
   <div class="listToolbar"><input id="carpetFilter" placeholder="Search collection, colour, roll or rack..." oninput="renderCarpetInventory()"></div>
   <div id="carpetQuickFilters" class="carpetQuickFilters"><button data-filter="FULL" onclick="setCarpetQuickFilter('FULL')">FULL</button><button data-filter="CAL" onclick="setCarpetQuickFilter('CAL')">CAL</button><button data-filter="TM" onclick="setCarpetQuickFilter('TM')">TM</button><button data-filter="UNDER15" onclick="setCarpetQuickFilter('UNDER15')">Under 15′</button><button data-filter="UNDER30" onclick="setCarpetQuickFilter('UNDER30')">Under 30′</button><button data-filter="UNDER50" onclick="setCarpetQuickFilter('UNDER50')">Under 50′</button></div><div id="carpetCount" class="listCount"></div></div>
   <div id="carpetInventoryList" class="card compactList"></div>
@@ -236,7 +236,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <section id="carpetEditor" class="page hidden">
  <div class="card"><button class="back" onclick="showPage('carpetInventory')">‹ Cancel</button><h2>Edit Carpet Roll</h2><div class="notice">Changes here update the same roll used by Command Center, labels and the cutting log.</div>
  <div class="formgrid"><div><label>Operational Roll #</label><input id="ceRoll"></div><div><label>Manufacturer Roll #</label><input id="ceMfr"></div><div><label>Product Name</label><input id="ceCollection"></div><div><label>Colour</label><input id="ceColour"></div><div><label>Current Length (ft)</label><input id="ceLength" type="number" min="0" step=".01"></div><div><label>Original Length (ft)</label><input id="ceOriginal" type="number" min="0" step=".01"></div><div><label>Width</label><input id="ceWidth"></div><div><label>Rack / Location</label><input id="ceLocation"></div><div><label>LOT</label><input id="ceLot"></div><div><label>Measure</label><select id="ceMeasure"><option></option><option>TM</option><option>CAL</option><option>CAL*</option><option>FULL</option></select></div><div><label>Status</label><select id="ceStatus"><option>Active</option><option>Pending</option><option>Used Up</option><option>Check</option></select></div><div class="full"><label>Review Note</label><textarea id="ceNote"></textarea></div></div>
- <div class="actions"><button class="green" onclick="saveCarpetEdit()">Save Changes</button><button class="red" onclick="deleteCarpetRecord()">Delete Roll</button></div></div>
+ <div class="actions"><button class="purple" onclick="openAIScan({target:'carpetEditor',returnPage:'carpetEditor',label:'Carpet Roll'})">📷 AI Scan Roll Label</button><button class="green" onclick="saveCarpetEdit()">Save Changes</button><button class="red" onclick="deleteCarpetRecord()">Delete Roll</button></div></div>
 </section>
 
 <section id="carpetLabelMaker" class="page hidden">
@@ -264,13 +264,13 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="products" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Products</h2>
-<div class="actions"><button class="green" onclick="newProduct()">＋ New Product</button><button onclick="showPage('search')">Search Products</button><button class="purple" onclick="openGeneralTagCenter()">🏷️ Tag Center</button></div></div>
+<div class="actions"><button class="green" onclick="newProduct()">＋ New Product</button><button class="purple" onclick="scanNewProduct()">📷 Scan New Product</button><button onclick="showPage('search')">Search Products</button><button class="purple" onclick="openGeneralTagCenter()">🏷️ Tag Center</button></div></div>
 <div id="productsList" class="card"></div>
 </section>
 
 <section id="inventory" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Inventory</h2>
-<div class="listToolbar"><input id="inventoryFilter" placeholder="Search colour, product or location..." oninput="renderInventory()"><button class="green" onclick="newInventoryReceiving()">＋</button><button class="purple" onclick="openGeneralTagCenter()">🏷️</button></div>
+<div class="listToolbar"><input id="inventoryFilter" placeholder="Search colour, product or location..." oninput="renderInventory()"><button class="green" onclick="newInventoryReceiving()">＋</button><button class="purple" onclick="openAIScan({target:'inventory',returnPage:'inventory',label:'Inventory'})">📷</button><button class="purple" onclick="openGeneralTagCenter()">🏷️</button></div>
 <div id="inventoryCount" class="listCount"></div></div>
 <div id="inventoryList" class="card compactList"></div>
 </section>
@@ -284,6 +284,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="editor" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('products')">‹ Back</button><h2>Add / Edit Product</h2>
+<div class="actions"><button class="purple" onclick="openAIScan({target:'product',returnPage:'editor',label:'Product Master'})">📷 AI Scan Product Label</button></div>
 <div class="sectionTitle">Master Product Data</div>
 <div class="notice"><b>Product variants stay separate.</b><br>Color and dimensions are part of the product identity. For example, Grand Cru · Barton 1 and Grand Cru · Barton 2 will be saved as two different products even when the product name and brand are the same.</div>
 <div class="formgrid">
@@ -324,8 +325,8 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 </section>
 
 <section id="scan" class="page hidden">
-<div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>AI Scan</h2>
-<div class="notice"><b>V5.5.22 Cutting & Underlayment Calculator</b><br>Stock carpet cutting automatically includes the warehouse 3-inch allowance. Heather Choice, Spill Blocker and Platinum can be entered in SY and converted to whole rolls for inventory review. Nothing changes inventory until you review and save.</div>
+<div class="card"><button class="back" onclick="returnFromAIScan()">‹ Back</button><h2>AI Scan</h2>
+<div id="scanContextNotice" class="notice"><b>Shared AI Scan</b><br>Open it from a work page to return the recognized fields to that page. Nothing changes inventory until you review and save.</div>
 <div class="sectionTitle">Stop & Snap Camera Test</div>
 <div class="notice"><b>Faster camera-assisted capture</b><br>Scan one sheet or label at a time and let it fill most of the frame. Auto Capture now needs only a brief steady pause. You can also tap Capture at any time.</div>
 <div id="cameraStage" class="cameraStage">
@@ -375,7 +376,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <div class="quick"><button onclick="setScanQty(10)">10</button><button onclick="setScanQty(20)">20</button><button onclick="setScanQty(22)">22</button><button onclick="setScanQty(55)">55</button></div>
 <label>Notes / visible label text</label><textarea id="scanNotes" placeholder="Example: label and physical count verified; damaged cartons excluded"></textarea>
 <div id="scanExisting" class="notice" style="margin-top:10px">Select a product and location to see the current recorded quantity.</div>
-<div class="actions"><button class="primary" onclick="addScanToBatch()">＋ Add to Review List</button><button class="green" onclick="saveScanBatch()">Save Reviewed Items</button><button onclick="clearScan()">Clear</button></div>
+<div class="actions"><button id="scanUseResultButton" class="green hidden" onclick="applyScanToContext()">Use Scan in Previous Page</button><button class="primary" onclick="addScanToBatch()">＋ Add to Review List</button><button class="green" onclick="saveScanBatch()">Save Reviewed Items</button><button onclick="clearScan()">Clear</button></div>
 </div>
 <div class="card"><h2>Count Review List</h2><div id="scanBatchList" class="empty">No items waiting for review.</div>
 </div>
@@ -383,13 +384,14 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="ordersHub" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Customer Orders</h2>
-<div class="listToolbar"><input id="orderFilter" placeholder="Search customer, PO or location" oninput="renderOrders()"><button class="green" onclick="newOrder('Ship')">＋</button></div>
+<div class="listToolbar"><input id="orderFilter" placeholder="Search customer, PO or location" oninput="renderOrders()"><button class="purple" onclick="scanNewOrder()">📷</button><button class="green" onclick="newOrder('Ship')">＋</button></div>
 <div id="orderCount" class="listCount"></div></div>
 <div id="orderList" class="card compactList"></div>
 </section>
 
 <section id="orderEditor" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('ordersHub')">‹ Back</button><h2>Customer Order Details</h2>
+<div class="actions"><button class="purple" onclick="openAIScan({target:'order',returnPage:'orderEditor',label:'Customer Order'})">📷 AI Scan Order</button></div>
 <div class="formgrid">
 <div><label>Date</label><input id="orderDate" type="date"></div><div><label>Order Type</label><select id="orderType"><option>Receive</option><option>Ship</option></select></div>
 <div><label>Customer / Supplier</label><input id="customer"></div><div><label>Salesperson</label><input id="salesperson"></div>
@@ -411,7 +413,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="specialOrders" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Special Orders</h2>
-<div class="listToolbar"><input id="specialFilter" placeholder="Search customer, PO or location" oninput="renderSpecialOrders()"><button class="green" onclick="newSpecialOrder()">＋</button></div>
+<div class="listToolbar"><input id="specialFilter" placeholder="Search customer, PO or location" oninput="renderSpecialOrders()"><button class="purple" onclick="scanNewSpecialOrder()">📷</button><button class="green" onclick="newSpecialOrder()">＋</button></div>
 <div id="specialCount" class="listCount"></div>
 <div style="display:none"><b id="specialWaiting">0</b><b id="specialReview">0</b><b id="specialDone">0</b></div></div>
 <div id="specialOrderList" class="card compactList"></div>
@@ -419,6 +421,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 <section id="specialOrderEditor" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('specialOrders')">‹ Back</button><h2>Special Order</h2>
+<div class="actions"><button class="purple" onclick="openAIScan({target:'specialOrder',returnPage:'specialOrderEditor',label:'Special Order'})">📷 AI Scan Order</button></div>
 <div class="formgrid">
 <div><label>Customer</label><input id="spCustomer" list="memory_customer"></div>
 <div><label>PO Number</label><input id="spPo" list="memory_po"></div>
@@ -441,12 +444,14 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <div class="notice"><b>V5 workflow:</b> create a supplier pickup task, mark it picked up, receive the material, choose a put-away location, and optionally allocate it to a customer order. Inventory changes only when receiving is completed.</div></div>
 <div class="grid2">
 <button class="module receive" onclick="newReceiving()"><span class="icon">🚚</span><strong>New Pickup / Receiving</strong><small>Create a supplier collection and receiving record</small></button>
+<button class="module scan" onclick="scanNewReceiving()"><span class="icon">📷</span><strong>Scan Supplier Document</strong><small>Scan first, then review the filled receiving record</small></button>
 <button class="module" onclick="renderReceivingHistory();showPage('receivingHistory')"><span class="icon">🕘</span><strong>Receiving History</strong><small>Review pickup and receiving records</small></button>
 </div>
 </section>
 
 <section id="receivingEditor" class="page hidden">
 <div class="card"><button class="back" onclick="showPage('receivingHub')">‹ Back</button><h2>Pickup & Receiving Record</h2>
+<div class="actions"><button class="purple" onclick="openAIScan({target:'receiving',returnPage:'receivingEditor',label:'Pickup / Receiving'})">📷 AI Scan Supplier Document</button></div>
 <div class="formgrid">
 <div><label>Date</label><input id="rcvDate" type="date"></div><div><label>Status</label><select id="rcvStatus"><option>Waiting for Pickup</option><option>Picked Up</option><option>Received</option><option>Put Away</option><option>Completed</option></select></div>
 <div><label>Supplier</label><input id="rcvSupplier" list="memory_supplier"><datalist id="memory_supplier"></datalist></div><div><label>Driver</label><input id="rcvDriver" value="John"></div>
@@ -670,12 +675,14 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="qrcode.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.5.22', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='5.5.23', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB];
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false;
+let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
 let generalTagReturnPage='inventory';
 const SCANDICT='runlu_scan_learning_dictionary';
+const AISCANCTX='runlu_ai_scan_context_v5523';
 const $=id=>document.getElementById(id);
 function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
 function loadObj(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch{return{}}}
@@ -741,7 +748,7 @@ function showPage(id){
  document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden')); $(id).classList.remove('hidden');
  document.body.classList.toggle('formEntry',['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].includes(id));
  if(id==='home')renderDashboard(); if(id==='carpetInventory')renderCarpetInventory(); if(id==='products')renderProducts(); if(id==='inventory')renderInventory();if(id==='generalTagCenter')renderGeneralTags();
- if(id==='search')renderSearch(); if(id==='scan'){refreshProducts();renderScanBatch();updateScanExisting();} if(id==='orderHistory')renderOrders();
+ if(id==='search')renderSearch(); if(id==='scan'){refreshProducts();renderScanBatch();updateScanExisting();updateScanContextUI();} if(id==='orderHistory')renderOrders();
  if(id==='databaseHealth')runDatabaseHealth(false); if(id==='databaseExplorer')renderDatabaseExplorer();
  if(id==='warehouseMap')renderMap(); if(id==='reports')renderReports();if(id==='operations')renderOperationsDays();if(id==='operationsDay')renderOperationsDay();if(id==='taskCenter')renderTasks();if(id==='receivingHistory')renderReceivingHistory();if(id==='specialOrders')renderSpecialOrders();if(id==='orderDataCenter')renderOrderDataCenter(); if(id==='settings'){loadSettings();renderBackupStatus();renderOrderDataStatus();runDatabaseHealth(false);setTimeout(()=>checkForUpdate(true),250);} if(id==='developer'){runDiagnostics();inspectStorage();}
  window.scrollTo(0,0);
@@ -1020,6 +1027,7 @@ function autoFillMasterFromName(){
 $('name').addEventListener('change',autoFillMasterFromName);
 function clearForm(){editId=null;photoData='';fields.forEach(x=>$(x).value='');$('category').value='Carpet Roll';$('coverageUnit').value='SF / Box';$('locationType').value='Rack';$('unit').value='Box';$('photo').value='';refreshMemory()}
 function newProduct(){clearForm();showPage('editor')}
+function scanNewProduct(){newProduct();openAIScan({target:'product',returnPage:'editor',label:'Product Master'})}
 function num(id){const v=parseFloat($(id).value);return Number.isFinite(v)?v:0}
 function saveProduct(){
  const name=normalizeText($('name').value),location=normalizeText($('location').value),sku=normalizeText($('sku').value);
@@ -1205,13 +1213,44 @@ function renderSearch(){
  const groups=[['Carpet Inventory','🟩',carpetResults],['General Inventory','📋',inventoryResults],['Product Master','📦',productResults],['Operations','🛠️',operationResults],['Customer Orders','🚚',orderResults],['Special Orders','🏷️',specialResults],['Cutting History','✂️',cutResults],['Receiving','📥',receivingResults]],total=groups.reduce((s,g)=>s+g[2].length,0);$('globalSearchCount').textContent=`${total} result(s) across Warehouse OS`;$('searchList').innerHTML=total?groups.map(g=>globalGroup(...g)).join(''):'<div class="empty">No matches anywhere in Warehouse OS.</div>';
 }
 function refreshProducts(){$('productList').innerHTML=loadMasters().map(x=>`<option value="${esc(productDisplayLabel(x))}"></option>`).join('')}
+function scanContext(){if(aiScanContext)return aiScanContext;try{aiScanContext=JSON.parse(sessionStorage.getItem(AISCANCTX)||'null')}catch{aiScanContext=null}return aiScanContext}
+function setScanContext(ctx){aiScanContext=ctx||null;if(aiScanContext)sessionStorage.setItem(AISCANCTX,JSON.stringify(aiScanContext));else sessionStorage.removeItem(AISCANCTX);updateScanContextUI()}
+function scanDocumentForTarget(target){if(['carpet','carpetEditor'].includes(target))return 'Carpet Roll Label';if(['order','specialOrder','operation'].includes(target))return 'Customer Order / Cutting Sheet';if(target==='receiving')return 'Supplier Pickup / Receiving';if(target==='product')return 'Product / Carton Label';return 'Inventory Count Photo'}
+function openAIScan(ctx={}){
+ const context={target:'inventory',returnPage:'home',label:'Warehouse OS',...ctx};setScanContext(context);clearScan(true);$('scanDocumentType').value=scanDocumentForTarget(context.target);
+ if(context.target==='receiving')$('scanMode').value='add';else if(context.target==='inventory')$('scanMode').value='replace';else if(context.target==='operation'&&['Shipping','Carpet Cutting','Order Picking & Preparation'].includes(context.workType||''))$('scanMode').value='subtract';
+ showPage('scan');updateScanContextUI()
+}
+function returnFromAIScan(){const ctx=scanContext();showPage(ctx?.returnPage||'home');setScanContext(null)}
+function updateScanContextUI(){
+ const ctx=scanContext(),notice=$('scanContextNotice'),button=$('scanUseResultButton');if(!notice||!button)return;
+ if(ctx?.target==='inventory'){notice.innerHTML='<b>Inventory Scan</b><br>Analyze the photo, review the product, location and quantity, then add it to the Review List. Inventory changes only after Save Reviewed Items.';button.classList.add('hidden')}
+ else if(ctx){notice.innerHTML=`<b>Scanning for ${esc(ctx.label||'previous page')}</b><br>Analyze the photo, review the fields, then tap the green button to return and fill the original form. Inventory is not changed here.`;button.textContent=`Use Scan in ${ctx.label||'Previous Page'}`;button.classList.remove('hidden')}
+ else{notice.innerHTML='<b>Shared AI Scan</b><br>Open it from a work page to return the recognized fields to that page. Nothing changes inventory until you review and save.';button.classList.add('hidden')}
+}
+function scanStructuredResult(){
+ const raw=normalizeText([$('scanLabelText').value,$('scanNotes').value].filter(Boolean).join('\n')),m=scanMaster(),pick=patterns=>firstMatch(raw,patterns)||'';
+ return {raw,master:m,product:m?.name||normalizeText($('scanProduct').value),brand:m?.brand||'',series:m?.series||'',color:m?.color||'',sku:m?.sku||pick([/\b(?:SKU|STYLE|ITEM)\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9._-]+)\b/i]),location:normalizeText($('scanLocation').value),quantity:Number($('scanQty').value)||0,unit:$('scanUnit').value,lot:normalizeText($('scanLot').value),po:normalizeText($('scanPo').value),notes:normalizeText($('scanNotes').value),roll:pick([/\b(?:OPERATIONAL\s+)?(?:RC|ROLL)\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]+)\b/i]),mfr:pick([/\b(?:MFG\.?|MANUFACTURER)\s*(?:ROLL)?\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]+)\b/i]),customer:pick([/\b(?:SOLD\s+TO|CUSTOMER)\s*[:#-]?\s*([^\n\r]+)/i]),supplier:pick([/\bSUPPLIER\s*[:#-]?\s*([^\n\r]+)/i]),sales:pick([/\b(?:CLERK|SALES(?:PERSON)?)\s*[:#-]?\s*([^\n\r]+)/i]),feet:pick([/\b(\d+\s*['’]\s*\d{0,2}\s*(?:["”])?)/i])}
+}
+function fillIf(id,value){const el=$(id);if(el&&value!==''&&value!=null)el.value=value}
+function applyScanToContext(){
+ const ctx=scanContext();if(!ctx){alert('Open AI Scan from the page you want to fill.');return}const r=scanStructuredResult(),target=ctx.target;
+ if(target==='operation'){fillIf('operationPO',r.po);fillIf('operationCustomer',r.customer);fillIf('operationSupplier',r.supplier);fillIf('operationSales',r.sales);if(r.master){$('operationProduct').value=operationProductLabel(r.master);$('operationProduct').dataset.productId=r.master.id}else fillIf('operationProduct',r.product);fillIf('operationCollection',r.product);fillIf('operationColour',r.color);fillIf('operationRoll',r.roll);fillIf('operationLot',r.lot);fillIf('operationLocation',r.location);if(r.quantity)fillIf('operationQty',r.quantity);fillIf('operationUnit',r.unit);fillIf('operationNotes',r.notes||r.raw);$('operationSource').value='AI Scan';operationProductChanged();updateOperationForm()}
+ else if(target==='order'){fillIf('customer',r.customer);fillIf('salesperson',r.sales);fillIf('poNumber',r.po);fillIf('orderProduct',r.master?productDisplayLabel(r.master):r.product);if(r.quantity)fillIf('orderQty',r.quantity);fillIf('orderUnit',r.unit);fillIf('orderLocation',r.location);fillIf('orderNotes',r.notes||r.raw)}
+ else if(target==='specialOrder'){fillIf('spCustomer',r.customer);fillIf('spPo',r.po);fillIf('spSupplier',r.supplier);fillIf('spProduct',r.product);fillIf('spColor',r.color);if(r.quantity)fillIf('spQty',r.quantity);fillIf('spUnit',r.unit);fillIf('spLocation',r.location);fillIf('spNotes',r.notes||r.raw)}
+ else if(target==='receiving'){fillIf('rcvSupplier',r.supplier);fillIf('rcvPo',r.po);fillIf('rcvProduct',r.master?productDisplayLabel(r.master):r.product);if(r.quantity)fillIf('rcvQty',r.quantity);fillIf('rcvUnit',r.unit);fillIf('rcvLocation',r.location);fillIf('rcvLot',r.lot);fillIf('rcvNotes',r.notes||r.raw);updateReceivingCheck()}
+ else if(target==='product'){fillIf('name',r.product);fillIf('brand',r.brand);fillIf('series',r.series);fillIf('color',r.color);fillIf('sku',r.sku);if(r.quantity)fillIf('quantity',r.quantity);fillIf('unit',r.unit);fillIf('location',r.location);fillIf('lotNumber',r.lot);fillIf('inventoryPo',r.po);fillIf('notes',r.notes||r.raw)}
+ else if(target==='carpetEditor'){fillIf('ceRoll',r.roll);fillIf('ceMfr',r.mfr);fillIf('ceCollection',r.product);fillIf('ceColour',r.color);fillIf('ceLocation',r.location);fillIf('ceLot',r.lot);if(r.feet){const p=r.feet.match(/(\d+)\D*(\d+)?/);if(p)fillIf('ceLength',Number(p[1])+(Number(p[2]||0)/12))}fillIf('ceNote',r.notes||r.raw)}
+ else if(target==='carpet'){setScanContext(null);showPage('carpetInventory');startCommandOperation('Carpet Receiving');fillIf('operationRoll',r.roll);fillIf('operationCollection',r.product);fillIf('operationColour',r.color);fillIf('operationLot',r.lot);fillIf('operationLocation',r.location);fillIf('operationPO',r.po);fillIf('operationNotes',r.notes||r.raw);return}
+ const page=ctx.returnPage||'home';setScanContext(null);showPage(page)
+}
 function adjustScan(d){$('scanQty').value=Math.max(0,(Number($('scanQty').value)||0)+d);updateScanExisting()}
 function setScanQty(n){$('scanQty').value=n;updateScanExisting()}
 function scanMaster(){return findMasterByNameOrSku($('scanProduct').value)}
 function scanExistingRecord(){const m=scanMaster(),loc=normKey($('scanLocation').value),lot=normKey($('scanLot').value);if(!m||!loc)return null;return loadInventoryRecords().find(v=>v.masterId===m.id&&normKey(v.location)===loc&&(!lot||normKey(v.lotNumber)===lot))||null}
 function updateScanExisting(){const m=scanMaster(),r=scanExistingRecord(),mode=$('scanMode')?.value||'replace',qty=Number($('scanQty')?.value||0);if(!m){$('scanExisting').innerHTML='Choose an existing product by name or SKU. New products should first be created in Product Master.';return}const current=Number(r?.quantity||0);const result=mode==='add'?current+qty:mode==='subtract'?Math.max(0,current-qty):qty;$('scanExisting').innerHTML=`<b>${esc(m.name)}${m.color?' · '+esc(m.color):''}</b><br>Current at this location: <b>${current} ${esc(r?.unit||$('scanUnit').value)}</b><br>After this operation: <b>${Number(result.toFixed(2))} ${esc($('scanUnit').value)}</b>${r?.lotNumber?'<br>Existing lot: '+esc(r.lotNumber):''}`}
 $('scanMode').addEventListener('change',updateScanExisting);$('rcvProduct').addEventListener('input',updateReceivingCheck);$('rcvQty').addEventListener('input',updateReceivingCheck);$('scanQty').addEventListener('input',updateScanExisting);
-function clearScan(keepBatch=true){stopStopSnapCamera();clearSmartDetection();scanPhoto='';$('scanPreview').classList.add('hidden');$('scanPreview').src='';$('photoReview')?.classList.add('hidden');$('scanPhoto').value='';['scanProduct','scanLocation','scanLot','scanPo','scanNotes'].forEach(x=>$(x).value='');$('scanQty').value=0;$('scanUnit').value='Box';$('scanMode').value='replace';$('scanLocationType').value='Rack';if(!keepBatch)scanBatch=[];refreshMemory();updateScanExisting();renderScanBatch()}
+function clearScan(keepBatch=true){stopStopSnapCamera();clearSmartDetection();scanPhoto='';$('scanPreview').classList.add('hidden');$('scanPreview').src='';$('photoReview')?.classList.add('hidden');$('scanPhoto').value='';['scanLabelText','scanProduct','scanLocation','scanLot','scanPo','scanNotes'].forEach(x=>$(x).value='');$('scanQty').value=0;$('scanUnit').value='Box';$('scanMode').value='replace';$('scanLocationType').value='Rack';if(!keepBatch)scanBatch=[];refreshMemory();updateScanExisting();renderScanBatch()}
 function addScanToBatch(){const check=scanSafetyCheck(true);if(!check.ok){alert('This scan cannot be added yet. Review the red validation messages.');return}const m=scanMaster(),loc=normalizeText($('scanLocation').value),qty=Number($('scanQty').value),documentType=detectScanDocumentType($('scanLabelText').value);const item={id:Date.now()+Math.random(),masterId:m.id,productName:m.name,color:m.color||'',documentType,location:loc,locationType:$('scanLocationType').value,quantity:qty,unit:$('scanUnit').value,mode:$('scanMode').value,lotNumber:normalizeText($('scanLot').value),poNumber:normalizeText($('scanPo').value),notes:normalizeText($('scanNotes').value),photo:scanPhoto,created:new Date().toLocaleString()};scanBatch.push(item);const continuous=$('continuousScanEnabled')?.checked;renderScanBatch();clearScan(true);if(continuous){setTimeout(startStopSnapCamera,250)}alert('Added to the review list. Review all items, then tap Save Reviewed Items.')}
 function removeScanBatch(id){scanBatch=scanBatch.filter(x=>x.id!==id);renderScanBatch()}
 function renderScanBatch(){const el=$('scanBatchList');if(!el)return;if(!scanBatch.length){el.className='empty';el.innerHTML='No items waiting for review.';return}el.className='';el.innerHTML=scanBatch.map((x,i)=>`<div class="item"><div class="name">${i+1}. ${esc(x.productName)}${x.color?' · '+esc(x.color):''}</div><div class="meta">${esc(x.documentType||'Inventory Scan')} · ${esc(x.location)} · ${esc(x.mode)}${x.lotNumber?' · Lot '+esc(x.lotNumber):''}${x.poNumber?' · PO '+esc(x.poNumber):''}</div><div class="qty">${x.quantity} ${esc(x.unit)}</div>${x.photo?`<img class="thumb" src="${x.photo}">`:''}${x.notes?`<div class="meta">${esc(x.notes)}</div>`:''}<div class="actions"><button class="red" onclick="removeScanBatch(${x.id})">Remove</button></div></div>`).join('')}
@@ -1221,6 +1260,7 @@ function saveScan(){addScanToBatch()}
 function todayISO(){const d=new Date(),year=d.getFullYear(),month=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${year}-${month}-${day}`}
 function clearOrder(){customerEditId=null;orderPhotoData='';['customer','salesperson','poNumber','soNumber','orderProduct','orderQty','orderLocation','handledBy','orderNotes'].forEach(x=>$(x).value='');$('orderDate').value=todayISO();$('orderType').value='Receive';$('orderUnit').value='Box';$('orderPhoto').value='';$('deleteCustomerOrderButton')?.classList.add('hidden')}
 function newOrder(type='Receive'){clearOrder();refreshProducts();$('orderType').value=type;showPage('orderEditor')}
+function scanNewOrder(){newOrder('Ship');openAIScan({target:'order',returnPage:'orderEditor',label:'Customer Order'})}
 function editCustomerOrder(id){const o=load(ODB).find(x=>x.id===id);if(!o)return;clearOrder();customerEditId=id;$('orderDate').value=o.date||todayISO();$('orderType').value=o.type||'Ship';$('customer').value=o.customer||'';$('salesperson').value=o.salesperson||'';$('poNumber').value=o.poNumber||'';$('soNumber').value=o.soNumber||'';$('orderProduct').value=o.product||'';$('orderQty').value=o.quantity||'';$('orderUnit').value=o.unit||'Box';$('orderLocation').value=o.location||'';$('handledBy').value=o.handledBy||'';$('orderNotes').value=o.notes||'';orderPhotoData=o.photo||'';$('deleteCustomerOrderButton')?.classList.remove('hidden');showPage('orderEditor')}
 function saveOrder(){
  const customer=$('customer').value.trim(),po=$('poNumber').value.trim()||$('soNumber').value.trim(),location=$('orderLocation').value.trim();
@@ -1243,6 +1283,7 @@ function renderOrders(){
 
 function clearReceiving(){receivingPhotoData='';['rcvSupplier','rcvPo','rcvOrder','rcvProduct','rcvLocation','rcvLot','rcvNotes'].forEach(id=>$(id).value='');$('rcvDate').value=todayISO();$('rcvStatus').value='Waiting for Pickup';$('rcvDriver').value='John';$('rcvPallets').value=1;$('rcvPerPallet').value=55;$('rcvLoose').value=0;$('rcvQty').value=55;$('rcvUnit').value='Carton';$('rcvTruck').value='Company Truck';$('rcvPhoto').value='';updateReceivingCheck()}
 function newReceiving(){clearReceiving();refreshProducts();showPage('receivingEditor')}
+function scanNewReceiving(){newReceiving();openAIScan({target:'receiving',returnPage:'receivingEditor',label:'Pickup / Receiving'})}
 function newInventoryReceiving(){newReceiving();$('rcvStatus').value='Received';$('rcvLocation').value='Receiving';updateReceivingCheck()}
 function newReceivingForProduct(masterId){newInventoryReceiving();const m=loadMasters().find(x=>x.id===masterId);if(m){$('rcvProduct').value=m.name;$('rcvPerPallet').value=m.boxesPerPallet||55;calcReceivingQty();updateReceivingCheck()}}
 function newReceivingForRecord(recordId){const r=loadInventoryRecords().find(x=>x.id===recordId);if(!r){newInventoryReceiving();return}newReceivingForProduct(r.masterId);$('rcvLocation').value=r.location||'Receiving';$('rcvLot').value=r.lotNumber||'';$('rcvUnit').value=r.unit||'Carton';updateReceivingCheck()}
@@ -1256,6 +1297,7 @@ function deleteReceivingRecord(id){const rows=load(RCVDB),r=rows.find(x=>String(
 function dayDiff(dateStr){if(!dateStr)return 0;const d=new Date(dateStr),now=new Date();return Math.max(0,Math.floor((now-d)/86400000))}
 function cleanupSpecialOrders(){const rows=load(SPODB),now=Date.now();const keep=rows.filter(r=>{if(!['Picked Up','Cancelled'].includes(r.status))return true;const base=r.pickedUpAt||r.cancelledAt||r.updatedAt||r.createdAt;if(!base)return true;return (now-new Date(base).getTime())<365*86400000});if(keep.length!==rows.length)save(SPODB,keep);return keep}
 function newSpecialOrder(){specialEditId=null;clearSpecialOrder();showPage('specialOrderEditor')}
+function scanNewSpecialOrder(){newSpecialOrder();openAIScan({target:'specialOrder',returnPage:'specialOrderEditor',label:'Special Order'})}
 function clearSpecialOrder(){['spCustomer','spPo','spSupplier','spProduct','spColor','spQty','spWeight','spLocation','spNotes'].forEach(id=>$(id).value='');$('spUnit').value='Carton';$('spStatus').value='Waiting for Arrival';$('spAutoDates').textContent='Received and pickup dates will be recorded automatically when the status changes.';if(!specialEditId)$('deleteSpecialOrderButton')?.classList.add('hidden')}
 function editSpecialOrder(id){const r=load(SPODB).find(x=>x.id===id);if(!r)return;specialEditId=id;$('spCustomer').value=r.customer||'';$('spPo').value=r.po||'';$('spSupplier').value=r.supplier||'';$('spProduct').value=r.product||'';$('spColor').value=r.color||'';$('spQty').value=r.quantity||'';$('spUnit').value=r.unit||'Carton';$('spWeight').value=r.weight||'';$('spLocation').value=r.location||'';$('spNotes').value=r.notes||'';$('spStatus').value=r.status||'Waiting for Arrival';$('spAutoDates').innerHTML=`Received: <b>${esc(r.receivedAt?new Date(r.receivedAt).toLocaleString():'Not recorded')}</b><br>Picked up: <b>${esc(r.pickedUpAt?new Date(r.pickedUpAt).toLocaleString():'Not recorded')}</b>`;$('deleteSpecialOrderButton')?.classList.remove('hidden');showPage('specialOrderEditor')}
 function saveSpecialOrder(){const customer=$('spCustomer').value.trim(),product=$('spProduct').value.trim(),qty=Number($('spQty').value),status=$('spStatus').value;if(!customer||!$('spLocation').value.trim()){alert('Customer and Location are required. PO and other details can be added later.');return}const rows=load(SPODB),now=new Date().toISOString();let r=specialEditId?rows.find(x=>x.id===specialEditId):null;if(!r){r={id:Date.now(),createdAt:now};rows.unshift(r)}const oldStatus=r.status;r.customer=customer;r.po=$('spPo').value.trim();r.supplier=$('spSupplier').value.trim();r.product=product;r.color=$('spColor').value.trim();r.quantity=qty;r.unit=$('spUnit').value;r.weight=Number($('spWeight').value)||0;r.location=$('spLocation').value.trim();r.notes=$('spNotes').value.trim();r.status=status;r.updatedAt=now;if(['Received','Ready for Pickup','Picked Up'].includes(status)&&!r.receivedAt)r.receivedAt=now;if(status==='Picked Up'&&!r.pickedUpAt)r.pickedUpAt=now;if(status==='Cancelled'&&!r.cancelledAt)r.cancelledAt=now;if(oldStatus==='Picked Up'&&status!=='Picked Up')r.pickedUpAt='';if(!save(SPODB,rows))return;specialEditId=null;refreshMemory();renderSpecialOrders();showPage('specialOrders')}
@@ -1347,7 +1389,7 @@ function operationQuantityLabel(x){
 }
 function startCommandOperation(type){newOperation();$('operationType').value=type;updateOperationForm();}
 function setOperationEntryMode(source){$('operationSource').value=source==='Manual'?'Manual':source;}
-function openOperationScanner(source){sessionStorage.setItem('runlu_operation_scan_type',$('operationType').value);sessionStorage.setItem('runlu_operation_scan_source',source);$('operationSource').value=source==='Photo Import'?'AI Scan':source;showPage('scan');}
+function openOperationScanner(source){const workType=$('operationType').value;sessionStorage.setItem('runlu_operation_scan_type',workType);sessionStorage.setItem('runlu_operation_scan_source',source);$('operationSource').value=source==='Photo Import'?'AI Scan':source;openAIScan({target:'operation',returnPage:'operationEditor',label:workType||'Warehouse Work',workType,source})}
 function updateOperationForm(){
  const type=$('operationType').value,showRoll=['Carpet Cutting','Carpet Receiving','Cut Piece Return','REM / Remnant Transfer'].includes(type),showLength=showRoll||$('operationUnit').value==='Foot';$('operationRollWrap').style.display=showRoll?'block':'none';$('operationLotWrap').style.display=showRoll?'block':'none';$('operationWidthWrap').style.display=['Carpet Receiving','Cut Piece Return','REM / Remnant Transfer'].includes(type)?'block':'none';$('operationInchesWrap').style.display=showLength?'block':'none';$('operationQtyLabel').textContent=showLength?(type==='Cut Piece Return'?'Returned Piece Length':'Feet'):'Quantity';
  const transfer=['Order Transfer & Storage','Sample Checkout','Sample Return'].includes(type);$('operationToLocationWrap').style.display=transfer?'block':'none';$('operationLocationLabel').textContent=transfer?'From Location':'Location';if(type==='Sample Checkout'&&!$('operationToLocation').value)$('operationToLocation').value='Store Samples';
