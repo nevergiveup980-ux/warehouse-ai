@@ -1,6 +1,6 @@
 {
-  "version": "5.5.24",
-  "name": "Multi-page Carpet Manifest Receiving",
-  "build": "2026-07-25-multipage-carpet-manifest-1",
-  "notes": "Adds a dedicated multi-page carpet receiving workspace with multiple photo pages, OCR or pasted-text parsing, editable roll-by-roll review, duplicate detection, blocking validation, and atomic batch creation of separate FULL carpet inventory records with manufacturer roll, lot, dimensions, square yards, weight, supplier and PO traceability."
+  "version": "5.5.25",
+  "name": "Installer Carpet Return",
+  "build": "2026-07-25-installer-return-1",
+  "notes": "Adds a dedicated Installer Return workflow. Enter the existing source roll and returned feet/inches; the system creates the next independent child roll such as RC2080A, preserves the original source balance, copies product/lot details, marks the returned piece TM, and keeps full traceability."
 }
