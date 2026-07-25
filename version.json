@@ -1,6 +1,6 @@
 {
-  "version": "5.5.20",
-  "name": "Local Date and Exact Shipping Deduction",
-  "build": "2026-07-24-local-date-shipping-deduction-1",
-  "notes": "Automatic work dates now use the device's local Calgary date instead of UTC. Completed Shipping work now deducts every Stock item from its exact selected inventory record, including multi-item orders, and records the before-and-after balance."
+  "version": "5.5.22",
+  "name": "Cutting Allowance & Underlayment Calculator",
+  "build": "2026-07-24-cutting-underlayment-calculator-1",
+  "notes": "Adds an automatic 3-inch allowance to each stock-carpet cut while preserving the customer-requested size. Adds SY-to-roll conversion, coverage and weight calculations for Heather Choice, Spill Blocker and Platinum."
 }
