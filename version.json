@@ -1,6 +1,6 @@
 {
-  "version": "5.5.30",
-  "name": "iPhone Local OCR",
-  "build": "2026-07-26-local-ocr-fallback",
-  "notes": "Adds an offline, iPhone-compatible photo text reader when the browser TextDetector API is unavailable. Detected text still goes through the existing review and classification workflow before any inventory change."
+  "version": "5.5.31",
+  "name": "Flat Upload OCR Path Fix",
+  "build": "2026-07-26-flat-root-ocr-path",
+  "notes": "Fixes iPhone local OCR loading when GitHub files are uploaded flat beside index.html. All OCR scripts, language data and engine files now load from the website root."
 }
