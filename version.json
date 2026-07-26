@@ -1,6 +1,6 @@
 {
-  "version": "5.5.31",
-  "name": "Flat Upload OCR Path Fix",
-  "build": "2026-07-26-flat-root-ocr-path",
-  "notes": "Fixes iPhone local OCR loading when GitHub files are uploaded flat beside index.html. All OCR scripts, language data and engine files now load from the website root."
+  "version": "5.5.32",
+  "name": "Structured AI Scan Review",
+  "build": "2026-07-26-structured-ocr-review",
+  "notes": "Shows customer, PO/order, Sales/Clerk, products, colours, quantities/cut sizes, roll and stock/source in a structured review list. Raw OCR is preserved in a collapsible troubleshooting section."
 }
