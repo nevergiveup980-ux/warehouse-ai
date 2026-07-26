@@ -1,6 +1,6 @@
 {
-  "version": "5.5.26",
-  "name": "Supplier Template Memory",
-  "build": "2026-07-25-supplier-template-memory-1",
-  "notes": "Adds synchronized supplier-document template memory to AI Scan, with built-in recognition for Twelve Oaks Order Acknowledgement and Taiga Sales Order / Will Call. Customer PO and supplier order numbers are kept separate, recognized fields remain review-only, and new supplier formats can be remembered for future scans."
+  "version": "5.5.27",
+  "name": "Emergency Startup Recovery",
+  "build": "2026-07-25-emergency-startup-recovery-1",
+  "notes": "Prevents a damaged legacy or synchronized dataset from blocking the entire application at startup. The home screen is revealed first, startup tasks are isolated, supplier-template data is validated defensively, and existing warehouse data remains unchanged."
 }
