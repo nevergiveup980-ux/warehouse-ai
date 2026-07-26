@@ -369,7 +369,8 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <div class="notice" style="margin-top:8px">On iPhone, use <b>Choose from Photos / Files</b> for an existing picture. This option does not force the camera to open.</div>
 <img id="scanPreview" class="preview hidden">
 <div id="photoReview" class="notice hidden" style="margin-top:10px"><b>Photo captured for review.</b><br>Use Photo keeps it with the pending record. Retake discards it and reopens the camera.<div class="actions"><button class="green" onclick="useCapturedPhoto()">Use Photo</button><button onclick="retakeCapturedPhoto()">Retake</button></div></div>
-<div class="scanTools"><button class="purple" onclick="readPhotoText()">🔤 Read Photo Text</button><button class="purple" onclick="scanPhotoBarcode()">▦ Scan Barcode</button><button onclick="clearSmartDetection()">Clear Detection</button></div>
+<div class="scanTools"><button id="readPhotoTextBtn" class="purple" onclick="readPhotoText()">🔤 Read Photo Text</button><button class="purple" onclick="scanPhotoBarcode()">▦ Scan Barcode</button><button onclick="clearSmartDetection()">Clear Detection</button></div>
+<div id="ocrStatus" class="notice hidden" style="margin-top:10px"></div>
 <label>Document Type</label><select id="scanDocumentType"><option value="auto">Auto Detect</option><option>Carpet Roll Label</option><option>Supplier Pickup / Receiving</option><option>Customer Order / Cutting Sheet</option><option>Product / Carton Label</option><option>Inventory Count Photo</option></select>
 <label>Visible Label Text / Voice Dictation</label><textarea id="scanLabelText" placeholder="Example: Dynamix XL Cobalt SKU DY199CO04-5G QTY 60 CARTONS LOT 2026.01.05 LOC-M10"></textarea>
 <div class="sectionTitle">Supplier Template Memory</div>
@@ -704,9 +705,10 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 </div></footer>
 
 <script src="qrcode.js"></script>
+<script src="ocr/tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.5.29', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='5.5.30', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1058,10 +1060,49 @@ function analyzeLabelText(){
   $('scanDetected').innerHTML=`<b>${confidence} assisted match · ${esc(docType)}</b><br>${found.length?'Filled: '+found.map(esc).join(', '):'No structured fields found.'}${match.master?`<br>Matched Product Master: <b>${esc(match.master.name)}</b>${match.master.sku?' · '+esc(match.master.sku):''}${match.learned?' · learned correction':''}`:'<br>No existing product confidently matched.'}<br><small>Please compare every field with the photo before saving.</small>`;
   scanSafetyCheck(true);
 }
+let localOcrWorker=null,localOcrBusy=false;
+function showOcrStatus(message,progress){
+ const box=$('ocrStatus');if(!box)return;
+ box.classList.remove('hidden');
+ box.innerHTML=`<b>${esc(message)}</b>${Number.isFinite(progress)?`<br>Progress: ${Math.round(progress*100)}%`:''}<br><small>Keep this page open while the photo is being read.</small>`;
+}
+async function getLocalOcrWorker(){
+ if(localOcrWorker)return localOcrWorker;
+ if(!window.Tesseract)throw new Error('The local OCR component did not load. Refresh the page and try again.');
+ showOcrStatus('Starting local photo reader…',0);
+ localOcrWorker=await Tesseract.createWorker('eng',1,{
+  workerPath:'ocr/worker.min.js',
+  corePath:'ocr/core',
+  langPath:'ocr/lang',
+  logger:m=>{if(m&&m.status)showOcrStatus(m.status,Number(m.progress))}
+ });
+ return localOcrWorker;
+}
 async function readPhotoText(){
  if(!$('scanPreview').src){alert('Take or choose a photo first.');return}
- if(!('TextDetector' in window)){alert('Automatic photo text reading is not available in this browser. On iPhone, open the photo with Live Text, Copy All, then paste it into Visible Label Text and tap Analyze.');return}
- try{const detector=new TextDetector(),blocks=await detector.detect($('scanPreview')),text=blocks.map(x=>x.rawValue).filter(Boolean).join('\n');if(!text){alert('No readable text found. Retake closer, keep the paper flat and reduce glare.');return}$('scanLabelText').value=normalizeText([$('scanLabelText').value,text].filter(Boolean).join('\n'));analyzeLabelText()}catch(err){alert('Photo text reading failed: '+err.message)}
+ if(localOcrBusy)return;
+ localOcrBusy=true;
+ const button=$('readPhotoTextBtn');if(button){button.disabled=true;button.textContent='Reading Photo…'}
+ try{
+  let text='',engine='';
+  if('TextDetector' in window){
+   try{const detector=new TextDetector(),blocks=await detector.detect($('scanPreview'));text=blocks.map(x=>x.rawValue).filter(Boolean).join('\n');engine='Browser photo reader'}catch(error){console.warn('Browser TextDetector failed; using local OCR.',error)}
+  }
+  if(!text.trim()){
+   showOcrStatus('Reading photo locally on this device…',0);
+   const worker=await getLocalOcrWorker(),result=await worker.recognize($('scanPreview').src);
+   text=String(result?.data?.text||'');engine='Local iPhone-compatible OCR';
+  }
+  if(!text.trim()){alert('No readable text found. Retake closer, keep the paper flat and reduce glare.');return}
+  $('scanLabelText').value=normalizeText([$('scanLabelText').value,text].filter(Boolean).join('\n'));
+  showOcrStatus(engine+' finished. Review the detected fields before saving.',1);
+  analyzeLabelText();
+ }catch(err){
+  showOcrStatus('Photo reading could not finish.',null);
+  alert('Photo text reading failed: '+err.message+'. You can still paste iPhone Live Text into Visible Label Text.');
+ }finally{
+  localOcrBusy=false;if(button){button.disabled=false;button.textContent='🔤 Read Photo Text'}
+ }
 }
 async function scanPhotoBarcode(){
   if(!$('scanPreview').src){alert('Take or choose a photo first.');return}

@@ -1,6 +1,6 @@
 {
-  "version": "5.5.29",
-  "name": "AI Scan Photo Library Fix",
-  "build": "2026-07-25-ios-photo-library-fix",
-  "notes": "Separates live camera capture from choosing an existing photo or file. On iPhone, Choose from Photos / Files no longer forces the camera to open."
+  "version": "5.5.30",
+  "name": "iPhone Local OCR",
+  "build": "2026-07-26-local-ocr-fallback",
+  "notes": "Adds an offline, iPhone-compatible photo text reader when the browser TextDetector API is unavailable. Detected text still goes through the existing review and classification workflow before any inventory change."
 }
