@@ -1,6 +1,6 @@
 {
-  "version": "5.5.27",
-  "name": "Emergency Startup Recovery",
-  "build": "2026-07-25-emergency-startup-recovery-1",
-  "notes": "Prevents a damaged legacy or synchronized dataset from blocking the entire application at startup. The home screen is revealed first, startup tasks are isolated, supplier-template data is validated defensively, and existing warehouse data remains unchanged."
+  "version": "5.5.28",
+  "name": "Startup Recovery + Smart Underlayment Issue",
+  "build": "2026-07-25-underlayment-half-roll-2",
+  "notes": "Keeps the V5.5.27 emergency startup recovery safeguards and adds smart underlayment issue calculations. Exact half-roll remainders or less use installer-returned loose material; only remainders over half a roll round up."
 }
