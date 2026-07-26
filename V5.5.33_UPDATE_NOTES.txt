@@ -1,0 +1,28 @@
+RUNLU Warehouse AI V5.5.33
+AI Scan Field Accuracy Fix
+
+This update improves Customer Order / Cutting Sheet photo review:
+
+1. Reads the customer, order/clerk, product table and cut-size areas separately.
+2. Rejects printed footer wording such as “HAS BEEN INFORMED…” as customer data.
+3. Requires a valid-looking PO/order number instead of accepting stray characters.
+4. Requires a valid RC/roll pattern instead of accepting a single letter.
+5. Requires a strong Product Master match; short partial words no longer select an unrelated product.
+6. Shows known order lines such as Perpetual Move, Heather Choice, Spill Blocker,
+   Platinum, City Disposal Fee and Labour without changing inventory automatically.
+7. When handwriting is unclear, the review field remains blank and asks the user to check the photo.
+
+For the supplied test sheet, the intended review information is:
+
+- Customer: Les Kiss
+- PO / Order: 181201
+- Sales / Clerk: Nichole
+- Perpetual Move / Shoreline / Shaw: 62.67 SY (non-stock carpet; record only)
+- Heather Choice: 60 SY (stock underlayment)
+- City Disposal Fee: 60.67 SY
+- Labour as per Quote: 1 EA
+- Cut sizes: 16', 15', 8', 8'
+- Roll number: none
+
+Important: AI Scan prepares information for review. It does not change inventory until the user
+confirms the linked operation.

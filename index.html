@@ -711,7 +711,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.5.32', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='5.5.33', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1004,18 +1004,105 @@ function applySupplierTemplate(raw,found){
  return r
 }
 
+function scanContainsStrongText(hay,value){
+ const key=normKey(value);
+ if(key.length<4)return false;
+ return hay.includes(key);
+}
+function scanProductMatchScore(text,master){
+ const hay=normKey(text),sku=normKey(master?.sku),name=normKey(master?.name),color=normKey(master?.color),series=normKey(master?.series);
+ let score=0;
+ if(sku.length>=4&&scanContainsStrongText(hay,sku))score=Math.max(score,30);
+ if(name.length>=4&&scanContainsStrongText(hay,name))score=Math.max(score,18);
+ if(!score)return 0;
+ if(color.length>=4&&scanContainsStrongText(hay,color))score+=5;
+ if(series.length>=4&&scanContainsStrongText(hay,series))score+=3;
+ return score;
+}
 function bestProductMatch(text){
-  const learned=dictionaryProductMatch(text);if(learned)return {master:learned,score:20,learned:true};
-  const hay=normKey(text); let best=null,bestScore=0;
+  const learned=dictionaryProductMatch(text);if(learned&&scanProductMatchScore(text,learned)>=18)return {master:learned,score:35,learned:true};
+  let best=null,bestScore=0;
   for(const m of loadMasters()){
-    let score=0;
-    const checks=[[m.sku,12],[m.name,8],[m.color,4],[m.series,3],[m.brand,2]];
-    for(const [v,w] of checks){const k=normKey(v);if(k&&hay.includes(k))score+=w}
+    const score=scanProductMatchScore(text,m);
     if(score>bestScore){best=m;bestScore=score}
   }
-  return {master:best,score:bestScore};
+  return {master:bestScore>=18?best:null,score:bestScore};
 }
 function firstMatch(text,patterns){for(const p of patterns){const m=text.match(p);if(m)return normalizeText(m[1])}return ''}
+const SCAN_FORM_NOISE=/HAS BEEN INFORMED|SHOULD VIEW PRODUCT|BEFORE INSTALL|ACCEPTANCE OF INVOICE|AUTHORIZED SIGNATURE|TERMS|DEPOSIT|BALANCE DUE|CUSTOMER HAS|WAREHOUSE:|EMAIL|PHONE|FAX|G\.?S\.?T/i;
+function scanPlausiblePerson(value){
+ const v=normalizeText(value).replace(/^[:#-]+/,'').trim();
+ if(!v||v.length<3||v.length>60||SCAN_FORM_NOISE.test(v)||/\d{3,}/.test(v))return '';
+ const letters=(v.match(/[A-Za-z]/g)||[]).length;
+ return letters>=3?v:'';
+}
+function scanCustomerValue(raw){
+ const lines=normalizeOcrText(raw).split('\n');
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i],same=line.match(/\bSOLD\s*TO\b[ \t]*[:#-]?[ \t]*(.+)$/i);
+  if(same){const value=scanPlausiblePerson(same[1]);if(value)return value}
+  if(/\bSOLD\s*TO\b/i.test(line)){
+   for(let j=i+1;j<Math.min(lines.length,i+3);j++){const value=scanPlausiblePerson(lines[j]);if(value&&!/\b(?:CALGARY|ALBERTA|STREET|ROAD|DRIVE|PLACE|AVE|ADDRESS)\b/i.test(value))return value}
+  }
+ }
+ const customerAreaStart=lines.findIndex(line=>/\[CUSTOMER AREA\]/i.test(line));
+ const customerAreaEnd=lines.findIndex((line,index)=>index>customerAreaStart&&/\[(?:ORDER|PRODUCT|CUT SIZE)/i.test(line));
+ const candidates=customerAreaStart>=0?lines.slice(customerAreaStart+1,customerAreaEnd>customerAreaStart?customerAreaEnd:customerAreaStart+12):[];
+ for(const line of candidates){
+  const value=scanPlausiblePerson(line);
+  if(!value||/\b(?:DEERFOOT|CARPET|FLOORING|CALGARY|ALBERTA|CANADA|STREET|ROAD|DRIVE|PLACE|AVE|EMAIL|PHONE|FAX|WWW|GST|SOLD|SHIP|DATE|DC)\b/i.test(value))continue;
+  const words=value.match(/[A-Za-z][A-Za-z.'-]*/g)||[];
+  if(words.length>=2&&words.length<=5)return value;
+ }
+ return '';
+}
+function scanOrderValue(raw){
+ const explicit=firstMatch(raw,[
+  /\bP\.?\s*O\.?\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]{5,})\b/i,
+  /\b(?:ORDER|INVOICE)\s*(?:NO\.?|NUMBER|#)\s*[:#-]?\s*([A-Z0-9-]{5,})\b/i
+ ]);
+ if(explicit&&(explicit.match(/\d/g)||[]).length>=4)return explicit;
+ const deerfoot=String(raw).match(/\b18\d{4}\b/);
+ return deerfoot?deerfoot[0]:'';
+}
+function scanSalesValue(raw){
+ const lines=normalizeOcrText(raw).split('\n');
+ for(let i=0;i<lines.length;i++){
+  const same=lines[i].match(/\b(?:CLERK|SALES(?:PERSON)?)\b[ \t]*[:#-]?[ \t]*(.*)$/i);
+  if(!same)continue;
+  const onLine=scanPlausiblePerson(same[1]);if(onLine)return onLine;
+  if(lines[i+1]){const next=scanPlausiblePerson(lines[i+1]);if(next)return next}
+ }
+ return '';
+}
+function scanRollValue(raw){
+ const rc=String(raw).match(/\bRC\s*[-#:]?\s*(\d{3,6}[A-Z]?)\b/i);
+ if(rc)return 'RC'+rc[1].toUpperCase();
+ const roll=String(raw).match(/\bROLL\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*(\d{4,8}[A-Z]?)\b/i);
+ return roll?roll[1].toUpperCase():'';
+}
+function scanRecognizedProductRows(raw){
+ const text=normalizeOcrText(raw),rows=[],known=[
+  {name:'Perpetual Move',pattern:/PERPETUAL\s*M[O0](?:V|U)?E?/i,detail:'Non-stock carpet · record only'},
+  {name:'Heather Choice',pattern:/HEATH(?:ER)?\s+CHOI(?:CE)?/i,detail:'Stock underlayment · 20 SY/roll'},
+  {name:'Spill Blocker',pattern:/SPILL\s*BLOCKER/i,detail:'Stock underlayment · 25 SY/roll'},
+  {name:'Platinum',pattern:/\bPLATINUM\b/i,detail:'Stock underlayment · 30 SY/roll'},
+  {name:'City Disposal Fee',pattern:/(?:CITY|QTY)\s+DISPOSAL(?:\s+FEE)?/i,detail:'Service / fee · no inventory'},
+  {name:'Labour as per Quote',pattern:/LABOU?R\s+(?:AS\s+)?PER\s+QUO?TE/i,detail:'Service · no inventory'}
+ ];
+ const lines=text.split('\n');
+ known.forEach(item=>{
+  const lineIndex=lines.findIndex(line=>item.pattern.test(line));
+  if(lineIndex<0)return;
+  const nearby=lines.slice(Math.max(0,lineIndex-1),Math.min(lines.length,lineIndex+2)).join(' ');
+  const qty=(nearby.match(/\b(\d+(?:\.\d+)?)\s*(SY|EA|ROLLS?|BOXES?|CARTONS?)\b/i)||[]);
+  rows.push({...item,quantity:qty[1]?`${qty[1]} ${qty[2].toUpperCase()}`:''});
+ });
+ scanMatchedMasters(text).forEach(x=>{
+  if(!rows.some(row=>normKey(row.name)===normKey(x.master.name)))rows.push({name:x.master.name,color:x.master.color||'',sku:x.master.sku||'',detail:[x.master.series,x.master.category].filter(Boolean).join(' · ')});
+ });
+ return rows;
+}
 function detectScanDocumentType(raw){
  const chosen=$('scanDocumentType')?.value||'auto';if(chosen!=='auto')return chosen;
  const k=normKey(raw);
@@ -1045,29 +1132,21 @@ function scanReviewRow(label,value,html=false){
  return `<div class="scanKeyRow"><div class="scanKeyLabel">${esc(label)}</div>${html?`<div class="scanKeyValue">${value}</div>`:scanReviewValue(value)}</div>`;
 }
 function scanMatchedMasters(raw){
- const hay=normKey(raw);
  return loadMasters().map(master=>{
-  let score=0;
-  [[master.sku,20],[master.name,12],[master.color,5],[master.series,3]].forEach(([value,weight])=>{const key=normKey(value);if(key&&hay.includes(key))score+=weight});
-  return {master,score}
- }).filter(x=>x.score>=8).sort((a,b)=>b.score-a.score).slice(0,12);
+  return {master,score:scanProductMatchScore(raw,master)}
+ }).filter(x=>x.score>=18).sort((a,b)=>b.score-a.score).slice(0,12);
 }
 function scanSizeCandidates(raw){
  const values=[];
- (String(raw).match(/\b\d{1,3}\s*['’]\s*\d{0,2}\s*(?:["”])?/g)||[]).forEach(v=>values.push(normalizeText(v)));
+ (String(raw).match(/(?:^|[\s,;])\d{1,3}\s*['’](?:\s*\d{1,2}\s*(?:["”])?)?/gm)||[]).forEach(v=>values.push(normalizeText(v)));
  (String(raw).match(/\b\d+(?:\.\d+)?\s*SY\b/gi)||[]).forEach(v=>values.push(normalizeText(v).toUpperCase()));
  return uniqueValues(values).slice(0,16);
 }
 function renderScanKeyInfoReview(rawOcr,context={}){
  const review=$('scanKeyInfoReview');if(!review)return;
- const result=scanStructuredResult(),matches=scanMatchedMasters(rawOcr),products=[];
- matches.forEach(x=>products.push({name:x.master.name,color:x.master.color||'',sku:x.master.sku||'',detail:[x.master.series,x.master.category].filter(Boolean).join(' · ')}));
- ['Heather Choice','Spill Blocker','Platinum'].forEach(name=>{
-  if(normKey(rawOcr).includes(normKey(name))&&!products.some(p=>normKey(p.name).includes(normKey(name))))products.push({name,color:'',sku:'',detail:'Recognized product wording — verify exact Product Master'});
- });
- if(!products.length&&context.match?.master&&context.match.score>=8){const m=context.match.master;products.push({name:m.name,color:m.color||'',sku:m.sku||'',detail:m.series||''})}
- if(!products.length&&normalizeText($('scanProduct').value))products.push({name:normalizeText($('scanProduct').value),color:'',sku:'',detail:'Review against Product Master'});
- const productHtml=products.length?products.map((p,i)=>`<div class="scanProductReview"><b>${i+1}. ${esc(p.name)}${p.color?' · '+esc(p.color):''}</b><small>${[p.sku,p.detail].filter(Boolean).map(esc).join(' · ')||'Product wording detected'}</small></div>`).join(''):'<div class="scanKeyMissing">No product confidently detected — check the product rows</div>';
+ const result=scanStructuredResult(),products=scanRecognizedProductRows(rawOcr);
+ if(!products.length&&context.match?.master&&context.match.score>=18){const m=context.match.master;products.push({name:m.name,color:m.color||'',sku:m.sku||'',detail:m.series||''})}
+ const productHtml=products.length?products.map((p,i)=>`<div class="scanProductReview"><b>${i+1}. ${esc(p.name)}${p.color?' · '+esc(p.color):''}${p.quantity?' · '+esc(p.quantity):''}</b><small>${[p.sku,p.detail].filter(Boolean).map(esc).join(' · ')||'Product wording detected'}</small></div>`).join(''):'<div class="scanKeyMissing">No product confidently detected — check the product rows</div>';
  const sizes=scanSizeCandidates(rawOcr),qtyParts=uniqueValues([result.quantity?`${result.quantity} ${result.unit}`:'',...sizes]).filter(Boolean);
  const source=/\bSTOCK\b/i.test(rawOcr)?'Inventory / STOCK indicated':/\b(?:SHAW|MOHAWK|PRIMCO|TAIGA|TWELVE OAKS|BUCKWOLD)\b/i.test(rawOcr)?'Supplier / non-stock wording detected — verify':'';
  review.innerHTML=`<div class="scanKeyHead"><span>${esc(context.docType||detectScanDocumentType(rawOcr))}</span><span>${products.length} product(s)</span></div>`
@@ -1084,7 +1163,7 @@ function analyzeLabelText(){
   if(!raw){alert('Paste, type or dictate visible label text first.');return}
   const match=bestProductMatch(raw), found=[],docType=detectScanDocumentType(raw);
   $('scanDocumentType').value=docType;
-  if(match.master){$('scanProduct').value=match.master.name;found.push('Product')}
+  if(match.master&&match.score>=18){$('scanProduct').value=match.master.name;found.push('Product')}
   const supplierTemplateResult=applySupplierTemplate(raw,found);
   const loc=firstMatch(raw,[/\b(?:LOC(?:ATION)?|RACK|BIN)\s*[:#-]?\s*([A-Z0-9][A-Z0-9-]*)\b/i]);
   if(loc){$('scanLocation').value=loc.toUpperCase().replace(/\s+/g,'-');found.push('Location')}
@@ -1092,11 +1171,11 @@ function analyzeLabelText(){
   if(qty){$('scanQty').value=qty;found.push('Quantity')}
   const lot=firstMatch(raw,[/\b(?:DYE\s*)?LOT\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9._-]+)\b/i,/\bBATCH\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9._-]+)\b/i]);
   if(lot){$('scanLot').value=lot;found.push('Lot')}
-  const po=$('scanPo').value||firstMatch(raw,[/\bP\.?\s*O\.?\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9._-]+)\b/i,/\bORDER\s*(?:NO\.?|NUMBER|#)\s*[:#-]?\s*([A-Z0-9._-]+)\b/i]);
+  const po=$('scanPo').value||scanOrderValue(rawOcr);
   if(po){$('scanPo').value=po;found.push('PO')}
   const unitMatch=raw.match(/\b(CTNS?|CARTONS?|PAILS?|BUCKETS?|TUBES?|BOXES?|ROLLS?|PALLETS?|PCS?|PIECES?)\b/i);
   if(unitMatch){const u=unitMatch[1].toLowerCase();$('scanUnit').value=u.startsWith('pail')?'Pail':u.startsWith('bucket')?'Bucket':u.startsWith('tube')?'Tube':u.startsWith('roll')?'Roll':u.startsWith('pallet')?'Pallet':u.startsWith('pc')||u.startsWith('piece')?'Piece':u.startsWith('ctn')||u.startsWith('carton')?'Carton':'Box';found.push('Unit')}
-  const roll=firstMatch(raw,[/\b(?:RC|ROLL)\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]+)\b/i]);
+  const roll=scanRollValue(rawOcr);
   const size=firstMatch(raw,[/\bSIZE\s*[:#-]?\s*([0-9]+\s*[X×]\s*[0-9]+'?(?:\s*[0-9]{1,2}")?)/i]);
   if(roll||size){$('scanNotes').value=normalizeText([$('scanNotes').value,roll?'Detected roll '+roll:'',size?'Detected size '+size:''].filter(Boolean).join('; '));if(roll)found.push('Roll');if(size)found.push('Size')}
   classifyWorkflow(raw);renderFieldConfidence(found,match,raw);updateDuplicateWarning();
@@ -1125,6 +1204,33 @@ async function getLocalOcrWorker(){
  });
  return localOcrWorker;
 }
+function scanImageDimensions(){
+ const image=$('scanPreview');
+ return {width:Number(image?.naturalWidth||image?.width||0),height:Number(image?.naturalHeight||image?.height||0)}
+}
+async function recognizeCustomerOrderRegions(worker,source){
+ const size=scanImageDimensions();
+ if(!size.width||!size.height)return '';
+ const regions=[
+  {marker:'CUSTOMER AREA',label:'customer information',left:0,top:.04,width:.66,height:.25},
+  {marker:'ORDER AND CLERK AREA',label:'order number and clerk',left:.60,top:0,width:.40,height:.32},
+  {marker:'PRODUCT TABLE',label:'product table',left:0,top:.22,width:.84,height:.40},
+  {marker:'CUT SIZE NOTES',label:'cut sizes and notes',left:0,top:.50,width:.84,height:.22}
+ ];
+ const output=[];
+ for(let i=0;i<regions.length;i++){
+  const region=regions[i],rectangle={
+   left:Math.max(0,Math.round(size.width*region.left)),
+   top:Math.max(0,Math.round(size.height*region.top)),
+   width:Math.max(1,Math.round(size.width*region.width)),
+   height:Math.max(1,Math.round(size.height*region.height))
+  };
+  showOcrStatus(`Reading ${region.label}…`,i/regions.length);
+  const result=await worker.recognize(source,{rectangle}),text=String(result?.data?.text||'').trim();
+  if(text)output.push(`[${region.marker}]\n${text}`);
+ }
+ return output.join('\n\n');
+}
 async function readPhotoText(){
  if(!$('scanPreview').src){alert('Take or choose a photo first.');return}
  if(localOcrBusy)return;
@@ -1137,8 +1243,15 @@ async function readPhotoText(){
   }
   if(!text.trim()){
    showOcrStatus('Reading photo locally on this device…',0);
-   const worker=await getLocalOcrWorker(),result=await worker.recognize($('scanPreview').src);
-   text=String(result?.data?.text||'');engine='Local iPhone-compatible OCR';
+   const worker=await getLocalOcrWorker(),source=$('scanPreview').src,chosen=$('scanDocumentType')?.value||'auto';
+   if(chosen==='Customer Order / Cutting Sheet'){
+    text=await recognizeCustomerOrderRegions(worker,source);
+    engine='Local form-region OCR';
+   }
+   if(!text.trim()){
+    const result=await worker.recognize(source);
+    text=String(result?.data?.text||'');engine='Local iPhone-compatible OCR';
+   }
   }
   if(!text.trim()){alert('No readable text found. Retake closer, keep the paper flat and reduce glare.');return}
   $('scanLabelText').value=normalizeOcrText([$('scanLabelText').value,text].filter(Boolean).join('\n'));
@@ -1430,7 +1543,8 @@ function updateScanContextUI(){
 }
 function scanStructuredResult(){
  const rawOcr=normalizeOcrText([$('scanLabelText').value,$('scanNotes').value].filter(Boolean).join('\n')),raw=normalizeText(rawOcr),m=scanMaster(),pick=patterns=>firstMatch(rawOcr,patterns)||firstMatch(raw,patterns)||'';
- return {raw:rawOcr,master:m,product:m?.name||normalizeText($('scanProduct').value),brand:m?.brand||'',series:m?.series||'',color:m?.color||'',sku:m?.sku||pick([/\b(?:SKU|STYLE|ITEM)\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9._-]+)\b/i]),location:normalizeText($('scanLocation').value),quantity:Number($('scanQty').value)||0,unit:$('scanUnit').value,lot:normalizeText($('scanLot').value),po:normalizeText($('scanPo').value),notes:normalizeText($('scanNotes').value),roll:pick([/\b(?:OPERATIONAL\s+)?(?:RC|ROLL)\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]+)\b/i]),mfr:pick([/\b(?:MFG\.?|MANUFACTURER)\s*(?:ROLL)?\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]+)\b/i]),customer:pick([/\b(?:SOLD\s*TO|CUSTOMER)[ \t]*[:#-]?[ \t]*([^\n\r]{2,80})/i,/\b(?:SOLD\s*TO|CUSTOMER)[ \t]*\n[ \t]*([^\n\r]{2,80})/i]),supplier:pick([/\bSUPPLIER[ \t]*[:#-]?[ \t]*([^\n\r]{2,80})/i]),sales:pick([/\b(?:CLERK|SALES(?:PERSON)?)[ \t]*[:#-]?[ \t]*([^\n\r]{2,50})/i]),feet:pick([/\b(\d+\s*['’]\s*\d{0,2}\s*(?:["”])?)/i])}
+ const safePo=normalizeText($('scanPo').value);
+ return {raw:rawOcr,master:m,product:m?.name||normalizeText($('scanProduct').value),brand:m?.brand||'',series:m?.series||'',color:m?.color||'',sku:m?.sku||pick([/\b(?:SKU|STYLE|ITEM)\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9._-]{4,})\b/i]),location:normalizeText($('scanLocation').value),quantity:Number($('scanQty').value)||0,unit:$('scanUnit').value,lot:normalizeText($('scanLot').value),po:(safePo&&(safePo.match(/\d/g)||[]).length>=4?safePo:'')||scanOrderValue(rawOcr),notes:normalizeText($('scanNotes').value),roll:scanRollValue(rawOcr),mfr:pick([/\b(?:MFG\.?|MANUFACTURER)\s*(?:ROLL)?\s*(?:NO\.?|NUMBER|#)?\s*[:#-]?\s*([A-Z0-9-]{4,})\b/i]),customer:scanCustomerValue(rawOcr),supplier:pick([/\bSUPPLIER[ \t]*[:#-]?[ \t]*([^\n\r]{2,80})/i]),sales:scanSalesValue(rawOcr),feet:pick([/(\d+\s*['’](?:\s*\d{1,2}\s*(?:["”])?)?)/i])}
 }
 function fillIf(id,value){const el=$(id);if(el&&value!==''&&value!=null)el.value=value}
 function applyScanToContext(){

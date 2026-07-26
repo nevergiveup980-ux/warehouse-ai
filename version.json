@@ -1,6 +1,6 @@
 {
-  "version": "5.5.32",
-  "name": "Structured AI Scan Review",
-  "build": "2026-07-26-structured-ocr-review",
-  "notes": "Shows customer, PO/order, Sales/Clerk, products, colours, quantities/cut sizes, roll and stock/source in a structured review list. Raw OCR is preserved in a collapsible troubleshooting section."
+  "version": "5.5.33",
+  "name": "AI Scan Field Accuracy",
+  "build": "2026-07-26-ai-scan-field-accuracy",
+  "notes": "Rejects boilerplate text as customer data, requires strong Product Master matches, validates PO and roll numbers, and lists recognized order lines without guessing."
 }
