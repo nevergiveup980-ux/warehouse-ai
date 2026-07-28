@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V5.5.34 — Multi-Item Order & Multi-Cut Fix
+
+1. ADD ANOTHER ITEM now opens a general item workflow using Item Type.
+2. Each item can independently be Carpet Cut, General Product / Material Issue, Receiving, Transfer, or Record Only.
+3. Underlayment and other products no longer inherit the carpet cutting form or +3 inch rule.
+4. Carpet Cutting adds Number of Cuts / Pieces. Actual deduction = customer total length + cuts × 3 inches.
+5. Mixed-item completion now applies each item using its own workflow instead of forcing the whole PO to Carpet Cutting.
+6. Added Delete Draft Order with confirmation.
+7. Improved carpet validation and completion details.

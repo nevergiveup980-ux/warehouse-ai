@@ -1,6 +1,6 @@
 {
-  "version": "5.5.33",
-  "name": "AI Scan Field Accuracy",
+  "version": "5.5.34",
+  "name": "Multi-Item Order & Multi-Cut Fix",
   "build": "2026-07-26-ai-scan-field-accuracy",
   "notes": "Rejects boilerplate text as customer data, requires strong Product Master matches, validates PO and roll numbers, and lists recognized order lines without guessing."
 }
