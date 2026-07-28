@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V5.5.39
+
+Inventory Transfer Deduction Fix
+
+- Fixed a transfer bug where the destination update reused the source inventoryRecordId.
+- Previously, the source record was deducted and then the same record was immediately credited back, leaving the visible balance unchanged.
+- The destination leg now clears inventoryRecordId and finds or creates a separate inventory record at the destination location.
+- Example: 92 Box transferred by 57 Box now leaves source balance 35 Box and creates/adds 57 Box at the destination.

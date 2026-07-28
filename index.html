@@ -1883,7 +1883,7 @@ function applyInventoryDelta(r,delta){
  if(!save(INVDB,inv))throw new Error('Inventory could not be saved.');
  return {before,after,location:loc,unit:stockUnit||x?.unit||''};
 }
-function applyInventoryTransfer(r){const qty=operationStockQuantity(r),source=applyInventoryDelta(r,-qty),destination={...r,location:r.toLocation||'Store Samples'};const target=applyInventoryDelta(destination,qty);return `${source.location} ${source.before} → ${source.after}; ${target.location} ${target.before} → ${target.after} ${operationStockUnit(r)||r.unit||''}`}
+function applyInventoryTransfer(r){const qty=operationStockQuantity(r),source=applyInventoryDelta(r,-qty),destination={...r,inventoryRecordId:'',location:r.toLocation||'Store Samples'};const target=applyInventoryDelta(destination,qty);return `${source.location} ${source.before} → ${source.after}; ${target.location} ${target.before} → ${target.after} ${operationStockUnit(r)||r.unit||''}`}
 function updateLinkedOrder(r,status){
  if(!r.po)return;const orders=load(ODB);const o=orders.find(x=>normKey(x.poNumber||x.soNumber||x.po)===normKey(r.po));if(!o)return;
  o.status=status;o.updatedAt=new Date().toISOString();if(status==='Shipped'){o.dateOut=r.date;o.pickedUpAt=new Date().toISOString()}save(ODB,orders);
