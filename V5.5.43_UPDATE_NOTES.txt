@@ -1,0 +1,19 @@
+RUNLU Warehouse AI V5.5.43
+
+1. Warehouse Map colours standardized:
+   - Green: available capacity / product area
+   - Yellow: nearly full
+   - Red: full, over capacity, or unavailable
+   - Gray: empty, unused, or non-inventory area
+
+2. Customer Order lifecycle added:
+   - Draft
+   - In Progress
+   - Completed
+   - Archived
+   - Only Draft orders can be deleted.
+   - Completed orders record completion time and completed-by, lock editing, remain searchable, and may be archived.
+   - Completed orders older than 180 days are automatically archived when the order list is opened.
+   - Complete Order and Archive actions added.
+
+3. Existing V5.5.42 receiving/product-link fix retained.
