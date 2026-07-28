@@ -1,0 +1,15 @@
+RUNLU Warehouse AI V5.5.35 — Carpet & Installer Transfer Upgrade
+
+1. Inventory Transfer is now a clearly named operation.
+2. Added transfer routes:
+   - Warehouse → Store
+   - Store → Warehouse
+   - Warehouse → Installer
+   - Installer → Warehouse
+   - Warehouse → Warehouse
+3. Added a dedicated active Carpet Roll selector.
+4. Selecting a carpet roll automatically fills product, colour, current location and roll details.
+5. Supports partial-length transfer or whole-roll transfer.
+6. Partial carpet transfer creates a traceable child roll at the destination and reduces the source roll once.
+7. Whole-roll transfer changes only the roll location.
+8. General products such as Spill Blocker can still use Existing Inventory Record and quantity/unit transfer.
