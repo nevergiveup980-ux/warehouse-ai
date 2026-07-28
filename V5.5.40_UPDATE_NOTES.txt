@@ -1,0 +1,6 @@
+RUNLU Warehouse AI V5.5.40
+
+- Fixes carpet roll lookup when one screen uses RC2223 and Carpet Inventory stores 2223 (or vice versa).
+- Roll lookup now checks Roll Number, Manufacturer Roll, Source Roll and Parent Roll using a normalized key.
+- The item card no longer says “Carpet roll linked” merely because a roll number was typed. It now verifies the roll exists and shows location and remaining length.
+- Clearer error message when a roll truly does not exist.

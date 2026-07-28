@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V5.5.41
+
+Product Transfer Unit Selection Fix
+
+- Fixed Inventory Transfer forcing Unit back to Foot.
+- Box and Carton can now be selected for flooring/product transfers.
+- Carpet-specific transfer controls activate only when a carpet roll/Foot transfer is selected.
+- Product transfers now use the selected inventory unit and show Transfer Quantity.

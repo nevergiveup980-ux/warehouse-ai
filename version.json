@@ -1,7 +1,4 @@
 {
-  "version": "5.5.39",
-  "name": "Inventory Auto-Link & Data Entry Recovery Edition",
-  "build": "Inventory Transfer Deduction Fix",
-  "notes": "Adds multi-piece carpet Cut Before Transfer with per-cut 3-inch allowance and child-roll creation, while retaining item-level stock linking and inventory previews.",
-  "label": "Cut & Transfer Stock Linking Complete"
+  "version": "5.5.41",
+  "name": "Product Transfer Unit Selection Fix"
 }
