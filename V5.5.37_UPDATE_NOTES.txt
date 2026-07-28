@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V5.5.37
+
+Cut & Transfer Recovery
+- Restores and completes the missing carpet Cut Pieces Before Transfer workflow.
+- Inventory Transfer now supports existing/whole roll or cutting multiple pieces before transfer.
+- Piece lengths may be entered comma-separated or one per line.
+- Each cut adds 3 inches to source-roll deduction.
+- Each requested piece creates a traceable child roll at Store or Installer.
+- Keeps V5.5.36 item-level stock linking and deduction preview improvements.

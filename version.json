@@ -1,6 +1,7 @@
 {
-  "version": "5.5.35",
-  "name": "Carpet and Installer Transfer Upgrade",
-  "build": "2026-07-26-ai-scan-field-accuracy",
-  "notes": "Rejects boilerplate text as customer data, requires strong Product Master matches, validates PO and roll numbers, and lists recognized order lines without guessing."
+  "version": "5.5.37",
+  "name": "Cut & Transfer + Stock Linking Complete",
+  "build": "2026-07-27-cut-transfer-complete",
+  "notes": "Adds multi-piece carpet Cut Before Transfer with per-cut 3-inch allowance and child-roll creation, while retaining item-level stock linking and inventory previews.",
+  "label": "Cut & Transfer Stock Linking Complete"
 }

@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V5.5.36 — Item-Level Stock Linking Fix
+
+- Added Item Inventory Handling for every item in a multi-product order.
+- Stock / Non-stock / Record Only is now selected per item, not only per order.
+- Stock material issues require an exact Existing Inventory Record before they can be added or completed.
+- Added visible inventory-link status and before → after balance preview on every item card.
+- Prevents a product from showing Completed · Stock without a specific inventory record.
+- Carpet roll items remain linked by roll number.
+- Receiving can still create or increase inventory from a Product Master selection.
+- Updated version to V5.5.36.
