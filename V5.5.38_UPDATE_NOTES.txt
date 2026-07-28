@@ -1,0 +1,11 @@
+RUNLU Warehouse AI V5.5.38
+Inventory Auto-Link & Data Entry Recovery Edition
+
+1. Product selection now automatically links the best matching Existing Inventory Record.
+2. Matching supports product name, colour, brand, SKU, and multi-word entries such as "Your Choice Jasper".
+3. If several inventory records exist, the system prefers the requested location, then a record with enough quantity, then the largest balance.
+4. Stock items receive an inventory record automatically before they are added or completed.
+5. The product status message now clearly shows linked location, balance, and unit, or reports that no inventory record exists.
+6. Existing Cut Pieces Before Transfer and whole-roll transfer functions are preserved.
+
+Primary test order: PO 181312 — 10 Jasper + 1 GAL PAIL adhesive.
