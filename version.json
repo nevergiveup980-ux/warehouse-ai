@@ -1,6 +1,8 @@
 {
-  "version": "5.5.44",
+  "version": "5.5.45",
   "published": "2026-07-28",
   "channel": "stable",
-  "notes": "Reliable cross-device cloud synchronization: Sync Now, 15-second refresh, automatic focus/online refresh, pending-change retry, conflict protection, and visible upload/download/cloud record status."
+  "notes": "Reliable cross-device cloud synchronization: Sync Now, 15-second refresh, automatic focus/online refresh, pending-change retry, conflict protection, and visible upload/download/cloud record status.",
+  "build": "001",
+  "name": "Carpet Inventory Workbench"
 }

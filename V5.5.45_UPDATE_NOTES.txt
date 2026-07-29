@@ -1,0 +1,13 @@
+RUNLU Warehouse AI V5.5.45 — Carpet Inventory Workbench Build 001
+
+NEW
+- Carpet Inventory dashboard statistics: Total Active Rolls, Need TM, Under 50', Available Racks.
+- Clickable status, measure, length and rack filters.
+- Rack buttons show current roll count and known rack capacity with open/near-full/full indicators.
+- Carpet roll rows upgraded to operational work cards.
+- Direct Locate, Cut, Order and Tag actions from each carpet roll card.
+- Locate view shows the exact rack, roll identity, current length, measure type and rack load.
+- Cut and Order actions preselect the exact carpet roll, reducing duplicate searching and wrong-roll selection.
+
+DESIGN PRINCIPLE
+The Carpet Inventory is now a warehouse workbench: locate stock, pull the correct roll and begin work directly from the inventory record.
