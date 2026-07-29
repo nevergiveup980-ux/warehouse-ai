@@ -1,6 +1,6 @@
 {
-  "version": "5.5.46",
+  "version": "5.6.0",
   "published": "2026-07-29",
   "channel": "testing",
-  "notes": "Order Workspace Build 002: adds an iPhone-friendly active carpet-roll selector. After each carpet cut is added, the form remains in Carpet Cut mode so the next roll can be selected without re-entering PO, Customer, Sales or Date."
+  "notes": "Build001 Order Workspace Foundation: active orders now open into a shared order workspace with multiple carpet/material tasks, progress tracking, continue-work memory, inventory-backed carpet selection, task status, and an order timeline. Existing order and inventory storage keys are preserved."
 }

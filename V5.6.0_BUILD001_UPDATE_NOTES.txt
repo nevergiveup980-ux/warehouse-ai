@@ -1,0 +1,23 @@
+RUNLU Warehouse AI V5.6.0 Build001
+Order Workspace Foundation
+
+NEW
+- Customer Orders open into an Order Workspace.
+- One order can contain multiple carpet rolls and materials.
+- Shared order information remains at the top of the workspace.
+- Live progress bar and completed-task counter.
+- Continue-work memory remembers the current active order.
+- Carpet tasks must be selected from Carpet Inventory search results.
+- Search accepts partial roll numbers such as 2285, helping reveal prefix-entry errors.
+- Task states: Waiting, In Progress, Completed.
+- Order timeline records task additions, starts, completions, removals, and order completion.
+- Existing Customer Order detail editor remains available.
+
+DATA SAFETY
+- Existing database/localStorage keys remain unchanged.
+- Existing single-product orders are migrated in memory into one initial workspace task.
+- Inventory is not automatically deducted in Build001; existing completed Operations remain the inventory-control authority.
+
+NEXT BUILD
+- Task workflow integration with Carpet Cutting and automatic inventory balance updates.
+- Smarter fuzzy roll suggestions and correction workflow.
