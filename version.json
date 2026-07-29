@@ -1,13 +1,13 @@
 {
-  "version": "5.6.2",
+  "version": "5.6.3",
   "build": "Build001",
-  "name": "Carpet Workflow Isolation Fix",
+  "name": "Carpet Length Feet and Inches Editor",
   "date": "2026-07-29",
   "notes": [
-    "Carpet operations are isolated from Product Master and general-material inventory.",
-    "Carpet Customer Return completion now uses the item workflow instead of the parent Customer Return type.",
-    "Returned carpet rolls can complete directly into Carpet Inventory without Product Master validation.",
-    "Product Search and Existing Inventory Record are hidden during carpet workflows.",
-    "Underlayment and general materials remain on their own inventory workflow and only connect at the order level."
+    "Edit Carpet Roll now uses separate Feet and Inches fields for current and original length.",
+    "Inches are validated from 0 to 11 and converted to decimal feet only for internal calculations.",
+    "Warehouse-format and calculation previews update while typing.",
+    "Existing decimal lengths are converted automatically when a roll is opened.",
+    "Operational roll numbers are normalized to uppercase when saved."
   ]
 }

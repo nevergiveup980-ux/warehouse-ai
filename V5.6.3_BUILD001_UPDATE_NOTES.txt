@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V5.6.3 Build001
+Carpet Length Feet + Inches Editor
+
+- Replaced Current Length (ft) decimal entry with Feet and Inches fields.
+- Replaced Original Length (ft) decimal entry with Feet and Inches fields.
+- Existing values such as 21.68 automatically open as the nearest warehouse measurement, such as 21'8".
+- Inches are limited to 0–11.
+- The app continues to store decimal feet internally for inventory calculations.
+- Added live warehouse-format and decimal calculation previews.
+- Operational roll numbers are saved in uppercase.
