@@ -1,0 +1,23 @@
+RUNLU Warehouse AI V5.5.46 — Order Workspace Prototype
+Date: 2026-07-29
+Status: Testing
+
+NEW
+- Carpet Inventory > Cut now asks whether to start a new customer order or add the roll to an unfinished/active order.
+- Customer, PO, Sales and Date are stored once at the order header level.
+- Multiple carpet rolls and general materials can be grouped under one PO as one operation/order entry.
+- New Customer Order Workspace summary shows shared order information and current item count.
+- Carpet roll details, colour, collection, lot, width and rack location are filled automatically.
+- Existing active one-item operations are converted into a multi-item order when another carpet is added.
+
+WORKFLOW
+1. Open Carpet Inventory and tap Cut on the first roll.
+2. Start a new customer order and enter Customer / PO / Sales / Date once.
+3. Enter the cut length and tap ADD THIS ITEM & CONTINUE.
+4. Return to Carpet Inventory, tap Cut on another roll and choose the same active order.
+5. Repeat for more carpets or add underlayment/general materials in the same workspace.
+6. Save as Waiting/In Progress, or Complete to apply all inventory changes together.
+
+DATA SAFETY
+- Uses the existing V5.5.44/V5.5.45 database keys and cloud sync foundation.
+- Completed inventory-affecting records remain locked.

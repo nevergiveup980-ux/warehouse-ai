@@ -11,3 +11,8 @@ NEW
 
 DESIGN PRINCIPLE
 The Carpet Inventory is now a warehouse workbench: locate stock, pull the correct roll and begin work directly from the inventory record.
+
+HOTFIX 001A
+- Corrected the embedded APP_VERSION in index.html from 5.5.44 to 5.5.45.
+- Corrected version.json release notes to describe Carpet Inventory Workbench.
+- No warehouse data keys or cloud synchronization logic were changed.

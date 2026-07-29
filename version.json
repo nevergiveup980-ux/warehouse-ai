@@ -1,8 +1,6 @@
 {
-  "version": "5.5.45",
-  "published": "2026-07-28",
-  "channel": "stable",
-  "notes": "Reliable cross-device cloud synchronization: Sync Now, 15-second refresh, automatic focus/online refresh, pending-change retry, conflict protection, and visible upload/download/cloud record status.",
-  "build": "001",
-  "name": "Carpet Inventory Workbench"
+  "version": "5.5.46",
+  "published": "2026-07-29",
+  "channel": "testing",
+  "notes": "Order Workspace prototype: add carpet rolls from Carpet Inventory into one active customer order. Customer, PO, Sales and Date are entered once and reused across multiple carpet rolls and materials. Includes active-order picker and shared order summary."
 }
