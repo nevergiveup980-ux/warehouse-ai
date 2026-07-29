@@ -1,0 +1,33 @@
+RUNLU Warehouse AI V5.6.1 Build001
+Customer Return Carpet Roll Fix
+Published: 2026-07-29
+
+WHAT CHANGED
+- Customer Return now opens with "Carpet Customer Return" as the default item workflow.
+- Added a separate "General Product Customer Return" choice for non-carpet products.
+- Carpet returns now display the required carpet fields:
+  * Returned Roll Number
+  * Collection / Product
+  * Colour
+  * Lot
+  * Width
+  * Returned length in feet and inches
+  * Return rack / location
+  * Notes / condition / PO details
+- Existing Inventory Record is hidden for a carpet return because carpet rolls use the Carpet Inventory database, not the general product inventory table.
+- Completing a Stock carpet return creates a new carpet roll in Carpet Inventory with measure TM.
+- Duplicate roll numbers are blocked to protect inventory accuracy.
+- Existing storage keys and data remain unchanged.
+
+TEST EXAMPLE
+Customer Return → Carpet Customer Return
+Roll: RC2202A
+Collection: Flawless Reputation
+Colour: Tradition
+Length: 15 ft 10 in
+Location: 2C
+Status: Completed
+Inventory Handling: Stock
+
+EXPECTED RESULT
+RC2202A is added to Carpet Inventory as an active TM roll at rack 2C.

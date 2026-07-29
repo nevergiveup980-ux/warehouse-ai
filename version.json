@@ -1,6 +1,6 @@
 {
-  "version": "5.6.0",
+  "version": "5.6.1",
   "published": "2026-07-29",
   "channel": "testing",
-  "notes": "Build001 Order Workspace Foundation: active orders now open into a shared order workspace with multiple carpet/material tasks, progress tracking, continue-work memory, inventory-backed carpet selection, task status, and an order timeline. Existing order and inventory storage keys are preserved."
+  "notes": "Customer Return Carpet Roll Fix: Customer Return now defaults to Carpet Customer Return and provides returned Roll Number, collection/product, colour, lot, width, feet/inches, and return rack fields. Completing the stock return creates a TM carpet roll directly in Carpet Inventory without requiring a generic Product Master or Existing Inventory Record. General product returns remain available separately."
 }
