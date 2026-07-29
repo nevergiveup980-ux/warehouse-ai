@@ -1,6 +1,13 @@
 {
-  "version": "5.6.1",
-  "published": "2026-07-29",
-  "channel": "testing",
-  "notes": "Customer Return Carpet Roll Fix: Customer Return now defaults to Carpet Customer Return and provides returned Roll Number, collection/product, colour, lot, width, feet/inches, and return rack fields. Completing the stock return creates a TM carpet roll directly in Carpet Inventory without requiring a generic Product Master or Existing Inventory Record. General product returns remain available separately."
+  "version": "5.6.2",
+  "build": "Build001",
+  "name": "Carpet Workflow Isolation Fix",
+  "date": "2026-07-29",
+  "notes": [
+    "Carpet operations are isolated from Product Master and general-material inventory.",
+    "Carpet Customer Return completion now uses the item workflow instead of the parent Customer Return type.",
+    "Returned carpet rolls can complete directly into Carpet Inventory without Product Master validation.",
+    "Product Search and Existing Inventory Record are hidden during carpet workflows.",
+    "Underlayment and general materials remain on their own inventory workflow and only connect at the order level."
+  ]
 }

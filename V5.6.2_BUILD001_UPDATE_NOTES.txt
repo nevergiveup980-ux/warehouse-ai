@@ -1,0 +1,13 @@
+RUNLU Warehouse AI V5.6.2 Build001
+Carpet Workflow Isolation Fix
+Date: 2026-07-29
+
+FIXED
+- Carpet Customer Return confirmation incorrectly evaluated the parent Customer Return workflow and displayed “Product Master not linked”.
+- Completion now evaluates each item using its own workflow type.
+
+IMPROVED
+- Carpet operations no longer display or validate Product Master / Existing General Inventory Record.
+- Carpet Receiving, Carpet Cutting, Carpet Customer Return, Cut Piece Return, Installer Return and REM Transfer use Carpet Inventory only.
+- A clear Carpet Workflow notice explains the separation.
+- Underlayment and general materials keep independent material inventory rules and only connect to carpet through the customer order.
