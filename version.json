@@ -1,4 +1,6 @@
 {
-  "version": "5.5.43",
-  "name": "Order Lifecycle and Warehouse Map Status Edition"
+  "version": "5.5.44",
+  "published": "2026-07-28",
+  "channel": "stable",
+  "notes": "Reliable cross-device cloud synchronization: Sync Now, 15-second refresh, automatic focus/online refresh, pending-change retry, conflict protection, and visible upload/download/cloud record status."
 }

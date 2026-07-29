@@ -1,0 +1,14 @@
+RUNLU Warehouse AI V5.5.44
+
+Reliable Cross-Device Cloud Sync Fix
+
+- Added Sync Now for a safe two-way cloud check.
+- Automatic cloud refresh now runs every 15 seconds instead of every 60 seconds.
+- Returning to the app, focusing the browser, or reconnecting to the internet triggers a cloud check.
+- Local changes are marked pending until the server confirms upload.
+- Failed uploads remain pending and retry automatically.
+- Auto-download pauses while an editor is open or unsent local changes exist.
+- Conflict protection stops synchronization when both the device and cloud changed, preventing silent overwrite.
+- Settings now shows last successful upload/download, pending changes, local record counts, and cloud record counts.
+- Upload This Device and Download Cloud Data remain explicit authoritative recovery actions.
+- Corrected displayed app version to V5.5.44.
