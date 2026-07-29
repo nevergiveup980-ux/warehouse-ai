@@ -2,5 +2,5 @@
   "version": "5.5.46",
   "published": "2026-07-29",
   "channel": "testing",
-  "notes": "Order Workspace prototype: add carpet rolls from Carpet Inventory into one active customer order. Customer, PO, Sales and Date are entered once and reused across multiple carpet rolls and materials. Includes active-order picker and shared order summary."
+  "notes": "Order Workspace Build 002: adds an iPhone-friendly active carpet-roll selector. After each carpet cut is added, the form remains in Carpet Cut mode so the next roll can be selected without re-entering PO, Customer, Sales or Date."
 }

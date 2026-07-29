@@ -21,3 +21,10 @@ WORKFLOW
 DATA SAFETY
 - Uses the existing V5.5.44/V5.5.45 database keys and cloud sync foundation.
 - Completed inventory-affecting records remain locked.
+
+
+Build 002 fix:
+- Added an iPhone-friendly Carpet Roll from Inventory dropdown for every Carpet Cut line.
+- After adding a carpet cut, the form automatically stays in Carpet Cut mode and opens the next roll selector.
+- Added Add Another Carpet quick action.
+- Shared PO, Customer, Sales and Date remain unchanged while adding all rolls.
