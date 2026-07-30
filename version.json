@@ -1,5 +1,5 @@
 {
-  "version": "5.7.4",
+  "version": "5.7.5",
   "date": "2026-07-30",
-  "notes": "Inventory Lifecycle Foundation: adds inventory type, lifecycle status, source module/source ID, automatic legacy migration, ACTIVE GENERAL-only inventory totals, and Archive Record in place of normal permanent deletion."
+  "notes": "Adds product-driven customer shipping directly from Product Inventory, with exact product and inventory-record linking."
 }

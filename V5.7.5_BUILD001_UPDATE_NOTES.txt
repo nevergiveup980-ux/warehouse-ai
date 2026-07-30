@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V5.7.5 Build001
+Product-Driven Shipping Foundation
+
+- Adds Ship to Customer directly from Manage Product Inventory.
+- Adds Ship From Here on each active inventory-location record.
+- The selected Product Master and exact inventory record are carried into the Shipping operation automatically.
+- Product, colour, source location, unit and current inventory balance no longer depend on a second manual product-link search.
+- Shipping opens as Stock work with Customer Order source and Completed status, while PO, customer and quantity remain for the operator to confirm.
+- Completing the operation deducts the exact selected inventory record and creates the Operations/history record in one transaction.
+- Keeps Receiving, corrections, archive and history workflows unchanged.
