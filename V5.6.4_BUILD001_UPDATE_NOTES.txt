@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V5.6.4 Build001
+Completed Order / Inventory Status Separation
+
+- A completed operation now marks all child order items Completed.
+- Existing completed historical multi-item orders display Completed instead of Waiting.
+- Waiting styling is removed from child items once the parent order is completed or inventory-linked.
+- Need TM remains a Carpet Inventory maintenance status and does not keep a customer order open.
+- Completed linked records remain locked to protect inventory accuracy.
