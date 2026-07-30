@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V5.6.5 Build005
+Order Workspace — Existing PO Continuation
+
+- Detects an existing PO while entering warehouse work.
+- Continue This Order reuses PO, customer and sales information.
+- New underlayment or material items append to the same existing operation record.
+- Previously completed carpet items remain locked and are never applied twice.
+- Only newly added items update their own inventory.
+- Completed orders display all carpet and material items under one PO.
+- Designed for PO181245 Heather Choice continuation test.
