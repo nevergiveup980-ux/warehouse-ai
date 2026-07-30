@@ -1,0 +1,21 @@
+RUNLU Warehouse AI V5.7.0 — Draft & Resume Build001
+
+NEW
+- Added a real Save Draft action to Customer Order Details.
+- Drafts can be saved before the customer, PO, location, or product is fully known.
+- Added Continue Working to Customer Orders, showing the three most recently updated Draft/In Progress orders.
+- Added Resume routing: unfinished detail-only drafts reopen in Order Details; active orders with tasks reopen in Order Workspace.
+- Added currentStep and updatedAt fields for reliable continuation.
+
+CHANGED
+- Save Order is now Save & Continue and opens Order Workspace after saving.
+- Opening an order workspace records the current step and safely moves Draft to In Progress.
+- Completed workspace orders record currentStep as Completed.
+
+TEST
+1. Create a new Customer Order with only a PO or even no completed header fields.
+2. Tap Save Draft.
+3. Leave Customer Orders and return.
+4. Confirm Continue Working shows the draft.
+5. Tap Resume and confirm the draft reopens with entered values.
+6. Enter a customer, tap Save & Continue, and confirm Order Workspace opens.

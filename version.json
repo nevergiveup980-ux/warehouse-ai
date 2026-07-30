@@ -1,8 +1,8 @@
 {
-  "version": "5.6.5",
+  "version": "5.7.0",
   "published": "2026-07-29",
-  "notes": "Completed multi-item carpet orders now display every order item as Completed. Waiting no longer appears inside a completed locked order; TM and other roll-maintenance needs remain in Carpet Inventory.",
-  "build": "005",
-  "name": "Order Workspace Existing PO Continuation",
+  "notes": "Adds real Save Draft and Continue Working/Resume support for Customer Orders, including current-step tracking and safe continuation into Order Workspace.",
+  "build": "001",
+  "name": "Draft Resume Foundation",
   "updated": "2026-07-29"
 }
