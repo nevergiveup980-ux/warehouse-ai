@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V5.7.3 Build001
+Date: 2026-07-30
+
+Emergency fix:
+- Completed customer-order inventory reconciliation is now idempotent and runs after startup/cloud refresh.
+- Removed the old one-time migration marker dependency.
+- Completed PO inventory is set to quantity 0 and retained in history instead of remaining in current inventory.
+- Added an explicit "Order Finished · Remove from Current Inventory" action for staged customer-order records.
+- The action only closes the selected staged record and does not alter other stock locations.
+- Inventory and global search reconcile completed orders before displaying current stock.

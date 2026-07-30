@@ -1,5 +1,5 @@
 {
-  "version": "5.7.2",
+  "version": "5.7.3",
   "date": "2026-07-30",
-  "notes": "Separates customer-order staged goods from general inventory and removes matched staged inventory when the customer order is completed."
+  "notes": "Emergency completed-order inventory cleanup. Re-runs safely after startup and cloud refresh, archives completed PO stock out of current inventory, and adds a manual Order Finished cleanup action for staged records."
 }
