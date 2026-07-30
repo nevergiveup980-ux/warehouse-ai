@@ -1,0 +1,12 @@
+RUNLU Warehouse AI V5.7.1 Build001
+Inventory Workflow Optimization
+
+1. Fixed completed Stock operations using Work Type Other so they now increase the selected product inventory.
+2. Added Receive Stock on Manage Product Inventory and Receive Here on each current inventory location.
+3. Product-context receiving now retains the exact Product ID instead of re-linking by name.
+4. Added Receive Source: Supplier, PCW, Store, Customer Return, Other.
+5. Receiving preview shows current stock, incoming quantity and resulting stock.
+6. Success confirmation shows before → after quantity.
+7. Transferred-out / external records are hidden from current warehouse inventory totals and cards.
+8. Warehouse-to-external transfers now deduct local stock without creating a misleading destination inventory record.
+9. App version source updated to V5.7.1.

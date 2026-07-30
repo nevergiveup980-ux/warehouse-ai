@@ -1,8 +1,8 @@
 {
-  "version": "5.7.0",
-  "published": "2026-07-29",
-  "notes": "Adds real Save Draft and Continue Working/Resume support for Customer Orders, including current-step tracking and safe continuation into Order Workspace.",
+  "version": "5.7.1",
+  "published": "2026-07-30",
+  "notes": "Fixes stock receiving so completed Stock operations increase inventory, adds product-context Receive Stock / Receive Here actions with exact product linking and before-to-after confirmation, records receive source, and hides transferred-out external records from current warehouse inventory.",
   "build": "001",
-  "name": "Draft Resume Foundation",
-  "updated": "2026-07-29"
+  "name": "Inventory Workflow Optimization",
+  "updated": "2026-07-30"
 }
