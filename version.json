@@ -1,8 +1,5 @@
 {
-  "version": "5.7.1",
-  "published": "2026-07-30",
-  "notes": "Fixes stock receiving so completed Stock operations increase inventory, adds product-context Receive Stock / Receive Here actions with exact product linking and before-to-after confirmation, records receive source, and hides transferred-out external records from current warehouse inventory.",
-  "build": "001",
-  "name": "Inventory Workflow Optimization",
-  "updated": "2026-07-30"
+  "version": "5.7.2",
+  "date": "2026-07-30",
+  "notes": "Separates customer-order staged goods from general inventory and removes matched staged inventory when the customer order is completed."
 }

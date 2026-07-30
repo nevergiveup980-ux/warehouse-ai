@@ -1,0 +1,7 @@
+RUNLU Warehouse AI V5.7.2 Build001
+
+- General Inventory now excludes Customer Order / staged records.
+- Global Search shows staged goods in a separate Customer Order / Staged Inventory section.
+- Product inventory manager separates general stock from staged customer-order goods.
+- Completing, shipping, or marking a customer order out removes matching PO staged quantities from current inventory while preserving history.
+- One-time reconciliation repairs matching staged inventory for already completed orders, including records such as PO 181132.
