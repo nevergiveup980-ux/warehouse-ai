@@ -1,0 +1,16 @@
+RUNLU V5.7.4 Build001 — Inventory Lifecycle Foundation
+Date: 2026-07-30
+
+CHANGES
+- Adds lifecycle metadata to every general inventory record:
+  inventoryType, lifecycleStatus, sourceModule, sourceId, createdAt, lastUpdatedAt.
+- Migrates older inventory records safely on startup.
+- Current Inventory now counts only ACTIVE + GENERAL records.
+- Customer-order reserved, transferred, shipped and archived records remain outside current totals.
+- Replaces normal Delete Record buttons with Archive Record.
+- Archiving removes a record from current inventory while retaining audit/history data.
+- New Receiving records are explicitly created as ACTIVE GENERAL inventory and retain their receiving source.
+- Completed customer-order stock is marked RESERVED + ARCHIVED with its PO as source ID.
+
+IMPORTANT
+Permanent deletion remains blocked in normal warehouse workflow. Use Archive Record for completed, shipped, duplicate or no-longer-current inventory records.

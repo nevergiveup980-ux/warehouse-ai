@@ -1,5 +1,5 @@
 {
-  "version": "5.7.3",
+  "version": "5.7.4",
   "date": "2026-07-30",
-  "notes": "Emergency completed-order inventory cleanup. Re-runs safely after startup and cloud refresh, archives completed PO stock out of current inventory, and adds a manual Order Finished cleanup action for staged records."
+  "notes": "Inventory Lifecycle Foundation: adds inventory type, lifecycle status, source module/source ID, automatic legacy migration, ACTIVE GENERAL-only inventory totals, and Archive Record in place of normal permanent deletion."
 }
