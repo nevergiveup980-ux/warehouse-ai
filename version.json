@@ -1,5 +1,5 @@
 {
-  "version": "5.7.5",
-  "date": "2026-07-30",
-  "notes": "Adds product-driven customer shipping directly from Product Inventory, with exact product and inventory-record linking."
+  "version": "5.8.0",
+  "date": "2026-07-31",
+  "notes": "Adds partial-order line-item statuses and expanded supplier receipt templates for Primco, Taiga, Fuzion, Treeco, Buckwold, Centura, Oakel City and Twelve Oaks."
 }

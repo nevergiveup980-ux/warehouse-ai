@@ -1,0 +1,12 @@
+RUNLU Warehouse OS V5.8.0 Build001
+
+PARTIAL ORDER MANAGEMENT
+- Line items now support Pending, Picked Up, Received, Backorder and Completed.
+- Mixed received/open line items automatically set the overall PO to Partial.
+- Received/Completed lines can update inventory immediately while Backorder/Pending lines remain open.
+- Reopening the PO later allows remaining line items to be received without reapplying completed lines.
+
+SUPPLIER RECEIPT FORMAT LIBRARY
+- Added built-in recognition templates for Primco, Taiga, Fuzion, Treeco, Buckwold, Centura, Oakel City and Twelve Oaks.
+- Expanded units to CTN, CT, EA, PAIL, SF and SQFT.
+- Supplier scan remains review-first and never changes inventory automatically.
