@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V5.8.1 Build001
+
+CARPET NEW ROLL WORK ROUTING FIX
+
+- Fixes Carpet Inventory > New Roll Work opening the universal general-product form.
+- Adds Carpet Receiving as an explicit item workflow option.
+- New Roll Work now preselects Carpet Receiving, Stock, Foot and Completed.
+- The dedicated carpet fields are shown immediately: Roll Number, Collection, Colour, Lot, Width, Feet/Inches and Rack/Location.
+- General Product Search and Existing Inventory Record are hidden for this carpet workflow.
+- The new carpet roll continues to write only to the independent Carpet Inventory database.

@@ -1,5 +1,5 @@
 {
-  "version": "5.8.0",
+  "version": "5.8.1",
   "date": "2026-07-31",
-  "notes": "Adds partial-order line-item statuses and expanded supplier receipt templates for Primco, Taiga, Fuzion, Treeco, Buckwold, Centura, Oakel City and Twelve Oaks."
+  "notes": "Fixes Carpet Inventory > New Roll Work so it opens the dedicated Carpet Receiving workflow with Roll Number, collection, colour, width, length, lot and rack fields instead of the general product form."
 }
