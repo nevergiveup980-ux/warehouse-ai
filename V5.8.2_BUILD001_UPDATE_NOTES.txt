@@ -1,0 +1,12 @@
+RUNLU Warehouse AI V5.8.2 Build001
+Manufacturer Roll Number Field
+Date: 2026-07-31
+
+- Adds Manufacturer Roll # to New Roll Work / Carpet Receiving.
+- Supports manufacturer and mill roll numbers containing letters, numbers, and hyphens.
+- Automatically trims spaces, removes unsupported characters, converts letters to uppercase, and limits the value to 20 characters.
+- Keeps Operational Roll # and Manufacturer Roll # as separate fields.
+- Saves Manufacturer Roll # into Carpet Inventory instead of hiding it in Notes.
+- Shows the field in Carpet Roll editing, roll details, labels, search, CSV export, cutting workflow, and operation drafts/history.
+- Prevents duplicate Manufacturer Roll # values when creating or editing carpet rolls.
+- Existing numeric values such as 5254 remain fully supported, along with values such as SHW-8K27.

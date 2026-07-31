@@ -1,5 +1,7 @@
 {
-  "version": "5.8.1",
+  "version": "V5.8.2",
   "date": "2026-07-31",
-  "notes": "Fixes Carpet Inventory > New Roll Work so it opens the dedicated Carpet Receiving workflow with Roll Number, collection, colour, width, length, lot and rack fields instead of the general product form."
+  "notes": "Fixes Carpet Inventory > New Roll Work so it opens the dedicated Carpet Receiving workflow with Roll Number, collection, colour, width, length, lot and rack fields instead of the general product form.",
+  "status": "stable",
+  "summary": "Adds a dedicated Manufacturer Roll # field for carpet receiving and editing, supporting letters, numbers and hyphens with search, tag and history integration."
 }
