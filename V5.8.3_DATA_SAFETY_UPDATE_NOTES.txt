@@ -1,0 +1,9 @@
+RUNLU Warehouse OS V5.8.3 — Data Safety / Upgrade Guard
+
+- Local changes are always marked as unsynchronized, even if cloud sync is temporarily off.
+- New Product + Inventory saves now upload immediately and verify cloud record identities before success is confirmed.
+- A failed cloud verification keeps the phone copy and warns not to update or reload.
+- Reload Latest App is blocked while unsynchronized data exists.
+- Before an update, pending datasets are uploaded and verified, then a local safety snapshot is created.
+- Silent cloud downloads cannot replace data while local changes are pending.
+- Version display unified to V5.8.3.

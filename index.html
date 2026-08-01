@@ -750,7 +750,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.8.1', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='5.8.3', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -777,6 +777,7 @@ const CLOUD_KEY='sb_publishable_Jr12gnQ7UrU6Wv9xz4L1aA_bcTZiGqn';
 const CLOUD_SESSION_KEY='runlu_cloud_session_v54', CLOUD_ENABLED_KEY='runlu_cloud_sync_enabled_v54';
 let cloudApplying=false,cloudSaveTimers={},cloudPollTimer=null,cloudSyncBusy=false;
 const CLOUD_LAST_PULL_KEY='runlu_cloud_last_pull_v54', CLOUD_LAST_PUSH_KEY='runlu_cloud_last_push_v54', CLOUD_DIRTY_KEY='runlu_cloud_dirty_keys_v5544', CLOUD_LAST_ERROR_KEY='runlu_cloud_last_error_v5544', CLOUD_SUMMARY_KEY='runlu_cloud_summary_v5544';
+const CLOUD_LOCAL_UPDATED_PREFIX='runlu_cloud_local_updated_v583_', CLOUD_DATASET_PUSH_PREFIX='runlu_cloud_dataset_push_v583_';
 function cloudSession(){try{return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY)||'null')}catch{return null}}
 function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'Bearer '+token};if(json)h['Content-Type']='application/json';return h}
 async function cloudRequest(path,options={}){const res=await fetch(CLOUD_URL+path,options);let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));return data}
@@ -798,8 +799,36 @@ async function cloudSignUp(){const email=normalizeText($('cloudEmail').value),pa
 async function cloudSignIn(){const email=normalizeText($('cloudEmail').value),password=$('cloudPassword').value;if(!email||!password){alert('Enter the cloud login email and password.');return}try{const data=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({email,password})});localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));$('cloudPassword').value='';renderCloudStatus();startCloudPolling();setTimeout(()=>cloudAutoRefresh(true),300);alert('Cloud sign-in succeeded. Sync Now will check this device and the cloud safely.')}catch(e){alert(e.message)}}
 async function cloudChangePassword(){const next=$('cloudNewPassword').value,confirmation=$('cloudConfirmPassword').value;if(!cloudSession()){alert('This device is not signed in. Change the password from a device that already shows Signed in.');return}if(next.length<8){alert('The new App password must contain at least 8 characters.');return}if(next!==confirmation){alert('The two new password entries do not match. Please enter them again.');return}if(!confirm('Change the Warehouse App login password?\n\nGmail, GitHub, Supabase Dashboard and warehouse data will not be changed.'))return;try{const s=await cloudEnsureSession();if(!s)throw new Error('The saved login session has expired. Use password recovery before changing the password.');await cloudRequest('/auth/v1/user',{method:'PUT',headers:cloudHeaders(s.access_token),body:JSON.stringify({password:next})});$('cloudNewPassword').value='';$('cloudConfirmPassword').value='';alert('App password changed successfully. Use the new password when signing in on the office computer.')}catch(e){alert('Password change failed: '+e.message)}}
 function cloudSignOut(){localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);if(cloudPollTimer)clearInterval(cloudPollTimer);renderCloudStatus();alert('Signed out. Local data remains on this device.')}
-async function cloudPutDataset(key,value){if(cloudApplying||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!DATA_KEYS.includes(key))return;const s=await cloudEnsureSession();if(!s)throw new Error('Cloud session is unavailable.');const payload=await cloudPreparePayload(value,key,s);await cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})});localStorage.setItem(CLOUD_LAST_PUSH_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);clearCloudDirty(key)}
-function queueCloudSave(key,value){if(cloudApplying||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!DATA_KEYS.includes(key))return;markCloudDirty(key);clearTimeout(cloudSaveTimers[key]);cloudSaveTimers[key]=setTimeout(()=>cloudPutDataset(key,value).catch(e=>{localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus('Sync pending: '+e.message)}),700)}
+function datasetIdentitySignature(value){
+ if(Array.isArray(value))return JSON.stringify(value.map((x,i)=>String(x?.id??x?.roll??x?.legacyKey??x?.poNumber??i)).sort());
+ if(value&&typeof value==='object')return JSON.stringify(Object.keys(value).sort());
+ return JSON.stringify(value);
+}
+async function cloudPutDataset(key,value){if(cloudApplying||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!DATA_KEYS.includes(key))return;const s=await cloudEnsureSession();if(!s)throw new Error('Cloud session is unavailable.');const payload=await cloudPreparePayload(value,key,s);await cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})});const now=new Date().toISOString();localStorage.setItem(CLOUD_LAST_PUSH_KEY,now);localStorage.setItem(CLOUD_DATASET_PUSH_PREFIX+key,now);localStorage.removeItem(CLOUD_LAST_ERROR_KEY);clearCloudDirty(key)}
+function queueCloudSave(key,value){
+ if(cloudApplying||!DATA_KEYS.includes(key))return;
+ // Always remember unsent local changes, even while signed out or sync is temporarily disabled.
+ // This prevents a later app reload/cloud download from replacing newly entered warehouse data.
+ markCloudDirty(key);localStorage.setItem(CLOUD_LOCAL_UPDATED_PREFIX+key,new Date().toISOString());
+ if(localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!cloudSession())return;
+ clearTimeout(cloudSaveTimers[key]);cloudSaveTimers[key]=setTimeout(()=>cloudPutDataset(key,value).catch(e=>{localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus('Sync pending: '+e.message)}),700)
+}
+async function verifyCloudDatasets(keys){
+ const rows=await cloudFetchRows(),byKey=new Map(rows.map(r=>[r.dataset_key,r.payload]));
+ const failed=[];
+ for(const key of [...new Set(keys)].filter(k=>DATA_KEYS.includes(k))){
+  let local=null;try{local=JSON.parse(localStorage.getItem(key)||'null')}catch{}
+  const remote=byKey.get(key);
+  if(remote===undefined||datasetIdentitySignature(local)!==datasetIdentitySignature(remote))failed.push(key);
+ }
+ if(failed.length)throw new Error('Cloud verification failed for '+failed.join(', '));
+ return true;
+}
+async function flushAndVerifyDatasets(keys){
+ const unique=[...new Set(keys)].filter(k=>DATA_KEYS.includes(k));
+ for(const key of unique){clearTimeout(cloudSaveTimers[key]);let value=null;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{}if(value!==null)await cloudPutDataset(key,value)}
+ await verifyCloudDatasets(unique);return unique.length;
+}
 function cloudDeviceId(){let id=localStorage.getItem('runlu_cloud_device_id_v54');if(!id){id=(crypto.randomUUID?.()||('device-'+Date.now()+'-'+Math.random()));localStorage.setItem('runlu_cloud_device_id_v54',id)}return id}
 async function cloudUploadAll(){const s=await cloudEnsureSession();if(!s){alert('Sign in first.');return}if(!confirm('Make this device the authoritative cloud copy?\n\nUse this only when this device contains the newest complete data.'))return;try{cloudSyncBusy=true;for(const key of DATA_KEYS){let value;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{value=null}if(value!==null)await cloudPutDatasetInitial(key,value,s)}localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_PUSH_KEY,new Date().toISOString());setCloudDirtyKeys([]);const rows=await cloudFetchRows();cloudRememberSummary(rows);const newest=rows.reduce((m,r)=>Math.max(m,new Date(r.updated_at||0).getTime()),0);localStorage.setItem(CLOUD_LAST_PULL_KEY,new Date(newest||Date.now()).toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);renderCloudStatus();startCloudPolling();alert('Cloud upload completed. This device is now the current cloud copy.')}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);alert('Cloud upload failed: '+e.message)}finally{cloudSyncBusy=false}}
 async function cloudPutDatasetInitial(key,value,s){const payload=await cloudPreparePayload(value,key,s);return cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})})}
@@ -1445,7 +1474,7 @@ function clearForm(){editId=null;photoData='';fields.forEach(x=>$(x).value='');$
 function newProduct(){clearForm();showPage('editor')}
 function scanNewProduct(){newProduct();openAIScan({target:'product',returnPage:'editor',label:'Product Master'})}
 function num(id){const v=parseFloat($(id).value);return Number.isFinite(v)?v:0}
-function saveProduct(){
+async function saveProduct(){
  const name=normalizeText($('name').value),location=normalizeText($('location').value),sku=normalizeText($('sku').value);
  if(!name){alert('Please enter Product Name.');return}
  const masters=loadMasters();
@@ -1460,7 +1489,15 @@ function saveProduct(){
   const ir={id:existing?.id||Date.now(),masterId,locationType:$('locationType').value,location,quantity:num('quantity'),unit:$('unit').value,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:existing?.createdAt||new Date().toISOString(),lastUpdatedAt:new Date().toISOString(),updated:new Date().toLocaleString()};
   const ii=inv.findIndex(x=>x.id===ir.id);if(ii>=0)inv[ii]=ir;else inv.unshift(ir);if(!save(INVDB,inv))return;
  }
- alert(location?'Product Master and Inventory Record saved.':'Product Master saved.');clearForm();showPage('products');
+ const savedKeys=location?[PMDB,INVDB]:[PMDB];
+ let cloudMessage='Saved locally. Cloud sync is not currently confirmed.';
+ if(localStorage.getItem(CLOUD_ENABLED_KEY)==='1'&&cloudSession()){
+  try{await flushAndVerifyDatasets(savedKeys);cloudMessage='Saved and verified in the cloud.';}
+  catch(err){localStorage.setItem(CLOUD_LAST_ERROR_KEY,err.message);alert('Saved on this phone, but cloud verification failed. Do NOT update or reload the app yet.\n\n'+err.message);renderCloudStatus();return;}
+ }else{
+  alert('Saved on this phone only. Cloud sync is not active, so app update/reload will be blocked until the data is synchronized.');
+ }
+ alert((location?'Product Master and Inventory Record saved.':'Product Master saved.')+'\n\n'+cloudMessage);clearForm();showPage('products');
 }
 function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;editId=id;photoData=x.photo||'';masterTextFields.forEach(k=>$(k).value=x[k]??'');['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category||'Other';$('coverageUnit').value=x.coverageUnit||'Other';['location','quantity','lotNumber','inventoryPo'].forEach(k=>$(k).value='');$('locationType').value='Rack';$('unit').value='Box';showPage('editor')}
 function removeItem(id){const x=loadMasters().find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+' and all of its inventory records?'))return;save(PMDB,loadMasters().filter(v=>v.id!==id));save(INVDB,loadInventoryRecords().filter(v=>v.masterId!==id));renderProducts();renderInventory();refreshMemory()}
@@ -2775,7 +2812,21 @@ function renderOrderDataCenter(){
  $('odSpecialList').innerHTML=special.length?special.map(r=>`<div class="item"><span class="status ${r.status==='Picked Up'?'done':'waiting'}">${esc(r.status||'Waiting')}</span><div class="name">${esc(r.customer||'-')} — ${esc(r.product||'Unnamed product')}${r.color?' · '+esc(r.color):''}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">PO: ${esc(r.po||'-')} · Supplier: ${esc(r.supplier||'-')}<br>Location: ${esc(r.location||'-')}</div><div class="actions"><button class="primary" onclick="copySpecialToCustomer('${String(r.id).replace(/'/g,'')}')">Copy to Customer Orders</button></div></div>`).join(''):'<div class="empty">No Special Order records found.</div>';
 }
 async function reloadLatestApp(){
- if(!confirm('Reload the latest published index.html from GitHub Pages? Your local warehouse data will remain in this browser.'))return;
+ const dirty=cloudDirtyKeys();
+ if(dirty.length){
+  if(!cloudSession()||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'){
+   alert('Update blocked: this phone has unsynchronized warehouse data. Sign in and run Sync Now before updating. No data was changed.');return;
+  }
+  try{
+   cloudSyncBusy=true;renderCloudStatus('Protecting new data before update...');
+   await flushAndVerifyDatasets(dirty);
+  }catch(err){
+   localStorage.setItem(CLOUD_LAST_ERROR_KEY,err.message);renderCloudStatus();
+   alert('Update blocked because the newest phone data could not be verified in the cloud. Your local data is still safe on this phone.\n\n'+err.message);return;
+  }finally{cloudSyncBusy=false}
+ }
+ if(cloudDirtyKeys().length){alert('Update blocked: pending changes still exist. Use Sync Now and try again.');return}
+ if(!confirm('Cloud verification passed. Reload the latest published app now? A local safety snapshot will also be created.'))return;
  createLocalSnapshot(false);const u=new URL(location.href);u.searchParams.set('update',Date.now());location.replace(u.toString());
 }
 async function checkForUpdate(fromSettings=false){
@@ -2783,7 +2834,7 @@ async function checkForUpdate(fromSettings=false){
  try{
   const response=await fetch('./version.json?ts='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('version.json was not found');
   const data=await response.json(),latest=String(data.version||'Unknown').replace(/^V/i,''),notes=String(data.notes||'No release notes.'),published=String(data.published||''),cmp=compareVersions(latest,APP_VERSION);let html='';
-  if(cmp>0)html=`<span class="updateBadge">Update available</span><br><b>V${esc(latest)}</b>${published?' · '+esc(published):''}${data.channel?' · '+esc(data.channel):''}<br>${esc(notes)}<br><br><button class="green" onclick="exportBackup(true)">1. Download Upgrade Backup</button> <button class="primary" onclick="reloadLatestApp()">2. Reload Latest App</button><br><span class="meta">Reload works after the newer index.html and matching version.json are published to this same GitHub Pages address.</span>`;
+  if(cmp>0)html=`<span class="updateBadge">Update available</span><br><b>V${esc(latest)}</b>${published?' · '+esc(published):''}${data.channel?' · '+esc(data.channel):''}<br>${esc(notes)}<br><br><button class="green" onclick="exportBackup(true)">1. Download Upgrade Backup</button> <button class="primary" onclick="reloadLatestApp()">2. Verify Sync & Reload Latest App</button><br><span class="meta">Reload works after the newer index.html and matching version.json are published to this same GitHub Pages address.</span>`;
   else if(cmp===0)html=`<span class="updateBadge">Up to date</span><br>Current: <b>V${esc(APP_VERSION)}</b> · Published: <b>V${esc(latest)}</b>${published?' · '+esc(published):''}<br>${esc(notes)}<br><br><button onclick="reloadLatestApp()">Refresh Published App</button>`;
   else html=`<span class="updateBadge">Version file needs publishing</span><br>This app is newer than the published version file.<br>Current app: <b>V${esc(APP_VERSION)}</b> · Published file: <b>V${esc(latest)}</b>.<br><br>Upload the matching <b>version.json</b> beside index.html, then check again.`;
   targets.forEach(x=>x.innerHTML=html);

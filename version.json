@@ -1,7 +1,7 @@
 {
-  "version": "V5.8.2",
+  "version": "V5.8.3",
   "date": "2026-07-31",
-  "notes": "Fixes Carpet Inventory > New Roll Work so it opens the dedicated Carpet Receiving workflow with Roll Number, collection, colour, width, length, lot and rack fields instead of the general product form.",
+  "notes": "Data-safety hotfix: every local warehouse change is marked pending even when cloud sync is temporarily unavailable. Product and inventory creation is verified against the cloud before reporting success, and app updates are blocked until pending data is uploaded and verified.",
   "status": "stable",
-  "summary": "Adds a dedicated Manufacturer Roll # field for carpet receiving and editing, supporting letters, numbers and hyphens with search, tag and history integration."
+  "summary": "Prevents newly entered products or inventory from disappearing after a version update or cloud refresh."
 }
