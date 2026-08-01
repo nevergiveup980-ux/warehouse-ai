@@ -1,0 +1,21 @@
+RUNLU Warehouse AI V5.9.0 Build001
+Inventory Duplicate Guard + Smart Delete / Archive
+
+1. Duplicate inventory protection
+- Checks Product ID + Location + Unit + Lot before creating a current GENERAL inventory record.
+- If an exact record already exists, the user can receive into it, cancel, or deliberately create a separate batch.
+- Prevents accidental duplicate records such as two identical Fission records at 27C.
+
+2. Smart Delete / Archive
+- Unused inventory records with no linked business history show Delete Record.
+- Records linked to receiving, shipping, transfer, customer orders, tags, PO/source IDs, or transaction history show Archive Record.
+- Permanent deletion is double-confirmed and restricted to unused records.
+
+3. Inventory ID foundation
+- Every inventory record receives a stable Inventory ID.
+- Existing records are upgraded automatically without changing quantity or location.
+- Inventory ID is displayed in Inventory and Manage Product Inventory.
+
+Data safety
+- Existing products, quantities, locations, orders, and history are preserved.
+- V5.8.3 cloud verification and upgrade guard remain active.

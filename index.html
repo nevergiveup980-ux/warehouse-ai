@@ -750,7 +750,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='5.8.3', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='5.9.0', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1407,12 +1407,57 @@ function normalizeInventoryLifecycleRecord(r){
  if(!r.sourceId&&r.poNumber)r.sourceId=String(r.poNumber);
  if(!r.createdAt)r.createdAt=r.updated||now;
  if(!r.lastUpdatedAt)r.lastUpdatedAt=now;
+ if(!r.inventoryId){
+  const stamp=String(r.createdAt||now).replace(/\D/g,'').slice(0,14)||String(Date.now());
+  const tail=String(r.id??Date.now()).replace(/\D/g,'').slice(-6).padStart(6,'0');
+  r.inventoryId=`INV-${stamp}-${tail}`;
+ }
+ if(r.transactionCount===undefined)r.transactionCount=0;
  return r;
 }
 function migrateInventoryLifecycle(){
  const inv=loadInventoryRecords();let changed=false;
- inv.forEach(r=>{const before=JSON.stringify([r.inventoryType,r.lifecycleStatus,r.sourceModule,r.sourceId,r.createdAt,r.lastUpdatedAt]);normalizeInventoryLifecycleRecord(r);if(before!==JSON.stringify([r.inventoryType,r.lifecycleStatus,r.sourceModule,r.sourceId,r.createdAt,r.lastUpdatedAt]))changed=true});
+ inv.forEach(r=>{const before=JSON.stringify([r.inventoryType,r.lifecycleStatus,r.sourceModule,r.sourceId,r.createdAt,r.lastUpdatedAt,r.inventoryId,r.transactionCount]);normalizeInventoryLifecycleRecord(r);if(before!==JSON.stringify([r.inventoryType,r.lifecycleStatus,r.sourceModule,r.sourceId,r.createdAt,r.lastUpdatedAt,r.inventoryId,r.transactionCount]))changed=true});
  if(changed)save(INVDB,inv);return changed;
+}
+function exactInventoryDuplicate(records,candidate,excludeId=null){
+ const current=(records||[]).filter(isCurrentGeneralInventoryRecord);
+ return current.find(r=>String(r.id)!==String(excludeId??'')&&
+  String(r.masterId)===String(candidate.masterId)&&
+  normKey(r.location)===normKey(candidate.location)&&
+  normKey(r.unit)===normKey(candidate.unit)&&
+  normKey(r.lotNumber||'')===normKey(candidate.lotNumber||''))||null;
+}
+function inventoryRecordHasBusinessHistory(r){
+ if(!r)return true;
+ normalizeInventoryLifecycleRecord(r);
+ if(Number(r.transactionCount||0)>0)return true;
+ if(r.poNumber||r.sourceId||r.linkedOrder||r.shippedQuantity||r.transferredOut||r.archivedAt)return true;
+ if(!['Inventory','Product Master','Manual Entry',''].includes(String(r.sourceModule||'')))return true;
+ const id=String(r.id),uid=String(r.inventoryId||'');
+ const linked=[...load(LOGDB),...load(RCVDB),...load(ODB),...load(SPODB),...load(TAGPRINTDB)].some(x=>{
+  const vals=[x.inventoryId,x.inventoryRecordId,x.recordId,x.sourceInventoryId,x.linkedInventoryId];
+  return vals.some(v=>String(v||'')===id||String(v||'')===uid);
+ });
+ return linked;
+}
+function inventoryRecordActionButton(r,context='list'){
+ const id=Number(r.id);
+ if(inventoryRecordHasBusinessHistory(r))return `<button class="red" onclick="archiveInventoryRecord(${id},'Archived from ${context}')">Archive Record</button>`;
+ return `<button class="red" onclick="deleteUnusedInventoryRecord(${id})">Delete Record</button>`;
+}
+function deleteUnusedInventoryRecord(id){
+ const inv=loadInventoryRecords(),r=inv.find(x=>Number(x.id)===Number(id));if(!r)return;
+ const m=loadMasters().find(x=>String(x.id)===String(r.masterId))||{};
+ if(inventoryRecordHasBusinessHistory(r)){alert('This record now contains business history and cannot be permanently deleted. Use Archive Record instead.');return}
+ if(!confirm(`Permanently delete this unused inventory record?
+
+${m.name||'Product'}${m.color?' · '+m.color:''}
+${Number(r.quantity||0)} ${r.unit||''} at ${r.location||'—'}
+${r.inventoryId?'\nInventory ID: '+r.inventoryId:''}
+
+This action cannot be undone.`))return;
+ if(save(INVDB,inv.filter(x=>Number(x.id)!==Number(id)))){renderInventory();renderProducts();renderDashboard();renderMap();refreshMemory();if(managedProductId)renderInventoryManager();alert('Unused inventory record permanently deleted.');}
 }
 function archiveInventoryRecord(id,reason='Removed from current inventory'){
  const inv=loadInventoryRecords(),r=inv.find(x=>Number(x.id)===Number(id));if(!r)return;
@@ -1485,9 +1530,38 @@ async function saveProduct(){
  const mi=masters.findIndex(x=>x.id===masterId);if(mi>=0)masters[mi]=rec;else masters.unshift(rec);
  if(!save(PMDB,masters))return;
  if(location){
-  const inv=loadInventoryRecords(),lot=normalizeText($('lotNumber').value),existing=inv.find(x=>x.masterId===masterId&&normKey(x.location)===normKey(location)&&normKey(x.lotNumber)===normKey(lot));
-  const ir={id:existing?.id||Date.now(),masterId,locationType:$('locationType').value,location,quantity:num('quantity'),unit:$('unit').value,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:existing?.createdAt||new Date().toISOString(),lastUpdatedAt:new Date().toISOString(),updated:new Date().toLocaleString()};
-  const ii=inv.findIndex(x=>x.id===ir.id);if(ii>=0)inv[ii]=ir;else inv.unshift(ir);if(!save(INVDB,inv))return;
+  const inv=loadInventoryRecords(),lot=normalizeText($('lotNumber').value),qty=num('quantity'),unit=$('unit').value;
+  const candidate={masterId,location,unit,lotNumber:lot};
+  const existing=exactInventoryDuplicate(inv,candidate);
+  if(existing&&!editId){
+   const m=rec;
+   const add=confirm(`Inventory already exists at this exact location.
+
+${m.name}${m.color?' · '+m.color:''}
+Location: ${existing.location}
+Lot: ${existing.lotNumber||'—'}
+Current: ${Number(existing.quantity||0)} ${existing.unit||unit}
+New entry: ${qty} ${unit}
+
+OK = Receive into the existing record (${Number(existing.quantity||0)} → ${Number(existing.quantity||0)+qty})
+Cancel = review other options.`);
+   if(add){
+    normalizeInventoryLifecycleRecord(existing);existing.quantity=Number((Number(existing.quantity||0)+qty).toFixed(2));existing.updated=new Date().toLocaleString();existing.lastUpdatedAt=new Date().toISOString();existing.lastAction='Received into existing record';existing.transactionCount=Number(existing.transactionCount||0)+1;
+    if(!save(INVDB,inv))return;
+   }else{
+    const separate=confirm(`Create a separate inventory record anyway?
+
+Use this only when it is a genuinely separate lot, batch, pallet, ownership status, or physical stock group.
+
+For an accidental duplicate, choose Cancel and edit the existing record instead.`);
+    if(!separate){alert('New duplicate inventory was not created. The existing record remains unchanged.');return}
+    const now=new Date();
+    const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
+   }
+  }else{
+   const now=new Date();
+   const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
+  }
  }
  const savedKeys=location?[PMDB,INVDB]:[PMDB];
  let cloudMessage='Saved locally. Cloud sync is not currently confirmed.';
@@ -1597,7 +1671,7 @@ The record will be kept in history and will not change other inventory locations
  if(save(INVDB,inv)){renderInventory();renderProducts();renderDashboard();renderMap();if(managedProductId)openInventoryManager(managedProductId);alert('Completed-order stock was removed from current inventory and retained in history.');}
 }
 function productCard(x){const inv=localInventoryRecordsForProduct(x.id),qty=inv.reduce((s,r)=>s+Number(r.quantity||0),0);return `<div class="item"><div class="productName">${esc(x.name)}${x.color?' · '+esc(x.color):''}</div><div class="meta">${x.sku?'SKU '+esc(x.sku)+' · ':''}${esc(x.brand||'')} ${esc(x.series||'')}<br>${esc(x.id)} · ${esc(x.category||'Other')} · ${inv.length} inventory record(s) · Total Qty ${qty}</div><div><span class="badge">${esc(x.coverageUnit||'Other')}</span><span class="badge">${esc(x.category||'Other')}</span></div><div class="meta">Size: ${esc(x.length||'-')} × ${esc(x.width||'-')} · Thickness: ${esc(x.thickness||'-')}<br>SF/Box: ${x.sfPerBox||'-'} · Weight/Box: ${x.weightPerBox||'-'} lb<br>Updated: ${esc(x.updated||'-')}${x.notes?'<br>'+esc(x.notes):''}</div>${x.photo?`<img class="thumb" src="${x.photo}">`:''}<div class="inventoryActions"><button onclick="editItem('${x.id}')">Edit Product</button><button class="primary" onclick="openInventoryManager('${x.id}')">Manage Inventory</button><button class="green" onclick="newReceivingForProduct('${x.id}')">Receive</button><button class="purple" onclick="openGeneralTagCenter('${x.id}','','products')">🏷️ Tag</button><button class="red" onclick="removeItem('${x.id}')">Delete</button></div></div>`}
-function inventoryCard(r){const m=loadMasters().find(x=>x.id===r.masterId)||{};const q=Number(r.quantity||0),unit=esc(r.unit||''),unitLabel=q===1?unit:(unit==='Carton'?'Cartons':unit==='Box'?'Boxes':unit==='Pail'?'Pails':unit==='Roll'?'Rolls':unit==='Piece'?'Pieces':unit);return `<div class="item"><div class="inventoryName">${esc(m.name||'Unknown Product')}${m.color?' · '+esc(m.color):''}</div><div class="meta">${m.sku?'SKU '+esc(m.sku)+' · ':''}${esc(m.id||'')}<br>${esc(r.locationType||'Location')} ${esc(r.location||'-')}${r.lotNumber?' · Lot '+esc(r.lotNumber):''}${r.poNumber?' · PO '+esc(r.poNumber):''}</div><div class="qty">${q} ${unitLabel}</div>${totalSF(r,m)?`<div class="coverage">${totalSF(r,m)} SF total</div>`:''}${totalWeight(r,m)?`<div class="meta">${totalWeight(r,m)} lb estimated</div>`:''}<div class="meta">Updated: ${esc(r.updated||'-')}</div><div class="inventoryActions"><button onclick="adjust(${r.id},-1)">−1</button><button onclick="adjust(${r.id},1)">+1</button><button class="green" onclick="newReceivingForRecord(${r.id})">Receive</button><button class="purple" onclick="openGeneralTagCenter('${esc(r.masterId)}','${esc(r.id)}','inventory')">🏷️ Tag</button></div><div class="actions"><button class="primary" onclick="openInventoryRecordEditor(${r.id})">Edit Record</button><button class="red" onclick="archiveInventoryRecord(${r.id},'Archived from Inventory list')">Archive Record</button></div></div>`}
+function inventoryCard(r){const m=loadMasters().find(x=>x.id===r.masterId)||{};const q=Number(r.quantity||0),unit=esc(r.unit||''),unitLabel=q===1?unit:(unit==='Carton'?'Cartons':unit==='Box'?'Boxes':unit==='Pail'?'Pails':unit==='Roll'?'Rolls':unit==='Piece'?'Pieces':unit);return `<div class="item"><div class="inventoryName">${esc(m.name||'Unknown Product')}${m.color?' · '+esc(m.color):''}</div><div class="meta">${m.sku?'SKU '+esc(m.sku)+' · ':''}${esc(m.id||'')}<br>${esc(r.locationType||'Location')} ${esc(r.location||'-')}${r.lotNumber?' · Lot '+esc(r.lotNumber):''}${r.poNumber?' · PO '+esc(r.poNumber):''}</div><div class="qty">${q} ${unitLabel}</div>${totalSF(r,m)?`<div class="coverage">${totalSF(r,m)} SF total</div>`:''}${totalWeight(r,m)?`<div class="meta">${totalWeight(r,m)} lb estimated</div>`:''}<div class="meta">Updated: ${esc(r.updated||'-')}<br>Inventory ID: ${esc(r.inventoryId||'—')}</div><div class="inventoryActions"><button onclick="adjust(${r.id},-1)">−1</button><button onclick="adjust(${r.id},1)">+1</button><button class="green" onclick="newReceivingForRecord(${r.id})">Receive</button><button class="purple" onclick="openGeneralTagCenter('${esc(r.masterId)}','${esc(r.id)}','inventory')">🏷️ Tag</button></div><div class="actions"><button class="primary" onclick="openInventoryRecordEditor(${r.id})">Edit Record</button>${inventoryRecordActionButton(r,'Inventory list')}</div></div>`}
 function renderProducts(){const a=loadMasters();$('productsList').innerHTML=a.length?a.map(productCard).join(''):'<div class="empty">No products yet.</div>'}
 let managedProductId=null, editingInventoryRecordId=null;
 function openInventoryManager(masterId){managedProductId=masterId;renderInventoryManager();showPage('inventoryManager')}
@@ -1605,7 +1679,7 @@ function renderInventoryManager(){
  const m=loadMasters().find(x=>String(x.id)===String(managedProductId));if(!m){$('inventoryManagerSummary').innerHTML='Product not found.';$('inventoryManagerList').innerHTML='';return}
  const allRows=loadInventoryRecords().filter(r=>String(r.masterId)===String(managedProductId)),rows=allRows.filter(isCurrentGeneralInventoryRecord),stagedRows=allRows.filter(r=>!isExternalInventoryRecord(r)&&isCustomerOrderInventoryRecord(r)),externalRows=allRows.filter(isExternalInventoryRecord),total=rows.reduce((s,r)=>s+Number(r.quantity||0),0);
  $('inventoryManagerSummary').innerHTML=`<b>${esc(m.name)}${m.color?' · '+esc(m.color):''}</b><br>${esc(m.id)} · ${rows.length} current general-inventory record(s) · Current total: <b>${total}</b><br><span class="meta">Only ACTIVE GENERAL inventory is included in this total. Reserved, transferred, shipped and archived records are kept separate.</span>`;
- const generalHtml=rows.length?rows.map(r=>`<div class="item"><div class="inventoryName">${esc(r.locationType||'Location')} ${esc(r.location||'-')}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">${r.lotNumber?'Lot '+esc(r.lotNumber)+' · ':''}${r.poNumber?'PO '+esc(r.poNumber)+' · ':''}Updated: ${esc(r.updated||'-')}${r.notes?'<br>Notes: '+esc(r.notes):''}</div><div class="actions"><button class="green" onclick="newReceivingForRecord(${r.id})">Receive Here</button><button class="primary" onclick="newShippingForRecord(${r.id})">Ship From Here</button><button onclick="openInventoryRecordEditor(${r.id})">Edit Record</button><button onclick="moveInventoryRecord(${r.id})">Move to Product</button><button class="red" onclick="archiveInventoryRecord(${r.id},'Archived from Product Inventory')">Archive Record</button></div></div>`).join(''):'<div class="empty">No current general inventory records for this product.</div>';
+ const generalHtml=rows.length?rows.map(r=>`<div class="item"><div class="inventoryName">${esc(r.locationType||'Location')} ${esc(r.location||'-')}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">${r.lotNumber?'Lot '+esc(r.lotNumber)+' · ':''}${r.poNumber?'PO '+esc(r.poNumber)+' · ':''}Updated: ${esc(r.updated||'-')}<br>Inventory ID: ${esc(r.inventoryId||'—')}${r.notes?'<br>Notes: '+esc(r.notes):''}</div><div class="actions"><button class="green" onclick="newReceivingForRecord(${r.id})">Receive Here</button><button class="primary" onclick="newShippingForRecord(${r.id})">Ship From Here</button><button onclick="openInventoryRecordEditor(${r.id})">Edit Record</button><button onclick="moveInventoryRecord(${r.id})">Move to Product</button>${inventoryRecordActionButton(r,'Product Inventory')}</div></div>`).join(''):'<div class="empty">No current general inventory records for this product.</div>';
  const stagedHtml=stagedRows.length?`<div class="notice" style="margin-top:14px"><b>Customer Order / Staged Inventory (${stagedRows.length})</b><br>These goods are physically in the warehouse but are reserved for customer orders and excluded from general inventory.</div>`+stagedRows.map(r=>`<div class="item"><div class="inventoryName">Customer Order · PO ${esc(r.poNumber||'—')}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">${esc(r.locationType||'Location')} ${esc(r.location||'-')} · Reserved / staged</div><div class="inventoryActions"><button class="red" onclick="archiveInventoryRecordAsShipped(${Number(r.id)})">Order Finished · Remove from Current Inventory</button></div></div>`).join(''):'';
  $('inventoryManagerList').innerHTML=generalHtml+stagedHtml+(externalRows.length?`<div class="notice" style="margin-top:12px"><b>${externalRows.length} completed / transferred-out record(s) hidden from current inventory.</b><br>These records remain available in operation and order history.</div>`:'');
 }
@@ -1639,7 +1713,7 @@ function saveInventoryRecordEdits(){
  record.locationType=$('editInvLocationType').value;record.location=location;record.quantity=Number(quantity.toFixed(2));record.unit=$('editInvUnit').value;record.lotNumber=normalizeText($('editInvLot').value);record.poNumber=normalizeText($('editInvPo').value);record.notes=normalizeText($('editInvNotes').value);record.updated=new Date().toLocaleString();record.lastAction='Inventory record edited';
  if(save(INVDB,inv)){closeInventoryEdit();renderInventoryManager();renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory();alert('Inventory record updated.')}
 }
-function deleteManagedInventoryRecord(id){alert('Permanent deletion is disabled in normal warehouse workflow. Use Archive Record so history and audit data are retained.');}
+function deleteManagedInventoryRecord(id){deleteUnusedInventoryRecord(id)}
 let pickerRecordId=null,pickerSourceMasterId=null;
 function moveInventoryRecord(id){
  const inv=loadInventoryRecords(),record=inv.find(x=>x.id===id);if(!record)return;
