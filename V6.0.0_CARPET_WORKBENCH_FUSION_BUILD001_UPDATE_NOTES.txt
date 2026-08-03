@@ -1,0 +1,19 @@
+RUNLU Warehouse AI V6.0.0 — Carpet Workbench Fusion Build001
+
+First construction release of the integrated Carpet Workbench.
+
+Added:
+- Carpet Workbench action hub
+- Quick New Roll, Multi-Roll Cutting and Batch Receiving entry points
+- Cut Piece Return, Create REM, Installer Return and Transfer entry points
+- Rack Capacity Map, OCR scan, labels and backup entry points
+- Data-quality filters: Need TM, Needs Review, Possible Duplicates, Missing MFG Roll, Incomplete Records
+- Expanded workbench dashboard metrics
+- Roll-card data-quality badges
+- Roll-detail actions for TM, REM, returns and transfer
+- Manufacturer roll # 0000 is always treated as unknown
+
+Safety:
+- Existing V5.9.0 local/cloud storage keys are retained
+- No automatic deletion or migration of existing carpet records
+- Existing Command Center, cutting log, labels and Supabase synchronization framework remain in place

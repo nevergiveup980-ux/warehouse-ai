@@ -1,7 +1,6 @@
 {
-  "version": "V5.9.0",
-  "date": "2026-07-31",
-  "notes": "Inventory integrity foundation: duplicate inventory guard, Receive into Existing choice, smart Delete versus Archive based on business history, and stable Inventory IDs.",
-  "status": "testing",
-  "summary": "Prevents accidental duplicate stock records and allows truly unused mistaken records to be permanently deleted while protecting records with history."
+  "version": "6.0.0",
+  "channel": "Carpet Workbench Fusion Build001",
+  "published": "2026-08-03",
+  "notes": "First integrated Carpet Workbench build: action hub, quick and batch receiving, multi-roll cutting entry, Cut Piece Return, Create REM, Installer Return, Transfer, rack map, labels, OCR, data-quality filters, duplicate alerts, Need TM review, and manufacturer roll 0000 treated as unknown."
 }
