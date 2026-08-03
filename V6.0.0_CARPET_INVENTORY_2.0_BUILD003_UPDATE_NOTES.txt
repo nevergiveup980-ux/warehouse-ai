@@ -1,0 +1,15 @@
+RUNLU Warehouse AI V6.0.0
+Carpet Inventory 2.0 Build003
+
+NEW
+- List / Card / Map views inside Carpet Roll Inventory.
+- View choice is remembered on each device.
+- Sorting by roll, rack, product, length, or attention.
+- List view for fast browsing and comparison.
+- Card view keeps the familiar detailed cards and adds Transfer, Return, REM and Details actions.
+- Map view shows rack load and filters the same inventory data.
+
+DATA SAFETY
+- No database keys or Supabase settings changed.
+- No existing carpet records are migrated or deleted.
+- Existing filters, cutting log, REM archive and cloud synchronization remain in place.
