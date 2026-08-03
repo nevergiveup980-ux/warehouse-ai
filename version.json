@@ -2,5 +2,7 @@
   "version": "6.0.0",
   "channel": "Carpet Workbench Fusion Build001",
   "published": "2026-08-03",
-  "notes": "First integrated Carpet Workbench build: action hub, quick and batch receiving, multi-roll cutting entry, Cut Piece Return, Create REM, Installer Return, Transfer, rack map, labels, OCR, data-quality filters, duplicate alerts, Need TM review, and manufacturer roll 0000 treated as unknown."
+  "notes": "Fix Rack Capacity Map routing from Carpet Workbench and add safe page-route fallback.",
+  "build": "002",
+  "name": "Carpet Workbench Fusion Build002"
 }

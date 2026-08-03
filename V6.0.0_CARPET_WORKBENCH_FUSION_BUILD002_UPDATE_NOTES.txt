@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V6.0.0 — Carpet Workbench Fusion Build002
+
+FIXED
+- Rack Capacity Map button no longer opens a blank page.
+- Carpet Workbench Rack Locations dashboard tile now opens the same working Warehouse Map.
+- Added safe route protection: an invalid page target returns to Home instead of leaving a blank screen.
+
+DATA SAFETY
+- No inventory data, carpet records, Supabase settings, or storage keys were changed.
