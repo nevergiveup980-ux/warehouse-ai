@@ -2134,10 +2134,11 @@ function bestInventoryRecordForProduct(productId,requested=0,preferredLocation='
   return Number(b.quantity||0)-Number(a.quantity||0);
  })[0];
 }
+function productLinkKey(value){return normKey(value).replace(/\bsku\b/g,' ').replace(/\s+/g,' ').trim()}
 function operationProductChanged(){
- const text=$('operationProduct').value.trim(),key=normKey(text),tokens=key.split(/\s+/).filter(Boolean),masters=loadMasters();
- let matches=masters.filter(x=>operationProductLabel(x)===text||String(x.id)===text||normKey(x.name)===key||normKey(x.sku)===key);
- if(matches.length!==1&&tokens.length){matches=masters.filter(x=>{const hay=normKey([x.name,x.brand,x.series,x.color,x.sku].join(' '));return tokens.every(t=>hay.includes(t))})}
+ const text=$('operationProduct').value.trim(),key=productLinkKey(text),tokens=key.split(/\s+/).filter(Boolean),masters=loadMasters();
+ let matches=masters.filter(x=>productLinkKey(operationProductLabel(x))===key||String(x.id)===text||productLinkKey(x.name)===key||productLinkKey(x.sku)===key);
+ if(matches.length!==1&&tokens.length){matches=masters.filter(x=>{const hay=productLinkKey([x.name,x.brand,x.series,x.color,x.sku].join(' '));return tokens.every(t=>hay.includes(t))})}
  const p=matches.length===1?matches[0]:null;
  if(p){
   $('operationProduct').dataset.productId=p.id;$('operationCollection').value=p.name||p.series||'';$('operationColour').value=p.color||'';
@@ -2278,10 +2279,13 @@ function renderOperationsDay(){
 }
 function ensureOperationProductLink(item){
  if(!item||item.roll||item.productId)return item?.productId||'';
- const masters=loadMasters(),parts=[item.product,item.collection,item.colour,item.supplier].map(normKey).filter(Boolean);
- if(!parts.length)return '';
- const matches=masters.filter(m=>{const hay=normKey([m.name,m.brand,m.series,m.color,m.sku].join(' '));return parts.every(part=>hay.includes(part)||part.split(/\s+/).filter(Boolean).every(t=>hay.includes(t)))});
- if(matches.length===1){const m=matches[0];item.productId=m.id;item.product=item.product||operationProductLabel(m);item.collection=item.collection||m.name||m.series||'';item.colour=item.colour||m.color||'';return item.productId}
+ const masters=loadMasters(),inventory=loadInventoryRecords();
+ if(item.inventoryRecordId){const record=inventory.find(r=>String(r.id)===String(item.inventoryRecordId));if(record?.masterId){item.productId=record.masterId;return item.productId}}
+ const collection=productLinkKey(item.collection),colour=productLinkKey(item.colour);
+ let matches=[];
+ if(collection||colour){matches=masters.filter(m=>{const names=[m.name,m.series].map(productLinkKey).filter(Boolean),mColour=productLinkKey(m.color);const nameOk=!collection||names.some(n=>n===collection||n.includes(collection)||collection.includes(n));const colourOk=!colour||mColour===colour;return nameOk&&colourOk})}
+ if(matches.length!==1){const parts=[item.product,item.collection,item.colour].map(productLinkKey).filter(Boolean);matches=masters.filter(m=>{const hay=productLinkKey([m.name,m.brand,m.series,m.color,m.sku].join(' '));return parts.every(part=>part.split(/\s+/).filter(Boolean).every(t=>hay.includes(t)))})}
+ if(matches.length===1){const m=matches[0];item.productId=m.id;item.product=operationProductLabel(m);item.collection=item.collection||m.name||m.series||'';item.colour=item.colour||m.color||'';const record=bestInventoryRecordForProduct(m.id,item.quantity,item.location);if(record){item.inventoryRecordId=String(record.id);item.location=item.location||record.location||'';item.unit=record.unit||item.unit;item.lot=item.lot||record.lotNumber||''}return item.productId}
  return '';
 }
 function operationItemFromForm(requireContent=false){const type=$('operationLineType')?.value||$('operationType').value,raw=$('operationQty').value,quantity=operationQuantityInput(),item={numberOfCuts:Math.max(1,Math.floor(Number($('operationCuts')?.value||1))),supplier:$('operationSupplier').value.trim(),itemStatus:$('operationItemStatus').value||'Waiting',productId:$('operationProduct').dataset.productId||'',inventoryRecordId:$('operationInventoryRecord').value||'',product:$('operationProduct').value.trim(),collection:$('operationCollection').value.trim(),colour:$('operationColour').value.trim(),lot:$('operationLot').value.trim(),roll:$('operationRoll').value.trim(),manufacturerRoll:cleanManufacturerRoll($('operationManufacturerRoll')?.value||''),width:$('operationWidth').value.trim(),quantity:Number.isFinite(quantity)?quantity:NaN,unit:$('operationUnit').value,location:$('operationLocation').value.trim(),toLocation:$('operationToLocation').value.trim(),notes:$('operationNotes').value.trim(),transferRoute:$('operationTransferRoute')?.value||'',transferWholeRoll:!!$('operationTransferWholeRoll')?.checked,transferMode:$('operationCarpetTransferMode')?.value||'Existing / Whole Roll',transferPieces:parseTransferPieceLengths($('operationTransferPieces')?.value),inventoryMode:$('operationLineInventoryMode')?.value||$('operationInventoryMode').value||'Record Only'};ensureOperationProductLink(item);if(item.inventoryMode==='Stock'&&!item.roll&&item.productId&&!item.inventoryRecordId){const r=bestInventoryRecordForProduct(item.productId,item.quantity,item.location);if(r){item.inventoryRecordId=String(r.id);item.location=item.location||r.location||'';item.unit=r.unit||item.unit;item.lot=item.lot||r.lotNumber||''}}const has=[item.product,item.collection,item.roll,item.manufacturerRoll,item.supplier,raw,$('operationInches').value,item.notes].some(Boolean);if(requireContent&&!has)return null;return enrichOperationItem(item,type)}

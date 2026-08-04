@@ -1,0 +1,1 @@
+Fixes Platinum and other existing inventory items failing to auto-link to Product Master during Shipping/linked stock operations. Existing inventory is matched by record, product name, colour and location. No data migration or deletion.
