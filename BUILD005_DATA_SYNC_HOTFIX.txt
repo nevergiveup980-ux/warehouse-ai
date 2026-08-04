@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V6.0.0 — Build005 Data Sync Hotfix
+
+- Used Up zero-balance carpet rolls show USED UP instead of SIZE PENDING.
+- Used Up zero-balance rolls are no longer incorrectly flagged as incomplete.
+- Strengthened Product Master auto-linking for Heather Choice, Spill Blocker and Platinum.
+- Duplicate unfinished operation records are cleaned once at startup.
+- Future identical unfinished operations update the existing draft instead of creating another card.
+- Completed and inventory-linked records are never removed.

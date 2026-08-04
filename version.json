@@ -3,7 +3,7 @@
   "channel": "Carpet Workbench Fusion Build001",
   "published": "2026-08-03",
   "notes": "Fix Rack Capacity Map routing from Carpet Workbench and add safe page-route fallback.",
-  "build": "004",
-  "name": "Product Master Auto-Link Hotfix",
+  "build": "005",
+  "name": "Operations Data Sync Hotfix",
   "file": "index.html"
 }
