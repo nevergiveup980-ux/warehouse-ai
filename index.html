@@ -2048,11 +2048,13 @@ function prepareProductDrivenShipping(masterId,recordId=''){
  $('operationCollection').value=m.name||m.series||'';
  $('operationColour').value=m.color||'';
  updateOperationForm();
+ populateOperationInventoryPicker(m.id,recordId);
  operationProductChanged();
  const records=localInventoryRecordsForProduct(m.id);
- let r=recordId?records.find(x=>String(x.id)===String(recordId)):null;
+ let r=recordId?loadInventoryRecords().find(x=>String(x.id)===String(recordId)&&String(x.masterId)===String(m.id)):null;
  if(!r&&records.length===1)r=records[0];
  if(r){
+  populateOperationInventoryPicker(m.id,r.id);
   $('operationInventoryRecord').value=String(r.id);
   operationInventoryRecordChanged();
   $('operationLocation').value=r.location||'';
@@ -2116,6 +2118,22 @@ function carpetRecords(){return load(CARPETDB).map(x=>{const length=Number(x.len
 function cuttingRecords(){return load(CUTDB)}
 function openOperationFingerprint(x){const first=Array.isArray(x.items)&&x.items.length?x.items[0]:x;return [operationPOKey(x.po),normKey(x.type),normKey(first.collection||first.product),normKey(first.colour),Number(first.quantity||0),normKey(first.unit),normKey(first.location),normKey(x.customer)].join('|')}
 function dedupeOpenOperationDrafts(showMessage=false){const marker='runlu_v600_build005_open_draft_dedupe',rows=operationRecords();if(localStorage.getItem(marker))return 0;const groups=new Map();rows.forEach(x=>{if(x.impactApplied||x.status==='Completed'||x.status==='Cancelled')return;const k=openOperationFingerprint(x);if(!k.replace(/\|/g,''))return;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)});const remove=new Set();for(const group of groups.values()){if(group.length<2)continue;group.sort((a,b)=>Number(b.updatedAt?Date.parse(b.updatedAt):b.id)-Number(a.updatedAt?Date.parse(a.updatedAt):a.id));group.slice(1).forEach(x=>remove.add(Number(x.id)))}if(remove.size)save(LOGDB,rows.filter(x=>!remove.has(Number(x.id))));localStorage.setItem(marker,new Date().toISOString());if(showMessage&&remove.size)alert(`${remove.size} duplicate unfinished operation record(s) were removed. Completed and inventory-linked records were not changed.`);return remove.size}
+function populateOperationInventoryPicker(preferredProductId='',selectedId=''){
+ const picker=$('operationInventoryRecord');if(!picker)return;
+ const products=loadMasters(),all=loadInventoryRecords();
+ const selected=String(selectedId||picker.value||'');
+ let rows=all.filter(r=>isCurrentGeneralInventoryRecord(r)&&!r.quantityPending);
+ const exact=selected?all.find(r=>String(r.id)===selected):null;
+ if(exact&&!rows.some(r=>String(r.id)===selected))rows.unshift(exact);
+ rows.sort((a,b)=>{
+  const ap=preferredProductId&&String(a.masterId)===String(preferredProductId)?1:0,bp=preferredProductId&&String(b.masterId)===String(preferredProductId)?1:0;
+  if(ap!==bp)return bp-ap;
+  const am=products.find(x=>String(x.id)===String(a.masterId))||{},bm=products.find(x=>String(x.id)===String(b.masterId))||{};
+  return String(am.name||'').localeCompare(String(bm.name||''),undefined,{numeric:true})||String(a.location||'').localeCompare(String(b.location||''),undefined,{numeric:true});
+ });
+ picker.innerHTML='<option value="">Choose current product / location (recommended for stock work)</option>'+rows.map(r=>{const p=products.find(x=>String(x.id)===String(r.masterId))||{};const prefix=preferredProductId&&String(r.masterId)===String(preferredProductId)?'✓ ':'';return `<option value="${esc(r.id)}">${prefix}${esc([p.name,p.color,r.location,Number(r.quantity||0)+' '+(r.unit||'')].filter(Boolean).join(' · '))}</option>`}).join('');
+ if(selected&&[...picker.options].some(o=>o.value===selected))picker.value=selected;
+}
 function refreshOperationMemory(){
  const ops=operationRecords(),products=loadMasters(),inv=loadInventoryRecords(),carpets=carpetRecords();
  const put=(id,values)=>{const el=$(id);if(el)el.innerHTML=[...new Set(values.filter(Boolean))].sort().map(x=>`<option value="${esc(x)}"></option>`).join('')};
@@ -2125,10 +2143,10 @@ function refreshOperationMemory(){
  put('operation_roll_memory',ops.map(x=>x.roll).concat(carpets.map(x=>x.roll)).concat(inv.map(x=>x.lotNumber)));
  const dl=$('operation_product_memory');if(dl)dl.innerHTML=products.map(p=>`<option value="${esc(operationProductLabel(p))}" data-id="${esc(p.id)}"></option>`).join('');
  refreshCarpetTransferPicker();
- const picker=$('operationInventoryRecord');if(picker){const selected=picker.value;picker.innerHTML='<option value="">Choose current product / location (recommended for stock work)</option>'+inv.filter(r=>!r.quantityPending).map(r=>{const p=products.find(x=>String(x.id)===String(r.masterId))||{};return `<option value="${esc(r.id)}">${esc([p.name,p.color,r.location,Number(r.quantity||0)+' '+(r.unit||'')].filter(Boolean).join(' · '))}</option>`}).join('');if([...picker.options].some(o=>o.value===selected))picker.value=selected}
+ populateOperationInventoryPicker($('operationProduct')?.dataset.productId||'', $('operationInventoryRecord')?.value||'');
 }
 function bestInventoryRecordForProduct(productId,requested=0,preferredLocation=''){
- const rows=loadInventoryRecords().filter(r=>String(r.masterId)===String(productId)&&!r.quantityPending),need=Math.max(0,Number(requested)||0),loc=normKey(preferredLocation);
+ const rows=loadInventoryRecords().filter(r=>String(r.masterId)===String(productId)&&isCurrentGeneralInventoryRecord(r)&&!r.quantityPending),need=Math.max(0,Number(requested)||0),loc=normKey(preferredLocation);
  if(!rows.length)return null;
  return rows.slice().sort((a,b)=>{
   const aLoc=loc&&normKey(a.location)===loc?1:0,bLoc=loc&&normKey(b.location)===loc?1:0;if(aLoc!==bLoc)return bLoc-aLoc;
@@ -2144,6 +2162,7 @@ function operationProductChanged(){
  const p=matches.length===1?matches[0]:null;
  if(p){
   $('operationProduct').dataset.productId=p.id;$('operationCollection').value=p.name||p.series||'';$('operationColour').value=p.color||'';
+  populateOperationInventoryPicker(p.id,$('operationInventoryRecord').value||'');
   const requested=operationQuantityInput(),record=bestInventoryRecordForProduct(p.id,requested,$('operationLocation').value);
   if(record){$('operationInventoryRecord').value=String(record.id);$('operationLocation').value=record.location||$('operationLocation').value;$('operationUnit').value=record.unit||$('operationUnit').value;$('operationLot').value=record.lotNumber||$('operationLot').value;$('operationProductMatch').innerHTML=`✓ Product and inventory linked: <b>${esc(operationProductLabel(p))}</b> · ${esc(record.location||'Unassigned')} · ${Number(record.quantity||0)} ${esc(record.unit||'')}`;}
   else{$('operationInventoryRecord').value='';$('operationProductMatch').innerHTML=`Linked to Product Master: <b>${esc(operationProductLabel(p))}</b> · <span style="color:#b91c1c">No inventory record found</span>`;}

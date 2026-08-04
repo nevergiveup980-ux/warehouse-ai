@@ -1,0 +1,7 @@
+RUNLU V6.0.0 Build006 — Inventory Picker Source Fix
+
+- Existing Inventory Record now uses the same ACTIVE GENERAL inventory source as the Inventory page.
+- Matching records for the selected product are moved to the top and marked with a check.
+- Ship From Here preserves and injects the exact clicked inventory record ID, even when it was missing from the generic dropdown.
+- Platinum / Green at 11A can now be selected directly and linked before completion.
+- No inventory quantities or Supabase settings are migrated or deleted.
