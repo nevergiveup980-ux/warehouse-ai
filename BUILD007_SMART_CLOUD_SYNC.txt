@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V6.0.1 — Smart Cloud Sync Build007
+
+Changes:
+- Automatic cloud check when the app opens.
+- Automatic cloud check when returning to the browser tab.
+- Automatic cloud check when internet connection returns.
+- Background cloud check every 15 seconds while safe.
+- Header cloud indicator: Cloud ✓, Syncing, Pending, Offline, or Setup Sync.
+- Existing safety rules remain: no automatic overwrite while a form is open or local unsent changes conflict with newer cloud data.
+- Manual Upload This Device and Download Cloud Data remain available for recovery only.
