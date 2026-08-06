@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V6.0.3 Build009
+Automatic Local Storage Cleanup
+
+- Automatically retains only the two newest local safety snapshots.
+- Runs safe cleanup on startup at most twice per day.
+- If a browser quota error occurs, cleanup runs and the save is retried once.
+- Never deletes products, inventory, orders, operations, carpet rolls, drafts, login information, or cloud data.
+- Replaces the misleading photo-size warning with an accurate local app storage warning.
+- Downloaded JSON backups remain the recommended long-term protection.

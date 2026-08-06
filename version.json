@@ -1,10 +1,10 @@
 {
-  "version": "6.0.0",
+  "version": "6.0.3",
   "channel": "Carpet Workbench Fusion Build001",
   "published": "2026-08-03",
   "notes": "Fix Rack Capacity Map routing from Carpet Workbench and add safe page-route fallback.",
-  "build": "006",
-  "name": "Inventory Picker Source Fix",
+  "build": "009",
+  "name": "Automatic Local Storage Cleanup",
   "file": "index.html",
-  "updated": "2026-08-04"
+  "updated": "2026-08-06"
 }

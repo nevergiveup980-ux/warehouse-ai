@@ -786,7 +786,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.0.2', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.0.3', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -798,12 +798,42 @@ const AISCANCTX='runlu_ai_scan_context_v5523';
 const $=id=>document.getElementById(id);
 function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
 function loadObj(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch{return{}}}
+const STORAGE_MAINTENANCE_KEY='runlu_storage_maintenance_v603';
+const LOCAL_SNAPSHOT_LIMIT=2;
+function isQuotaError(err){return !!(err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||err.code===22||err.code===1014))}
+function localStorageBytes(){let total=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i)||'',v=localStorage.getItem(k)||'';total+=(k.length+v.length)*2}}catch{}return total}
+function pruneLocalApplicationCache(force=false){
+ const now=Date.now();let state={};try{state=JSON.parse(localStorage.getItem(STORAGE_MAINTENANCE_KEY)||'{}')}catch{}
+ if(!force&&state.lastRun&&now-Date.parse(state.lastRun)<12*60*60*1000)return {removedSnapshots:0,reclaimedBytes:0,skipped:true};
+ const before=localStorageBytes();let removedSnapshots=0;
+ try{
+  const snapshots=load(SNAPDB);
+  if(snapshots.length>LOCAL_SNAPSHOT_LIMIT){
+   removedSnapshots=snapshots.length-LOCAL_SNAPSHOT_LIMIT;
+   localStorage.setItem(SNAPDB,JSON.stringify(snapshots.slice(0,LOCAL_SNAPSHOT_LIMIT)));
+  }
+ }catch(err){console.warn('Snapshot cleanup skipped:',err)}
+ // Remove only disposable diagnostic/cache values. Business records, drafts,
+ // login details and cloud synchronization markers are never removed here.
+ try{sessionStorage.removeItem('runlu_startup_errors')}catch{}
+ const after=localStorageBytes();
+ const result={lastRun:new Date().toISOString(),removedSnapshots,reclaimedBytes:Math.max(0,before-after),snapshotLimit:LOCAL_SNAPSHOT_LIMIT};
+ try{localStorage.setItem(STORAGE_MAINTENANCE_KEY,JSON.stringify(result))}catch{}
+ return result;
+}
 function save(k,v){
- try{localStorage.setItem(k,JSON.stringify(v));queueCloudSave(k,v);return true;}
+ const encoded=JSON.stringify(v);
+ try{localStorage.setItem(k,encoded);queueCloudSave(k,v);return true;}
  catch(err){
   console.error('Storage save failed:',err);
-  if(err&&(err.name==='QuotaExceededError'||err.code===22)) alert('Storage is full. The selected photo may be too large. Please export a backup, remove unnecessary photos, or choose a smaller image.');
-  else alert('The record could not be saved. Please try again.');
+  if(isQuotaError(err)){
+   const cleaned=pruneLocalApplicationCache(true);
+   try{localStorage.setItem(k,encoded);queueCloudSave(k,v);renderBackupStatus();return true}catch(retryErr){
+    console.error('Storage save retry failed:',retryErr);
+    const freed=cleaned.reclaimedBytes?` Automatic cleanup recovered ${(cleaned.reclaimedBytes/1024/1024).toFixed(1)} MB, but more space is still required.`:'';
+    alert('This browser’s local app storage is full.'+freed+' Your cloud data was not deleted. Download an Upgrade Backup, then remove old attachments or use Download Cloud Data on a freshly initialized browser.');
+   }
+  } else alert('The record could not be saved. Please try again.');
   return false;
  }
 }
@@ -2720,7 +2750,7 @@ function createLocalSnapshot(showMessage=false,reason='manual'){
   const snapshots=load(SNAPDB);
   const payload=buildBackupPayload();payload.snapshotReason=reason;
   snapshots.unshift(payload);
-  while(snapshots.length>7)snapshots.pop();
+  while(snapshots.length>LOCAL_SNAPSHOT_LIMIT)snapshots.pop();
   if(!save(SNAPDB,snapshots))return false;
   const p=loadObj(PROTECTDB);p.lastSnapshotAt=payload.exportedAt;p.lastSnapshotReason=reason;save(PROTECTDB,p);
   renderBackupStatus();
@@ -2754,7 +2784,7 @@ function renderBackupStatus(){
  const p=loadObj(PROTECTDB),snaps=load(SNAPDB),last=snaps[0];
  const exportText=p.lastExportAt?new Date(p.lastExportAt).toLocaleString():'No downloaded backup recorded';
  const snapshotText=last?`${new Date(last.exportedAt).toLocaleString()} (${esc(last.snapshotReason||'snapshot')})`:'No local snapshot yet';
- box.innerHTML=`<b>Upgrade-safe storage is active</b><br>App version: V${APP_VERSION}<br>Current website: ${esc(location.origin+location.pathname)}<br>Latest local snapshot: ${snapshotText}<br>Latest downloaded backup: ${exportText}<br>Local snapshots retained: ${snaps.length} / 7`;
+ box.innerHTML=`<b>Upgrade-safe storage is active</b><br>App version: V${APP_VERSION}<br>Current website: ${esc(location.origin+location.pathname)}<br>Latest local snapshot: ${snapshotText}<br>Latest downloaded backup: ${exportText}<br>Local snapshots retained: ${snaps.length} / ${LOCAL_SNAPSHOT_LIMIT}<br>Automatic local cleanup: active`;
 }
 $('restoreFile').onchange=e=>{
  const f=e.target.files[0];if(!f)return;const r=new FileReader();
@@ -3245,6 +3275,7 @@ document.body.classList.remove('formEntry');
  ['repairCompletedStockTransfers',()=>repairCompletedStockTransfers(true)],
  ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
  ['reconcileCompletedCustomerOrderInventory',()=>reconcileCompletedCustomerOrderInventory(true)],
+ ['pruneLocalApplicationCache',()=>pruneLocalApplicationCache(false)],
  ['automaticDailySnapshot',()=>automaticDailySnapshot()],
  ['renderDashboard',()=>renderDashboard()],
  ['renderProducts',()=>renderProducts()],
