@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
 <title>Runlu Warehouse AI V6.0.2 Smart Material Quantity Build008</title>
 <style>
@@ -786,7 +789,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.0.3', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.0.4', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -802,6 +805,18 @@ const STORAGE_MAINTENANCE_KEY='runlu_storage_maintenance_v603';
 const LOCAL_SNAPSHOT_LIMIT=2;
 function isQuotaError(err){return !!(err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||err.code===22||err.code===1014))}
 function localStorageBytes(){let total=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i)||'',v=localStorage.getItem(k)||'';total+=(k.length+v.length)*2}}catch{}return total}
+const STORAGE_SOFT_LIMIT_BYTES=3.2*1024*1024;
+function aggressiveSafeStorageCleanup(){
+ const before=localStorageBytes();let removed=[];
+ // These values are disposable copies or diagnostics only. Never remove live
+ // products, inventory, orders, operations, carpet records, drafts, login or sync markers.
+ [SNAPDB,'runlu_v516_preupgrade_backup','runlu_startup_error_log','runlu_photo_temp_cache','runlu_scan_temp_cache'].forEach(k=>{
+  try{if(localStorage.getItem(k)!==null){localStorage.removeItem(k);removed.push(k)}}catch{}
+ });
+ try{sessionStorage.clear()}catch{}
+ const after=localStorageBytes();
+ return {removed,reclaimedBytes:Math.max(0,before-after),beforeBytes:before,afterBytes:after};
+}
 function pruneLocalApplicationCache(force=false){
  const now=Date.now();let state={};try{state=JSON.parse(localStorage.getItem(STORAGE_MAINTENANCE_KEY)||'{}')}catch{}
  if(!force&&state.lastRun&&now-Date.parse(state.lastRun)<12*60*60*1000)return {removedSnapshots:0,reclaimedBytes:0,skipped:true};
@@ -827,11 +842,11 @@ function save(k,v){
  catch(err){
   console.error('Storage save failed:',err);
   if(isQuotaError(err)){
-   const cleaned=pruneLocalApplicationCache(true);
+   const normal=pruneLocalApplicationCache(true),deep=aggressiveSafeStorageCleanup();
    try{localStorage.setItem(k,encoded);queueCloudSave(k,v);renderBackupStatus();return true}catch(retryErr){
     console.error('Storage save retry failed:',retryErr);
-    const freed=cleaned.reclaimedBytes?` Automatic cleanup recovered ${(cleaned.reclaimedBytes/1024/1024).toFixed(1)} MB, but more space is still required.`:'';
-    alert('This browser’s local app storage is full.'+freed+' Your cloud data was not deleted. Download an Upgrade Backup, then remove old attachments or use Download Cloud Data on a freshly initialized browser.');
+    const freed=(normal.reclaimedBytes||0)+(deep.reclaimedBytes||0);
+    alert('This browser cannot save more local app data.'+(freed?` Automatic cleanup recovered ${(freed/1024/1024).toFixed(1)} MB, but the browser still needs more room.`:'')+' Cloud data was not deleted. Keep this page open, confirm Cloud ✓, then use Settings → Download Upgrade Backup before clearing this site’s browser data.');
    }
   } else alert('The record could not be saved. Please try again.');
   return false;
@@ -2747,6 +2762,12 @@ function exportBackup(isUpgrade=false){
 }
 function createLocalSnapshot(showMessage=false,reason='manual'){
  try{
+  const used=localStorageBytes();
+  if(used>STORAGE_SOFT_LIMIT_BYTES){
+   aggressiveSafeStorageCleanup();
+   if(showMessage)alert('Local snapshot skipped because browser storage is already high. Please use Download Upgrade Backup instead.');
+   return false;
+  }
   const snapshots=load(SNAPDB);
   const payload=buildBackupPayload();payload.snapshotReason=reason;
   snapshots.unshift(payload);
@@ -2759,9 +2780,10 @@ function createLocalSnapshot(showMessage=false,reason='manual'){
  }catch(err){console.error(err);if(showMessage)alert('The local snapshot could not be created. Please download a JSON backup instead.');return false;}
 }
 function automaticDailySnapshot(){
- const p=loadObj(PROTECTDB),today=todayISO();
- if(p.lastAutoSnapshotDate===today)return;
- if(createLocalSnapshot(false,'automatic daily')){p.lastAutoSnapshotDate=today;save(PROTECTDB,p);}
+ // Disabled in V6.0.4: full daily browser snapshots duplicate the entire database
+ // and can exhaust Safari localStorage. Cloud sync remains active; users can make
+ // an explicit JSON Upgrade Backup or a manual snapshot when space permits.
+ return false;
 }
 function applyBackupData(d){
  if(d.productMaster){save(PMDB,d.productMaster||[]);save(INVDB,d.inventory||[])}
@@ -3259,6 +3281,7 @@ document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));
 if($('home'))$('home').classList.remove('hidden');
 document.body.classList.remove('formEntry');
 [
+ ['earlyStorageCleanup',()=>{pruneLocalApplicationCache(true);if(localStorageBytes()>STORAGE_SOFT_LIMIT_BYTES)aggressiveSafeStorageCleanup()}],
  ['migrateV13',()=>migrateV13()],
  ['migrateToV21',()=>migrateToV21()],
  ['migrateInventoryLifecycle',()=>migrateInventoryLifecycle()],
@@ -3275,8 +3298,6 @@ document.body.classList.remove('formEntry');
  ['repairCompletedStockTransfers',()=>repairCompletedStockTransfers(true)],
  ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
  ['reconcileCompletedCustomerOrderInventory',()=>reconcileCompletedCustomerOrderInventory(true)],
- ['pruneLocalApplicationCache',()=>pruneLocalApplicationCache(false)],
- ['automaticDailySnapshot',()=>automaticDailySnapshot()],
  ['renderDashboard',()=>renderDashboard()],
  ['renderProducts',()=>renderProducts()],
  ['renderInventory',()=>renderInventory()],

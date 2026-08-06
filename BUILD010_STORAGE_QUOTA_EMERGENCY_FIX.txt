@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V6.0.4 Build010
+Storage Quota Emergency Fix
+
+- Stops automatic daily full local snapshots that duplicated the entire database.
+- Runs safe cleanup before migrations and rendering.
+- Removes only disposable snapshots, legacy pre-upgrade copies and temporary diagnostics.
+- Never deletes live products, inventory, orders, operations, carpet data, drafts, cloud login or sync markers.
+- Retries the interrupted save after cleanup.
+- Replaces the misleading selected-photo warning with an accurate browser-storage message.
+- Adds no-cache metadata and a clearly visible V6.0.4 version marker.

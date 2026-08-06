@@ -1,10 +1,10 @@
 {
-  "version": "6.0.3",
-  "channel": "Carpet Workbench Fusion Build001",
-  "published": "2026-08-03",
-  "notes": "Fix Rack Capacity Map routing from Carpet Workbench and add safe page-route fallback.",
-  "build": "009",
-  "name": "Automatic Local Storage Cleanup",
+  "version": "6.0.4",
+  "channel": "Emergency Data Entry Hotfix",
+  "published": "2026-08-06",
+  "notes": "Stops automatic full browser snapshots, safely removes disposable local copies before startup, retries quota failures, and replaces the misleading photo-storage warning.",
+  "build": "010",
+  "name": "Storage Quota Emergency Fix",
   "file": "index.html",
   "updated": "2026-08-06"
 }
