@@ -1,0 +1,11 @@
+RUNLU Warehouse AI V6.0.2 — Smart Material Quantity Build008
+
+Improvements:
+1. Underlayment products such as Heather Choice, Spill Blocker and Platinum now show “Number of Underlayment Rolls” instead of carpet-length fields.
+2. The inches field is hidden for underlayment roll issues.
+3. Underlayment quantity uses roll-count input and automatically keeps Unit = Roll.
+4. The calculation preview shows coverage, estimated weight, current stock and expected balance after issue.
+5. Product, colour and inventory-record changes refresh the material-specific form immediately.
+6. Smart Cloud Sync from Build007 is retained.
+
+No Supabase configuration or inventory data is changed by installing this build.
