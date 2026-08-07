@@ -1,0 +1,18 @@
+RUNLU Warehouse AI V6.0.6 · Build012
+Customer Return From Inventory
+
+Built on V6.0.5 Build011 / V6.0.4 Storage Quota Emergency Fix foundation.
+
+NEW
+- Added “↩️ Customer Return” directly to each current general-inventory record card.
+- Opens a pre-linked Customer Return operation for the exact Product Master and inventory record.
+- Prefills product, colour, location, unit and lot when available.
+- Completed Customer Return increases the linked ACTIVE GENERAL inventory record and keeps a separate Customer Return operation/history trail.
+- Notes prompt is optimized for return reason, condition and resale status.
+- Existing Underlayment Roll Count logic remains active: underlayment returns use roll count and add rolls back to inventory.
+- Carpet return remains on the independent Carpet Customer Return workflow.
+
+DATA SAFETY
+- No database key/schema replacement.
+- Existing inventory and history are preserved.
+- Build010 storage-quota protections remain unchanged.
