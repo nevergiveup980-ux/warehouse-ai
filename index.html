@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.0.5 Underlayment Roll Count Build011</title>
+<title>RUNLU Warehouse AI V6.0.9 Adhesive Pail + Exact Search Build015</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -136,7 +136,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 </style>
 </head>
 <body>
-<header><div class="top"><div class="brand"><img class="brandLogo" src="runlu_logo_header_complete.svg" alt="RUNLU"><div class="brandText"><h1>Runlu Warehouse AI</h1><p>Warehouse Operating System</p></div></div><div class="headerRight"><div class="cloudPill offline" id="headerCloudPill">Offline</div><div class="version" id="headerVersion">V6.0.2</div></div></div></header>
+<header><div class="top"><div class="brand"><img class="brandLogo" src="runlu_logo_header_complete.svg" alt="RUNLU"><div class="brandText"><h1>Runlu Warehouse AI</h1><p>Warehouse Operating System</p></div></div><div class="headerRight"><div class="cloudPill offline" id="headerCloudPill">Offline</div><div class="version" id="headerVersion">V6.0.9</div></div></div></header>
 
 <main>
 <section id="home" class="page">
@@ -214,7 +214,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 </section>
 
 <section id="operationsDay" class="page hidden">
-  <div class="card"><button class="back" onclick="showPage('operations')">‹ Back</button><div class="dayHeader"><div><h2 id="operationsDayTitle">Daily Operations</h2><div id="operationsDaySummary" class="meta"></div></div><button class="green" onclick="newOperation(activeOperationsDate)">＋ Add Work</button></div>
+  <div class="card"><button class="back" onclick="activeOperationsExactIds=null;showPage('operations')">‹ Back</button><div class="dayHeader"><div><h2 id="operationsDayTitle">Daily Operations</h2><div id="operationsDaySummary" class="meta"></div></div><button class="green" onclick="newOperation(activeOperationsDate)">＋ Add Work</button></div>
   <div class="opsFilters"><button id="opsFilterAll" class="active" onclick="setOperationsStatusFilter('All')">All</button><button id="opsFilterWaiting" onclick="setOperationsStatusFilter('Waiting')">Waiting</button><button id="opsFilterProgress" onclick="setOperationsStatusFilter('In Progress')">In Progress</button><button id="opsFilterCompleted" onclick="setOperationsStatusFilter('Completed')">Completed</button></div>
   <div class="notice opsMobileHint" style="margin-top:10px">Swipe the table sideways to see every column.</div></div>
   <div class="card opsTableWrap"><table class="opsTable"><thead><tr><th>Time</th><th>Status</th><th>Work Type</th><th>PO</th><th>Product / Colour</th><th>Qty / Location</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="operationsDayRows"></tbody></table></div>
@@ -384,7 +384,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <div><label>Location Type</label><select id="locationType"><option>Rack</option><option>Floor Stack</option><option>Temporary Area</option></select></div>
 <div><label>Rack / Location</label><input id="location" list="memory_location"><datalist id="memory_location"></datalist></div>
 <div><label>Quantity</label><input id="quantity" type="number" min="0" step=".01"></div><div><label>Lot Number</label><input id="lotNumber" list="memory_lot"><datalist id="memory_lot"></datalist></div><div><label>P.O. Number</label><input id="inventoryPo" list="memory_po"><datalist id="memory_po"></datalist></div>
-<div><label>Unit</label><select id="unit"><option>Box</option><option>Roll</option><option>Pallet</option><option>Piece</option><option>Foot</option><option>Approx.</option></select></div>
+<div><label>Unit</label><select id="unit" onchange="updateProductPailSize()"><option>Box</option><option>Carton</option><option>Pail</option><option>Bucket</option><option>Tube</option><option>Roll</option><option>Pallet</option><option>Piece</option><option>Foot</option><option>Approx.</option></select></div><div id="productPailSizeWrap" style="display:none"><label>Pail Size</label><select id="productPailSize"><option value="1 gal">1 gal</option><option value="3 gal">3 gal</option><option value="4 gal">4 gal</option></select></div>
 <div class="full"><label>Photo</label><input id="photo" type="file" accept="image/*" capture="environment"></div>
 <div class="full"><label>Notes</label><textarea id="notes"></textarea></div>
 </div>
@@ -1528,6 +1528,7 @@ function exactInventoryDuplicate(records,candidate,excludeId=null){
   String(r.masterId)===String(candidate.masterId)&&
   normKey(r.location)===normKey(candidate.location)&&
   normKey(r.unit)===normKey(candidate.unit)&&
+  normKey(r.pailSize||'')===normKey(candidate.pailSize||'')&&
   normKey(r.lotNumber||'')===normKey(candidate.lotNumber||''))||null;
 }
 function inventoryRecordHasBusinessHistory(r){
@@ -1628,7 +1629,8 @@ function autoFillMasterFromName(){
  ['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet'].forEach(k=>$(k).value=x[k]||'')
 }
 $('name').addEventListener('change',autoFillMasterFromName);
-function clearForm(){editId=null;photoData='';fields.forEach(x=>$(x).value='');$('category').value='Carpet Roll';$('coverageUnit').value='SF / Box';$('locationType').value='Rack';$('unit').value='Box';$('photo').value='';refreshMemory()}
+function updateProductPailSize(){const wrap=$('productPailSizeWrap');if(!wrap)return;wrap.style.display=$('unit').value==='Pail'?'block':'none';}
+function clearForm(){editId=null;photoData='';fields.forEach(x=>$(x).value='');$('category').value='Carpet Roll';$('coverageUnit').value='SF / Box';$('locationType').value='Rack';$('unit').value='Box';if($('productPailSize'))$('productPailSize').value='1 gal';updateProductPailSize();$('photo').value='';refreshMemory()}
 function newProduct(){clearForm();showPage('editor')}
 function scanNewProduct(){newProduct();openAIScan({target:'product',returnPage:'editor',label:'Product Master'})}
 function num(id){const v=parseFloat($(id).value);return Number.isFinite(v)?v:0}
@@ -1644,7 +1646,7 @@ async function saveProduct(){
  if(!save(PMDB,masters))return;
  if(location){
   const inv=loadInventoryRecords(),lot=normalizeText($('lotNumber').value),qty=num('quantity'),unit=$('unit').value;
-  const candidate={masterId,location,unit,lotNumber:lot};
+  const pailSize=unit==='Pail'?($('productPailSize')?.value||''):'';const candidate={masterId,location,unit,lotNumber:lot,pailSize};
   const existing=exactInventoryDuplicate(inv,candidate);
   if(existing&&!editId){
    const m=rec;
@@ -1659,7 +1661,7 @@ New entry: ${qty} ${unit}
 OK = Receive into the existing record (${Number(existing.quantity||0)} → ${Number(existing.quantity||0)+qty})
 Cancel = review other options.`);
    if(add){
-    normalizeInventoryLifecycleRecord(existing);existing.quantity=Number((Number(existing.quantity||0)+qty).toFixed(2));existing.updated=new Date().toLocaleString();existing.lastUpdatedAt=new Date().toISOString();existing.lastAction='Received into existing record';existing.transactionCount=Number(existing.transactionCount||0)+1;
+    normalizeInventoryLifecycleRecord(existing);if(pailSize)existing.pailSize=pailSize;existing.quantity=Number((Number(existing.quantity||0)+qty).toFixed(2));existing.updated=new Date().toLocaleString();existing.lastUpdatedAt=new Date().toISOString();existing.lastAction='Received into existing record';existing.transactionCount=Number(existing.transactionCount||0)+1;
     if(!save(INVDB,inv))return;
    }else{
     const separate=confirm(`Create a separate inventory record anyway?
@@ -1669,11 +1671,11 @@ Use this only when it is a genuinely separate lot, batch, pallet, ownership stat
 For an accidental duplicate, choose Cancel and edit the existing record instead.`);
     if(!separate){alert('New duplicate inventory was not created. The existing record remains unchanged.');return}
     const now=new Date();
-    const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
+    const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,pailSize,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
    }
   }else{
    const now=new Date();
-   const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
+   const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,pailSize,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
   }
  }
  const savedKeys=location?[PMDB,INVDB]:[PMDB];
@@ -1686,7 +1688,7 @@ For an accidental duplicate, choose Cancel and edit the existing record instead.
  }
  alert((location?'Product Master and Inventory Record saved.':'Product Master saved.')+'\n\n'+cloudMessage);clearForm();showPage('products');
 }
-function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;editId=id;photoData=x.photo||'';masterTextFields.forEach(k=>$(k).value=x[k]??'');['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category||'Other';$('coverageUnit').value=x.coverageUnit||'Other';['location','quantity','lotNumber','inventoryPo'].forEach(k=>$(k).value='');$('locationType').value='Rack';$('unit').value='Box';showPage('editor')}
+function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;editId=id;photoData=x.photo||'';masterTextFields.forEach(k=>$(k).value=x[k]??'');['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category||'Other';$('coverageUnit').value=x.coverageUnit||'Other';['location','quantity','lotNumber','inventoryPo'].forEach(k=>$(k).value='');$('locationType').value='Rack';$('unit').value='Box';if($('productPailSize'))$('productPailSize').value='1 gal';updateProductPailSize();showPage('editor')}
 function removeItem(id){const x=loadMasters().find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+' and all of its inventory records?'))return;save(PMDB,loadMasters().filter(v=>v.id!==id));save(INVDB,loadInventoryRecords().filter(v=>v.masterId!==id));renderProducts();renderInventory();refreshMemory()}
 function removeInventory(id){const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x||!confirm('Delete this inventory record?'))return;save(INVDB,inv.filter(v=>v.id!==id));renderInventory();renderDashboard();renderMap();refreshMemory()}
 function adjust(id,d){const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x)return;x.quantity=Math.max(0,Number((Number(x.quantity||0)+d).toFixed(2)));x.updated=new Date().toLocaleString();save(INVDB,inv);renderInventory();renderDashboard()}
@@ -1903,7 +1905,8 @@ function renderInventory(){
 function openGlobalSearch(value=''){showPage('search');$('query').value=String(value||'').trim();renderSearch();setTimeout(()=>$('query')?.focus(),50)}
 function globalResult(title,detail,action){return `<button class="globalResult" onclick="${action}"><b>${esc(title)}</b><small>${esc(detail)}</small></button>`}
 function globalGroup(title,icon,items){return items.length?`<div class="searchGroup"><div class="searchGroupTitle"><div>${icon} ${esc(title)}</div><span>${items.length} result(s)</span></div>${items.join('')}</div>`:''}
-function openOperationSearchResult(id){const x=operationRecords().find(r=>Number(r.id)===Number(id));if(!x)return;activeOperationsDate=x.date||todayISO();showPage('operationsDay');renderOperationsDay()}
+let activeOperationsExactIds=null;
+function openOperationSearchResult(id){const x=operationRecords().find(r=>Number(r.id)===Number(id));if(!x)return;activeOperationsDate=x.date||todayISO();activeOperationsExactIds=[Number(x.id)];operationsStatusFilter='All';showPage('operationsDay');renderOperationsDay()}
 function openCutSearchResult(roll){const x=carpetRecords().find(r=>normKey(r.roll)===normKey(roll));if(x)openCarpetDetail(x.id);else showPage('carpetInventory')}
 function parseSmartSearch(value){const q=normKey(value),underMatch=q.match(/(?:under|below|less\s+than|小于|低于)\s*(\d+(?:\.\d+)?)/),under=underMatch?Number(underMatch[1]):null,measure=(q.match(/\b(full|cal|tm)\b/)||[])[1]?.toUpperCase()||'',lowCarpet=(q.includes('low stock')||q.includes('true measure')||q.includes('低库存'))&&(q.includes('carpet')||q.includes('roll')||q.includes('地毯')),operationStatus=q.includes('in progress')?'In Progress':q.includes('completed')||q.includes('complete')?'Completed':q.includes('waiting')?'Waiting':'',operationType=q.includes('pickup')?'pickup':q.includes('cutting')||q.includes('carpet cut')?'cutting':q.includes('receiving')||q.includes('receive')?'receiving':q.includes('transfer')?'transfer':q.includes('shipping')||q.includes('ship')?'shipping':q.includes('return')?'return':'',carpetScope=under!==null||!!measure||lowCarpet,operationScope=!!operationStatus||!!operationType,scope=carpetScope?'carpet':operationScope?'operation':'all';let residual=q.replace(/(?:under|below|less\s+than|小于|低于)\s*\d+(?:\.\d+)?/g,' ').replace(/\b(full|cal|tm)\b/g,' ').replace(/\b(low\s+stock|true\s+measure|carpet|carpets|roll|rolls|ft|feet|foot)\b/g,' ').replace(/\b(in\s+progress|completed|complete|waiting|pickup|cutting|receiving|receive|transfer|shipping|ship|return|operation|operations|work)\b/g,' ').replace(/\s+/g,' ').trim();const terms=residual.split(' ').filter(Boolean);return {scope,under,measure,lowCarpet,operationStatus,operationType,terms}}
 function smartTermsMatch(intent,values){const hay=normKey(Array.isArray(values)?values.join(' '):values);return intent.terms.every(term=>hay.includes(term))}
@@ -2397,14 +2400,14 @@ function renderOperationsDays(){
  const groups={};rows.forEach(x=>(groups[x.date]??=[]).push(x));const dates=Object.keys(groups).sort().reverse();
  if($('operationsCount'))$('operationsCount').textContent=`${dates.length} day(s) · ${rows.length} work record(s)`;
  if(!$('operationsDaysList'))return;
- $('operationsDaysList').innerHTML=dates.length?dates.map(date=>{const a=groups[date],done=a.filter(x=>x.status==='Completed').length,pending=a.filter(x=>!['Completed','Cancelled'].includes(x.status)).length,types=[...new Set(a.map(x=>x.type))];return `<button class="dailyRecord" onclick="openOperationsDay('${esc(date)}')"><div><div class="date">${esc(formatOperationDate(date))}</div><div class="summary">${done} Completed · ${pending} Pending · ${esc(types.slice(0,2).join(', '))}${types.length>2?' +'+(types.length-2):''}</div></div><div class="count">${a.length}<br><span class="meta">Jobs</span></div></button>`}).join(''):'<div class="empty">No operations records yet.</div>';
+ $('operationsDaysList').innerHTML=dates.length?dates.map(date=>{const a=groups[date],done=a.filter(x=>x.status==='Completed').length,pending=a.filter(x=>!['Completed','Cancelled'].includes(x.status)).length,types=[...new Set(a.map(x=>x.type))],ids=a.map(x=>Number(x.id)).filter(Number.isFinite).join(',');return `<button class="dailyRecord" onclick="openOperationsDay('${esc(date)}',[${ids}])"><div><div class="date">${esc(formatOperationDate(date))}</div><div class="summary">${done} Completed · ${pending} Pending · ${esc(types.slice(0,2).join(', '))}${types.length>2?' +'+(types.length-2):''}</div></div><div class="count">${a.length}<br><span class="meta">Jobs</span></div></button>`}).join(''):'<div class="empty">No operations records yet.</div>';
 }
-function openOperationsDay(date){activeOperationsDate=date;operationsStatusFilter='All';showPage('operationsDay')}
-function openDashboardOperations(status){activeOperationsDate=todayISO();operationsStatusFilter=status;showPage('operationsDay')}
+function openOperationsDay(date,exactIds=null){activeOperationsDate=date;activeOperationsExactIds=Array.isArray(exactIds)&&exactIds.length?exactIds:null;operationsStatusFilter='All';showPage('operationsDay')}
+function openDashboardOperations(status){activeOperationsDate=todayISO();activeOperationsExactIds=null;operationsStatusFilter=status;showPage('operationsDay')}
 function setOperationsStatusFilter(status){operationsStatusFilter=status;renderOperationsDay()}
 function operationMobileActions(x){if(x.impactApplied)return '<div class="lockedOperation">✓ Completed and linked to inventory · Record locked</div>';return `<div class="mobileOperationActions">${x.status==='Waiting'?`<button onclick="setOperationStatus(${x.id},'In Progress')">▶ Start</button>`:''}${x.status!=='Completed'?`<button class="complete" onclick="setOperationStatus(${x.id},'Completed')">✓ Complete</button>`:''}<button class="edit" onclick="editOperation(${x.id})">✎ Edit</button><button class="delete" onclick="deleteOperation(${x.id})">Delete</button></div>`}
 function renderOperationsDay(){
- if(!activeOperationsDate)activeOperationsDate=todayISO();const all=operationRecords().filter(x=>x.date===activeOperationsDate).sort((a,b)=>String(a.time||'99:99').localeCompare(String(b.time||'99:99'))||Number(a.id)-Number(b.id));
+ if(!activeOperationsDate)activeOperationsDate=todayISO();const dayAll=operationRecords().filter(x=>x.date===activeOperationsDate).sort((a,b)=>String(a.time||'99:99').localeCompare(String(b.time||'99:99'))||Number(a.id)-Number(b.id));const all=activeOperationsExactIds?dayAll.filter(x=>activeOperationsExactIds.includes(Number(x.id))):dayAll;
  const done=all.filter(x=>x.status==='Completed').length,progress=all.filter(x=>x.status==='In Progress').length,waiting=all.filter(x=>x.status==='Waiting').length;
  $('operationsDayTitle').textContent=formatOperationDate(activeOperationsDate);$('operationsDaySummary').textContent=`${all.length} Total · ${done} Completed · ${progress} In Progress · ${waiting} Waiting`;
  ['All','Waiting','In Progress','Completed'].forEach(s=>{const id=s==='All'?'opsFilterAll':s==='Waiting'?'opsFilterWaiting':s==='In Progress'?'opsFilterProgress':'opsFilterCompleted';$(id)?.classList.toggle('active',operationsStatusFilter===s)});

@@ -1,0 +1,15 @@
+RUNLU Warehouse AI V6.0.9 Build015
+
+1. Adhesive PAIL packaging
+- Added Pail to Product/Inventory Unit selector.
+- Selecting Pail reveals Pail Size: 1 gal / 3 gal / 4 gal.
+- Pail size is stored on inventory records.
+- Duplicate guard treats different pail sizes as separate inventory records.
+
+2. Exact Operations Search Navigation
+- Operations/Command Center filtered day results now carry the exact matched record IDs.
+- Opening a filtered day shows only records matching the search instead of every record from that date.
+- Global Operations search opens the exact selected work record.
+- Normal unfiltered day navigation still shows the full day.
+
+Base: V6.0.8 Build014. Existing storage quota, record isolation, safe delete, underlayment roll count and exact inventory binding changes retained.
