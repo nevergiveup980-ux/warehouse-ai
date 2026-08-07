@@ -1,0 +1,17 @@
+RUNLU Warehouse AI V6.0.8 Build014
+EXACT INVENTORY BINDING / INVENTORY ID CARRY-THROUGH
+2026-08-07
+
+Emergency fix based directly on V6.0.7 Build013.
+
+Fixes:
+1. Ship From Here keeps the exact Inventory ID through the Command Center/order line.
+2. Inventory validation now resolves records by Inventory ID first, with legacy ID fallback only for older records.
+3. Completion preview uses the same exact-record identity lookup.
+4. Product auto-link no longer converts a modern Inventory ID back to the old numeric record ID.
+5. URL inventory opening supports Inventory ID.
+6. Existing V6.0.7 record isolation and safe-delete protections remain in place.
+
+Expected test:
+Open a specific inventory record -> Ship From Here -> enter order/quantity -> Add This Item.
+The line must show Inventory linked and must deduct only that exact Inventory ID on completion.
