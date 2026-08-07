@@ -1,10 +1,10 @@
 {
-  "version": "6.0.4",
-  "channel": "Emergency Data Entry Hotfix",
+  "version": "6.0.5",
+  "channel": "Underlayment Workflow Upgrade",
   "published": "2026-08-06",
-  "notes": "Stops automatic full browser snapshots, safely removes disposable local copies before startup, retries quota failures, and replaces the misleading photo-storage warning.",
-  "build": "010",
-  "name": "Storage Quota Emergency Fix",
+  "notes": "Adds a dedicated underlayment roll-count field for sending and receiving while preserving Build010 storage-quota protections.",
+  "build": "011",
+  "name": "Underlayment Roll Count",
   "file": "index.html",
   "updated": "2026-08-06"
 }

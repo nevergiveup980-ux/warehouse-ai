@@ -1,0 +1,12 @@
+RUNLU Warehouse AI V6.0.5 Build011
+Underlayment Roll Count Upgrade
+
+Based directly on V6.0.4 Storage Quota Emergency Fix Build010.
+
+- Adds a dedicated Underlayment Rolls to Send field for shipping, picking and transfer work.
+- Adds Underlayment Rolls Received for receiving and customer-return work.
+- Automatically detects Heather Choice, Spill Blocker and Platinum underlayment.
+- Shows the correct SY-per-roll reference beside the roll-count field.
+- Hides the generic quantity field while an underlayment item is selected to prevent confusion.
+- Uses the entered roll count directly for inventory additions and deductions.
+- Preserves all Build010 storage-quota protections, cloud sync, carpet workbench and existing data structures.
