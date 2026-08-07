@@ -1,10 +1,10 @@
 {
-  "version": "6.0.5",
-  "channel": "Underlayment Workflow Upgrade",
-  "published": "2026-08-06",
-  "notes": "Adds a dedicated underlayment roll-count field for sending and receiving while preserving Build010 storage-quota protections.",
-  "build": "011",
-  "name": "Underlayment Roll Count",
+  "version": "6.0.7",
+  "channel": "Inventory Safety Upgrade",
+  "published": "2026-08-07",
+  "notes": "Fixes duplicate legacy record-ID collisions by isolating inventory actions with Inventory ID, and adds a safe Delete Record option with audit history.",
+  "build": "013",
+  "name": "Record Isolation + Safe Delete",
   "file": "index.html",
-  "updated": "2026-08-06"
+  "updated": "2026-08-07"
 }

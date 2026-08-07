@@ -1,0 +1,23 @@
+RUNLU Warehouse AI V6.0.7 · Build013
+Record Isolation + Safe Delete
+
+Emergency inventory-safety upgrade based directly on V6.0.6 Build012.
+
+1. INVENTORY ID ISOLATION
+- Inventory-manager actions now target the exact Inventory ID instead of relying on the legacy numeric record ID.
+- Fixes the case where two different inventory rows can share the same old numeric ID and editing one can affect the other.
+- Edit, Receive Here, Ship From Here, Customer Return, Move to Product, Archive and Delete now start from the exact Inventory ID.
+- Operation inventory picker also stores Inventory ID so same-product / same-location / different-lot records stay independent.
+- Edit and Archive include a one-record isolation guard. If the target is not unique, the action is blocked and inventory is not changed.
+
+2. SAFE DELETE RECORD
+- Adds Delete Record alongside Archive Record in Product Inventory.
+- Delete is intended for records that were entered by mistake.
+- First confirmation shows product, quantity, location, lot and Inventory ID.
+- If business history exists, a second confirmation warns that only the current inventory row will be removed.
+- Existing operation / receiving history is retained.
+- An Inventory Record Deleted audit event stores a snapshot of the deleted row.
+
+3. DATA SAFETY
+- Existing Product Master, inventory database keys, cloud settings and Build010-012 fixes are preserved.
+- No automatic deletion or merging of existing inventory records is performed during upgrade.
