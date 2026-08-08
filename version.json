@@ -1,7 +1,7 @@
 {
-  "version": "6.2.4",
-  "build": "025",
-  "notes": "Build025 Exact Entity Resolver + Unbreakable Conversation Loop",
+  "version": "6.2.5",
+  "build": "026",
+  "notes": "Turn Controller + Answer Pipeline: restores local inventory summary, isolates each voice turn, prevents stale answers from overwriting newer turns, keeps Sound Test out of the live answer area, and preserves continuous conversation.",
   "published": "2026-08-08",
   "name": "Exact Entity Resolver + Unbreakable Conversation Loop"
 }

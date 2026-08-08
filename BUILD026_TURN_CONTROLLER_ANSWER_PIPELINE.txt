@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V6.2.5 Build026
+Turn Controller + Answer Pipeline
+
+- Restored the local inventory summary helper required by exact product answers.
+- Added per-turn IDs so stale async results cannot overwrite the active answer.
+- Voice pipeline is now: Final transcript -> intent/entity -> local query -> render answer -> TTS -> resume listening.
+- Sound Test no longer replaces the live Warehouse Answer.
+- Continuous conversation remains active through recoverable answer/TTS errors.
+- Based directly on V6.2.4 Build025; existing warehouse data keys and business logic are preserved.
