@@ -1,0 +1,14 @@
+RUNLU Warehouse AI V6.1.2 Build018
+Continuous Voice Loop / iPhone TTS Reliability
+
+Changes
+- Rebuilt Warehouse Voice state flow: Ready -> Listening -> Thinking -> Speaking -> Listening.
+- Continuous Conversation automatically restarts recognition after every spoken/text answer.
+- Added iPhone/Safari speechSynthesis reset/resume handling.
+- Added TTS onstart/onend/onerror handling and a watchdog timeout so the UI cannot remain stuck on Speaking.
+- If audio cannot start, the text answer remains visible and Continuous Conversation continues listening.
+- Recognition no-speech/network interruptions retry automatically; microphone permission errors stop safely.
+- Added microphone start retry protection for Safari timing issues.
+- Voice remains READ-ONLY in this build; no inventory write operations are performed by voice.
+
+Base: V6.1.1 Build017. Existing warehouse data keys and cloud sync settings are preserved.
