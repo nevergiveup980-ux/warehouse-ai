@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V6.2.4 Build025
+Exact Entity Resolver + Unbreakable Conversation Loop
+
+- Added a dedicated exact product/entity resolver before fuzzy matching.
+- Exact product name / SKU / series / brand matches bypass fuzzy confidence thresholds.
+- Location intent (for example “Where is Platinum?”) now resolves the exact product first and returns current rack/location data.
+- Quantity questions for an exact product return current inventory directly.
+- Fuzzy matching remains only as a fallback when exact entity resolution fails.
+- Continuous conversation now schedules the next listening turn after local no-match, speech completion/failure, recognition recoverable errors, and AI Gateway failures.
+- Existing cloud, login/roles, inventory, operations, bilingual voice, and read-only safeguards are preserved.

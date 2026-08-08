@@ -1,7 +1,7 @@
 {
-  "version": "6.2.3",
-  "build": "023",
-  "notes": "Build024 Smart Login Polish + Voice Exact-Match Guard",
+  "version": "6.2.4",
+  "build": "025",
+  "notes": "Build025 Exact Entity Resolver + Unbreakable Conversation Loop",
   "published": "2026-08-08",
-  "name": "Boot Recovery & iOS AutoFill Fix"
+  "name": "Exact Entity Resolver + Unbreakable Conversation Loop"
 }
