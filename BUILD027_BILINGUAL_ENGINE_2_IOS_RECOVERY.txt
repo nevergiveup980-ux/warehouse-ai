@@ -1,0 +1,11 @@
+RUNLU Warehouse AI V6.2.6 Build027
+Bilingual Engine 2.0 + iOS Recognition Recovery
+
+- Keeps Build026 Turn Controller / Answer Pipeline intact.
+- Auto bilingual mode remembers the last successful language per conversation.
+- Chinese characters force Chinese replies even when warehouse product names remain English.
+- Low-confidence English-looking transcripts can trigger an automatic retry in Chinese recognition.
+- no-speech in Auto mode can alternate recognition language instead of ending the conversation.
+- iOS aborted/no-speech events recover and continue listening while Continuous Conversation is enabled.
+- Exact product/entity resolution remains higher priority than fuzzy matching.
+- Voice remains read-only for warehouse safety.
