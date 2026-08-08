@@ -134,15 +134,42 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 
 .lengthPair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lengthPair span{display:block;color:var(--muted);font-size:12px;font-weight:800;margin:0 0 6px 3px}.lengthPreview{margin-top:8px;padding:9px 11px;border-radius:10px;background:#f4f7fb;color:#40516a;font-size:13px;font-weight:800}.lengthPreview.error{background:#fff0f0;color:#b4232e}@media(max-width:520px){.lengthPair{grid-template-columns:1fr 1fr}}
 
-/* V6.1.4 Build020 — True bilingual auto switch + conversation language routing */
+/* V6.2.0 Build021 — Branded login + role-based access + Sales view-only mode */
 .voiceHero{background:linear-gradient(135deg,#14213d,#2456a5);color:#fff;border-radius:22px;padding:20px;text-align:center}.voiceHero h2{font-size:31px;margin:6px 0}.voiceHero .meta{color:#d8e5ff}.voiceMicWrap{display:flex;justify-content:center;margin:22px 0 12px}.voiceMic{width:132px;height:132px;border:0;border-radius:50%;font-size:52px;color:#fff;background:linear-gradient(145deg,#3272ef,#1649b8);box-shadow:0 14px 35px rgba(20,55,120,.3)}.voiceMic.listening{background:linear-gradient(145deg,#ef4444,#a8172b);animation:voicePulse 1.1s infinite}.voiceMic.speaking{background:linear-gradient(145deg,#18a35f,#0e6c3d)}@keyframes voicePulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.42)}70%{box-shadow:0 0 0 25px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}.voiceStatus{font-size:18px;font-weight:950}.voiceBox{border:1px solid var(--line);background:#f7f9fc;border-radius:15px;padding:14px;margin-top:12px;min-height:55px;text-align:left}.voiceAnswer{border-left:5px solid var(--blue);background:#eef5ff}.voiceQuick{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.voiceQuick button{font-size:12px;padding:8px 10px;border-radius:999px}.voiceToggle{width:56px;height:32px;border-radius:99px;background:#cfd6e1;padding:3px;flex:none;cursor:pointer}.voiceToggle i{display:block;width:26px;height:26px;background:#fff;border-radius:50%;transition:.2s}.voiceToggle.on{background:var(--green)}.voiceToggle.on i{transform:translateX(24px)}.voiceSetting{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}.voiceLog{max-height:250px;overflow:auto}.voiceMsg{padding:9px 0;border-top:1px solid var(--line);font-size:13px}.voiceMsg:first-child{border-top:0}.voiceWho{font-weight:900}.voiceLocalBadge{display:inline-block;background:#e7f7ee;color:#137145;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}.voiceAiBadge{display:inline-block;background:#eaf1ff;color:#2457b8;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}@media(max-width:620px){footer button{font-size:9px}footer button b{font-size:19px}.voiceMic{width:118px;height:118px}}
+
+
+/* V6.2.0 Build021 — Branded Login + Role Based Access */
+.accessGate{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#07162f 0%,#10264c 45%,#eef5fb 45.2%,#f8fbff 100%);display:flex;align-items:center;justify-content:center;padding:calc(22px + env(safe-area-inset-top)) 20px calc(22px + env(safe-area-inset-bottom));overflow:auto}.accessGate.hidden{display:none}.accessPanel{width:min(440px,100%);background:rgba(255,255,255,.97);border-radius:28px;padding:27px 24px;box-shadow:0 28px 70px rgba(4,18,43,.28);text-align:center;border:1px solid rgba(255,255,255,.75)}.accessLogo{width:178px;max-width:58%;height:auto;display:block;margin:0 auto 16px}.accessPanel h1{font-size:29px;line-height:1.05;margin:4px 0 7px;color:#13213c}.accessPanel .accessSubtitle{color:#647189;font-size:14px;margin-bottom:20px}.accessWelcome{background:#f2f7fd;border:1px solid #dce8f6;border-radius:16px;padding:13px;margin:12px 0;text-align:left}.accessFields{text-align:left;margin-top:14px}.accessFields label{font-weight:800}.accessPrimary{width:100%;background:#183f78;color:#fff;font-size:17px;font-weight:900;margin-top:13px;padding:14px}.accessSecondary{width:100%;margin-top:9px}.accessReadOnly{display:inline-flex;align-items:center;gap:6px;background:#e8f7ef;color:#167447;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:950;letter-spacing:.02em}.accessFoot{font-size:11px;line-height:1.45;color:#7b8799;margin-top:15px}.accessError{background:#fff0f1;color:#a62534;border-radius:12px;padding:10px;margin-top:10px;font-size:12px;text-align:left}.userChip{display:flex;align-items:center;gap:7px;background:#eef3f9;border-radius:999px;padding:6px 9px;color:#20334e;font-size:10px;font-weight:900;white-space:nowrap}.userChip.viewer{background:#e8f7ef;color:#176d45}.userChip.warehouse{background:#fff4dc;color:#8b5a00}.roleBanner{display:none}.role-viewer .roleBanner{display:block;background:#e8f7ef;color:#176d45;border:1px solid #c9ecd8;border-radius:14px;padding:10px 13px;margin-bottom:12px;font-weight:900;font-size:12px}.role-viewer .operationsPin{display:none}.role-viewer #navOperations,.role-viewer #navSettings{display:none}.role-viewer footer .nav{grid-template-columns:repeat(4,1fr)}.role-viewer .viewerHide{display:none!important}.accessProfileCard{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.accessProfileCard b{display:block;font-size:15px}.accessProfileCard span{font-size:12px;color:var(--muted)}
 
 </style>
 </head>
 <body>
-<header><div class="top"><div class="brand"><img class="brandLogo" src="runlu_logo_header_complete.svg" alt="RUNLU"><div class="brandText"><h1>Runlu Warehouse AI</h1><p>Warehouse Operating System</p></div></div><div class="headerRight"><div class="cloudPill offline" id="headerCloudPill">Offline</div><div class="version" id="headerVersion">V6.1.4</div></div></div></header>
+<div id="accessGate" class="accessGate">
+  <div class="accessPanel">
+    <img class="accessLogo" src="runlu_logo_final_5184.jpg" alt="RUNLU">
+    <div class="accessReadOnly">🔐 SECURE WAREHOUSE ACCESS</div>
+    <h1>RUNLU Warehouse AI</h1>
+    <div class="accessSubtitle">Live Warehouse Operating System</div>
+    <div id="accessSavedSession" class="hidden">
+      <div class="accessWelcome"><b id="accessSavedEmail">Signed in</b><div class="meta" id="accessSavedRole">Trusted device</div></div>
+      <button class="accessPrimary" onclick="accessContinueSaved()">Continue</button>
+      <button class="accessSecondary" onclick="accessUseAnotherAccount()">Use another account</button>
+    </div>
+    <div id="accessLoginForm">
+      <div class="accessFields">
+        <label>Warehouse Login Email</label><input id="accessEmail" type="email" autocomplete="username" placeholder="name@company.com">
+        <label>Password</label><input id="accessPassword" type="password" autocomplete="current-password" placeholder="Warehouse app password" onkeydown="if(event.key==='Enter')accessSignIn()">
+      </div>
+      <button class="accessPrimary" id="accessSignInBtn" onclick="accessSignIn()">Sign In</button>
+      <div id="accessLoginError" class="accessError hidden"></div>
+      <div class="accessFoot">New devices sign in as <b>View Only</b> by default. View-only users can search and inspect live warehouse information but cannot change inventory.</div>
+    </div>
+  </div>
+</div>
+<header><div class="top"><div class="brand"><img class="brandLogo" src="runlu_logo_header_complete.svg" alt="RUNLU"><div class="brandText"><h1>Runlu Warehouse AI</h1><p>Warehouse Operating System</p></div></div><div class="headerRight"><div id="accessUserChip" class="userChip hidden">View Only</div><div class="cloudPill offline" id="headerCloudPill">Offline</div><div class="version" id="headerVersion">V6.2.0</div></div></div></header>
 
 <main>
+<div id="roleBanner" class="roleBanner">👁 VIEW ONLY · Live warehouse data · Editing is disabled on this device.</div>
 <section id="home" class="page">
   <div class="operationsPin card">
     <div class="operationsPinTop"><div><h3>🏭 Warehouse Command Center</h3><div class="meta">The single entry point for receiving, cutting, picking, shipping and corrections.</div></div><button class="green" onclick="newOperation()">＋ New</button></div>
@@ -630,7 +657,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 </section>
 
 <section id="settings" class="page hidden">
-<div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Settings</h2>
+<div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Settings</h2><div class="settingRow"><div class="accessProfileCard"><div><b>🔐 Device Access</b><span id="settingsAccessSummary">Administrator</span></div><button onclick="accessLogout()">Sign Out</button></div><label>Role on this trusted device</label><select id="deviceAccessRole" onchange="if(!accessIsAdmin()){this.value=accessRole();alert('Only an Administrator can change device access.');return}accessSetRole(this.value);$('settingsAccessSummary').textContent=accessRoleLabel();"><option value="admin">Administrator</option><option value="warehouse">Warehouse Staff</option><option value="viewer">View Only</option></select><div class="meta">New devices default to View Only. Administrator can intentionally change this trusted device to Warehouse Staff or View Only.</div></div>
 <div class="settingRow"><div class="name">Cloud Sync</div><div class="meta">Sign in to keep this device's warehouse data synchronized with the Runlu Supabase project. Local storage remains active for offline work.</div>
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
 <label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
@@ -800,16 +827,16 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <button onclick="showPage('home')"><b>🏠</b>Home</button>
 <button onclick="showPage('products')"><b>📦</b>Products</button>
 <button onclick="showPage('inventory')"><b>📋</b>Inventory</button>
-<button onclick="showPage('operations')"><b>📋</b>Operations</button>
+<button id="navOperations" onclick="showPage('operations')"><b>📋</b>Operations</button>
 <button onclick="showPage('voiceAssistant')"><b>🎤</b>Voice</button>
-<button onclick="showPage('settings')"><b>⚙️</b>Settings</button>
+<button id="navSettings" onclick="showPage('settings')"><b>⚙️</b>Settings</button>
 </div></footer>
 
 <script src="qrcode.js"></script>
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.1.4', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.2.0', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -817,6 +844,25 @@ let generalTagReturnPage='inventory';
 const SCANDICT='runlu_scan_learning_dictionary';
 const SCANTEMPLATES='runlu_scan_supplier_templates_v1';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB,SCANDICT,SCANTEMPLATES];
+
+const ACCESS_ROLE_KEY='runlu_access_role_v620', ACCESS_TRUSTED_KEY='runlu_access_trusted_v620';
+const ACCESS_ROLES={admin:'Administrator',warehouse:'Warehouse Staff',viewer:'View Only'};
+function accessRole(){return localStorage.getItem(ACCESS_ROLE_KEY)||'viewer'}
+function accessCanWrite(){return accessRole()!=='viewer'}
+function accessIsAdmin(){return accessRole()==='admin'}
+function accessSetRole(role){role=ACCESS_ROLES[role]?role:'viewer';localStorage.setItem(ACCESS_ROLE_KEY,role);applyAccessUI()}
+function accessRoleLabel(role=accessRole()){return ACCESS_ROLES[role]||ACCESS_ROLES.viewer}
+function accessCurrentEmail(){return cloudSession()?.user?.email||''}
+function accessShowGate(){const gate=$('accessGate');if(!gate)return;gate.classList.remove('hidden');const s=cloudSession(),saved=$('accessSavedSession'),form=$('accessLoginForm');if(s){saved.classList.remove('hidden');form.classList.add('hidden');$('accessSavedEmail').textContent=s.user?.email||'Warehouse account';$('accessSavedRole').textContent=accessRoleLabel()+' · '+(accessCanWrite()?'Editing enabled':'Read-only access')}else{saved.classList.add('hidden');form.classList.remove('hidden')}}
+function accessHideGate(){const gate=$('accessGate');if(gate)gate.classList.add('hidden');applyAccessUI();const role=accessRole();if(role==='viewer'&&cloudSession()){localStorage.setItem(CLOUD_ENABLED_KEY,'1');setTimeout(()=>cloudDownloadAll(true).catch(()=>{}),250)}else if(cloudSession())startCloudPolling()}
+function accessContinueSaved(){accessHideGate();showPage('home')}
+function accessUseAnotherAccount(){try{localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY)}catch{}localStorage.setItem(ACCESS_ROLE_KEY,'viewer');$('accessSavedSession').classList.add('hidden');$('accessLoginForm').classList.remove('hidden');$('accessPassword').value='';$('accessLoginError').classList.add('hidden')}
+async function accessSignIn(){const email=normalizeText($('accessEmail').value),password=$('accessPassword').value,err=$('accessLoginError'),btn=$('accessSignInBtn');if(!email||!password){err.textContent='Enter the warehouse login email and password.';err.classList.remove('hidden');return}btn.disabled=true;btn.textContent='Signing in…';err.classList.add('hidden');try{const data=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({email,password})});localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(ACCESS_ROLE_KEY,'viewer');localStorage.setItem(ACCESS_TRUSTED_KEY,'1');$('accessPassword').value='';accessHideGate();await cloudDownloadAll(true);showPage('home')}catch(e){err.textContent=e.message||'Sign in failed.';err.classList.remove('hidden')}finally{btn.disabled=false;btn.textContent='Sign In'}}
+function accessLogout(){if(!confirm('Sign out of RUNLU Warehouse OS on this device?'))return;try{localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);localStorage.removeItem(ACCESS_ROLE_KEY)}catch{}if(cloudPollTimer)clearInterval(cloudPollTimer);location.reload()}
+function accessMutationButtonIsWrite(btn){const raw=(btn.getAttribute('onclick')||'')+' '+(btn.textContent||'');return /(newOperation|save[A-Z_(]|delete|edit|receive|ship|transfer|return|archive|move to|move[A-Z_(]|cut[A-Z_(]|complete|setTaskStatus|commit|correct|create|upload|change password|recover|repair|remove|startCarpet|openCarpetTM|tag center|print|scan|add work|\+ new|supplier pickup)/i.test(raw)}
+function applyAccessUI(){const role=accessRole();document.body.classList.remove('role-admin','role-warehouse','role-viewer');document.body.classList.add('role-'+role);const chip=$('accessUserChip');if(chip){chip.className='userChip '+role;chip.textContent=accessRoleLabel(role);chip.classList.remove('hidden')}if(role==='viewer'){document.querySelectorAll('button').forEach(btn=>{if(btn.closest('#accessGate'))return;if(accessMutationButtonIsWrite(btn)){btn.classList.add('viewerHide');btn.setAttribute('aria-hidden','true')}});document.querySelectorAll('input[type=file]').forEach(x=>x.closest('.card,.item,.settingRow')?.classList.add('viewerHide'))}else document.querySelectorAll('.viewerHide').forEach(x=>{x.classList.remove('viewerHide');x.removeAttribute('aria-hidden')})}
+const accessObserver=new MutationObserver(()=>{if(accessRole()==='viewer')applyAccessUI()});
+
 const AISCANCTX='runlu_ai_scan_context_v5523';
 const $=id=>document.getElementById(id);
 function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
@@ -857,6 +903,7 @@ function pruneLocalApplicationCache(force=false){
  return result;
 }
 function save(k,v){
+ if(accessRole()==='viewer' && DATA_KEYS.includes(k) && !cloudApplying){console.warn('[RUNLU View Only] blocked write to',k);return false;}
  const encoded=JSON.stringify(v);
  try{localStorage.setItem(k,encoded);queueCloudSave(k,v);return true;}
  catch(err){
@@ -967,14 +1014,21 @@ function migrateV13(){
  localStorage.setItem('runlu_v13_migrated','yes');
 }
 function showPage(id){
+ if(accessRole()==='viewer' && ['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan','settings','databaseHealth','databaseExplorer','orderDataCenter','developer'].includes(id)){alert('View Only access: editing and system settings are disabled.');id='home';}
  const target=$(id);
  if(!target){console.error('Unknown page id:',id);alert('This page is not available yet. Returning to Home.');id='home';}
- document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden')); $(id).classList.remove('hidden');
+ // Access migration: the device that was already signed in before Build021 is trusted as Administrator.
+if(!localStorage.getItem(ACCESS_ROLE_KEY)){localStorage.setItem(ACCESS_ROLE_KEY,cloudSession()?'admin':'viewer')}
+accessObserver.observe(document.body,{childList:true,subtree:true});
+applyAccessUI();
+accessShowGate();
+document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden')); $(id).classList.remove('hidden');
  document.body.classList.toggle('formEntry',['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].includes(id));
  if(id==='home')renderDashboard(); if(id==='carpetInventory')renderCarpetInventory(); if(id==='products')renderProducts(); if(id==='inventory')renderInventory();if(id==='generalTagCenter')renderGeneralTags();
  if(id==='search')renderSearch(); if(id==='voiceAssistant')renderVoiceAssistant(); if(id==='scan'){refreshProducts();renderScanBatch();updateScanExisting();updateScanContextUI();} if(id==='orderHistory')renderOrders(); if(id==='orderWorkspace')renderOrderWorkspace();
  if(id==='databaseHealth')runDatabaseHealth(false); if(id==='databaseExplorer')renderDatabaseExplorer();
- if(id==='warehouseMap')renderMap(); if(id==='reports')renderReports();if(id==='operations')renderOperationsDays();if(id==='operationsDay')renderOperationsDay();if(id==='taskCenter')renderTasks();if(id==='receivingHistory')renderReceivingHistory();if(id==='specialOrders')renderSpecialOrders();if(id==='orderDataCenter')renderOrderDataCenter(); if(id==='settings'){loadSettings();renderBackupStatus();renderOrderDataStatus();runDatabaseHealth(false);setTimeout(()=>checkForUpdate(true),250);} if(id==='developer'){runDiagnostics();inspectStorage();}
+ if(id==='warehouseMap')renderMap(); if(id==='reports')renderReports();if(id==='operations')renderOperationsDays();if(id==='operationsDay')renderOperationsDay();if(id==='taskCenter')renderTasks();if(id==='receivingHistory')renderReceivingHistory();if(id==='specialOrders')renderSpecialOrders();if(id==='orderDataCenter')renderOrderDataCenter(); if(id==='settings'){loadSettings();renderBackupStatus();renderOrderDataStatus();runDatabaseHealth(false);if($('deviceAccessRole'))$('deviceAccessRole').value=accessRole();if($('settingsAccessSummary'))$('settingsAccessSummary').textContent=accessRoleLabel();setTimeout(()=>checkForUpdate(true),250);} if(id==='developer'){runDiagnostics();inspectStorage();}
+ applyAccessUI();
  window.scrollTo(0,0);
 }
 function readPhoto(file,cb){
@@ -3340,7 +3394,7 @@ function restoreConversationOrders(showMessage=false){
 
 
 
-// V6.1.4 Build020 — True bilingual auto switch + conversation language routing
+// V6.2.0 Build021 — Branded login + role-based access + Sales view-only mode
 const VOICE_GATEWAY_KEY='runlu_voice_gateway_v610';
 const VOICE_LANGUAGE_KEY='runlu_voice_language_v610';
 let voiceRecognition=null,voiceListening=false,voiceSpeaking=false,voiceContinuous=false,voiceAsking=false,voiceRestartTimer=null,voiceSpeechTimer=null,voiceSessionToken=0,voiceHistory=[],voiceRestartAttempts=0,voiceLastSpeechStartedAt=0,voiceUtteranceTimer=null,voicePendingTranscript='',voiceAutoListenLang=localStorage.getItem('runlu_voice_auto_last_lang_v614')||'zh-CN',voiceLastDetectedLang=voiceAutoListenLang,voiceLastReplyLang=voiceAutoListenLang,voiceAutoRetryFlip=false;

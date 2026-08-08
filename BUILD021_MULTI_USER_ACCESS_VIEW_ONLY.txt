@@ -1,0 +1,18 @@
+RUNLU Warehouse AI V6.2.0 Build021
+Multi-User Access + Sales View-Only Login
+
+Based directly on V6.1.4 Build020.
+
+Added:
+- Branded RUNLU startup/login gate using the blue-green RUNLU software logo.
+- Existing signed-in upgrade device is trusted as Administrator.
+- New devices/accounts default to View Only.
+- View Only hides Operations/Settings navigation and mutating controls.
+- Core save() guard blocks normal business dataset writes while in View Only.
+- Viewer keeps Home, Products, Inventory, Search and Voice access.
+- Header role badge and persistent VIEW ONLY banner.
+- Administrator device-role control: Administrator / Warehouse Staff / View Only.
+- Sign out / switch-account flow.
+
+Important security note:
+This build provides strong application-level read-only protection for normal internal use. The existing cloud database is still based on a single Supabase user owning its datasets. For cryptographic multi-account isolation with separate employee accounts, migrate to organization-level shared datasets plus Supabase RLS roles in a later backend build.
