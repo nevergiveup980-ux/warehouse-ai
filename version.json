@@ -1,7 +1,7 @@
 {
-  "version": "6.2.2",
+  "version": "6.2.3",
   "build": "023",
-  "notes": "Cinematic Boot + Smart Login",
+  "notes": "Build024 Smart Login Polish + Voice Exact-Match Guard",
   "published": "2026-08-08",
   "name": "Boot Recovery & iOS AutoFill Fix"
 }

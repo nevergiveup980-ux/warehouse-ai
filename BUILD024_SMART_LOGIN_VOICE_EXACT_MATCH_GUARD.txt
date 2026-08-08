@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V6.2.3 Build024
+Smart Login Polish + Voice Exact-Match Guard
+
+- Trusted devices no longer instantiate Email/Password fields during boot or Welcome Back.
+- Login inputs are created only after Switch account, reducing iOS Password AutoFill interruption.
+- Voice product matching now gives absolute priority to exact product/SKU matches.
+- Fuzzy correction thresholds tightened; short/weak matches cannot override exact warehouse names.
+- If confidence is insufficient, Voice asks/retries instead of silently choosing an unrelated product.
+- Existing V6.2.2 boot recovery, permissions, cloud sync and warehouse business logic retained.
