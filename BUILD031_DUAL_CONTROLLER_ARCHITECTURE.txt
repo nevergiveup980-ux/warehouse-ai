@@ -1,0 +1,11 @@
+RUNLU Warehouse AI V6.3.0 Build031
+Dual Controller Architecture
+
+- Mic Controller owns Start / Stop / Restart / iOS recovery only.
+- Language Controller owns zh-CN / en-CA / Auto switching only.
+- Auto mode no longer lets an English reply permanently lock the next listening session to English.
+- Auto uses zh-CN as the primary mixed-language listening lane, because it can retain English warehouse product names while preserving Chinese speech recognition.
+- English lane remains available as a fallback after low-confidence, no-speech, or no-exact-match events.
+- Reply language is detected independently from the listening lane.
+- Added visible Listen lane / Reply language diagnostic text for testing.
+- Existing Build030 mic lifecycle protections remain in place.

@@ -1,7 +1,8 @@
 {
-  "version": "6.2.9",
-  "build": "030",
+  "version": "6.3.0",
+  "build": "Build031",
   "name": "Continuous Mic Controller",
   "base": "6.2.8 Build029",
-  "date": "2026-08-08"
+  "date": "2026-08-08",
+  "notes": "Dual Controller Architecture: separates continuous microphone lifecycle from bilingual language selection; Auto uses Chinese/mixed primary lane with English fallback and visible listen-lane diagnostics."
 }
