@@ -1,0 +1,13 @@
+RUNLU Warehouse AI V6.3.1 Build032
+TTS Latency Polish + Smarter Lane Handoff
+
+Changes
+- Keeps Build031 Dual Controller Architecture intact.
+- Shows the warehouse answer text immediately before TTS begins.
+- Adds a 1.5 second TTS startup watchdog on iOS; if speech does not actually start, the app falls back to the visible text and resumes continuous listening instead of appearing stuck.
+- Shortens post-answer microphone handoff delay for a more natural conversation rhythm.
+- Successful Chinese recognition keeps the next listening lane in Chinese; successful English recognition keeps the next lane in English.
+- Lane handoff is based on the detected user speech, not on the language used by the spoken reply.
+- Existing low-confidence bilingual fallback remains available when the next turn switches languages.
+
+No warehouse inventory, cloud sync, permissions, or business workflow schema changes.
