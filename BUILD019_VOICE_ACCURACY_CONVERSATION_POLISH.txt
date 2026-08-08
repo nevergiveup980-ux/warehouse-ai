@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V6.1.3 Build019
+Voice Accuracy & Conversation Polish
+- 850 ms utterance settling
+- partial phrase filtering
+- warehouse vocabulary fuzzy correction
+- warehouse intent layer
+- quiet/useful no-gateway fallback
+- preserves V6.1.2 continuous loop and read-only safety
