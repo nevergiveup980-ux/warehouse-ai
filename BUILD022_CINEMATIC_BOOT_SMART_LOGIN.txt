@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V6.2.1 Build022
+Cinematic Boot + Smart Login
+
+- Rebuilt the startup experience as a full-screen RUNLU cinematic boot sequence.
+- Added animated RUNLU branding, Warehouse OS title, and cloud connection status.
+- Trusted signed-in devices now land on a clean Welcome Back screen with Enter Warehouse.
+- Email/password fields stay hidden on trusted devices unless Switch Account is selected.
+- New devices retain secure sign-in and default View Only access.
+- Preserves Administrator / Warehouse Staff / View Only permissions from Build021.
+- Preserves Warehouse Voice, cloud sync, inventory, operations, PAIL, search, and all prior data keys.

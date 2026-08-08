@@ -1,10 +1,1 @@
-{
-  "version": "6.2.0",
-  "channel": "Multi-User Access",
-  "published": "2026-08-08",
-  "notes": "Build021: branded RUNLU startup/login gate, Administrator/Warehouse Staff/View Only roles, Sales read-only UI, write guard, role badge, and trusted-device access controls.",
-  "build": "021",
-  "name": "Multi-User Access + Sales View-Only Login",
-  "file": "index.html",
-  "updated": "2026-08-08"
-}
+{"version":"6.2.1","build":"022","notes":"Cinematic Boot + Smart Login","published":"2026-08-08"}
