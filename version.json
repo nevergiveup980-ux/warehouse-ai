@@ -1,7 +1,7 @@
 {
-  "version": "6.2.8",
-  "build": "029",
-  "name": "Voice Stability Reset",
-  "base": "6.2.6 Build027",
+  "version": "6.2.9",
+  "build": "030",
+  "name": "Continuous Mic Controller",
+  "base": "6.2.8 Build029",
   "date": "2026-08-08"
 }

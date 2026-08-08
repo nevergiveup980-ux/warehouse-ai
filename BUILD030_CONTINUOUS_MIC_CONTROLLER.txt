@@ -1,0 +1,13 @@
+RUNLU Warehouse AI V6.2.9 Build030
+Continuous Mic Controller
+
+Base: V6.2.8 Build029 Voice Stability Reset
+
+Changes:
+- Added a single microphone desired-state controller for Continuous Conversation.
+- Prevents iOS intentional abort events caused by TTS, Sound Test, or user Stop from triggering competing restart loops.
+- Recognition onerror no longer starts a second restart race; onend owns the restart handoff.
+- Continuous mode keeps a persistent micWanted state until the user presses Stop or turns Continuous off.
+- Added start-in-flight protection to prevent duplicate SpeechRecognition.start() calls.
+- Recovery UI stays in Listening state instead of dropping to Tap the microphone to continue while Continuous mode is still active.
+- Existing Build029 bilingual recognition, warehouse vocabulary correction, exact entity resolver, answer pipeline, and conservative context behavior are preserved.
