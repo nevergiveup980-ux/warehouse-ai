@@ -1,10 +1,10 @@
 {
-  "version": "6.0.7",
-  "channel": "Inventory Safety Upgrade",
+  "version": "6.1.0",
+  "channel": "Voice Assistant Fusion",
   "published": "2026-08-07",
-  "notes": "Fixes duplicate legacy record-ID collisions by isolating inventory actions with Inventory ID, and adds a safe Delete Record option with audit history.",
-  "build": "013",
-  "name": "Record Isolation + Safe Delete",
+  "notes": "Integrates the Runlu Voice GPT Beta into Warehouse OS as a read-only voice assistant. Exact inventory, location, carpet-roll, order and today-task questions are answered locally at zero API cost; complex questions can use the optional Cloudflare/OpenAI gateway with read-only warehouse context.",
+  "build": "016",
+  "name": "Voice Assistant Fusion",
   "file": "index.html",
   "updated": "2026-08-07"
 }

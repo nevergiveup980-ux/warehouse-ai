@@ -1,0 +1,17 @@
+RUNLU Warehouse AI V6.1.0 Build016 — Voice Assistant Fusion
+
+Base: V6.0.9 Build015.
+
+Added:
+- Integrated Voice Assistant page inside Warehouse OS.
+- Voice button in Home and bottom navigation.
+- Browser speech recognition + spoken answers + continuous conversation.
+- Read-only local warehouse queries at zero API cost for product inventory, locations, carpet rolls, PO references, Today Tasks and Transfers.
+- Optional GPT fallback through the existing Cloudflare Worker.
+- GPT receives only a compact, read-only context relevant to the question; this build does not allow voice writes to inventory.
+- API key remains in Cloudflare Worker Secret only.
+
+Data safety:
+- No database/localStorage keys were renamed.
+- Voice queries never call save(), delete, archive, receive, ship or transfer functions.
+- Existing Build015 functionality is preserved.
