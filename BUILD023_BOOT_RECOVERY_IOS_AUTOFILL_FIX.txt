@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V6.2.2 · Build023
+Boot Recovery & iOS AutoFill Fix
+
+- Added a hard boot failsafe: the cinematic boot screen can no longer remain indefinitely.
+- Boot automatically reveals Smart Login after a maximum ~2.8 seconds even if iOS interrupts the page.
+- Added recovery on pageshow, focus, and visibilitychange so returning from the iOS password sheet resumes the app.
+- Preserved the existing cinematic visual design and all V6.2.1 business/voice/cloud/role features.
+- Version updated to V6.2.2.

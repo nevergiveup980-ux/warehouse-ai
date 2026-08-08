@@ -1,1 +1,7 @@
-{"version":"6.2.1","build":"022","notes":"Cinematic Boot + Smart Login","published":"2026-08-08"}
+{
+  "version": "6.2.2",
+  "build": "023",
+  "notes": "Cinematic Boot + Smart Login",
+  "published": "2026-08-08",
+  "name": "Boot Recovery & iOS AutoFill Fix"
+}
