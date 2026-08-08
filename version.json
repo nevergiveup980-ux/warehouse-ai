@@ -1,7 +1,7 @@
 {
-  "version": "6.2.7",
-  "build": "Build028",
-  "notes": "Seamless Recovery + Context Memory: quieter iOS recovery and product-aware follow-up questions.",
-  "published": "2026-08-08",
-  "name": "Bilingual Engine 2.0 + iOS Recognition Recovery"
+  "version": "6.2.8",
+  "build": "029",
+  "name": "Voice Stability Reset",
+  "base": "6.2.6 Build027",
+  "date": "2026-08-08"
 }

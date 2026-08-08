@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V6.2.8 Build029 — Voice Stability Reset
+
+Base: V6.2.6 Build027.
+- Restores Build027 bilingual recognition/recovery as the primary voice pipeline.
+- Removes Build028 aggressive context/recovery interference.
+- Context is saved only after a successful exact/local warehouse answer.
+- Context is used only for clearly incomplete short follow-ups such as How many?, Where is it?, 多少?, 在哪里?.
+- Full utterances are never rewritten by context memory.
