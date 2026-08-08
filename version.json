@@ -1,7 +1,7 @@
 {
-  "version": "6.2.6",
-  "build": "027",
-  "notes": "Bilingual Engine 2.0 + iOS Recognition Recovery: preserves the stable English warehouse query pipeline, adds language-state memory, low-confidence English-to-Chinese retry, automatic language alternation after no-speech, and resilient recovery from iOS aborted/no-speech recognition events without ending continuous conversation.",
+  "version": "6.2.7",
+  "build": "Build028",
+  "notes": "Seamless Recovery + Context Memory: quieter iOS recovery and product-aware follow-up questions.",
   "published": "2026-08-08",
   "name": "Bilingual Engine 2.0 + iOS Recognition Recovery"
 }

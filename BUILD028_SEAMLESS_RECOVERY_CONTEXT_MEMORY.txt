@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V6.2.7 Build028
+Seamless Recovery + Context Memory
+
+- Keeps Continuous Conversation visually in Listening state during recoverable iOS recognition restarts.
+- Distinguishes intentional recognition aborts from real iOS recognition interruptions.
+- Faster background restart after aborted/no-speech/end events.
+- Remembers the most recent exact product for 15 minutes.
+- Follow-up questions such as “How many?”, “Where is it?”, “还有多少？” and “在哪里？” inherit the last product automatically.
+- Existing bilingual recognition, exact entity resolver, local inventory answers, cloud sync, permissions, and warehouse workflows are preserved.
