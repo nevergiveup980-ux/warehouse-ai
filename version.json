@@ -1,10 +1,10 @@
 {
-  "version": "6.1.0",
+  "version": "6.1.1",
   "channel": "Voice Assistant Fusion",
   "published": "2026-08-07",
   "notes": "Integrates the Runlu Voice GPT Beta into Warehouse OS as a read-only voice assistant. Exact inventory, location, carpet-roll, order and today-task questions are answered locally at zero API cost; complex questions can use the optional Cloudflare/OpenAI gateway with read-only warehouse context.",
-  "build": "016",
-  "name": "Voice Assistant Fusion",
+  "build": "017",
+  "name": "Smart Voice Recognition",
   "file": "index.html",
   "updated": "2026-08-07"
 }

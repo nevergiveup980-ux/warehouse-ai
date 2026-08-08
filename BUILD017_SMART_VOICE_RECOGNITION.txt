@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V6.1.1 Build017
+Smart Voice Recognition Upgrade
+
+- Increased speech recognition alternatives from 3 to 10.
+- Scores speech alternatives against the live warehouse vocabulary.
+- Adds fuzzy matching for imperfect product-name recognition.
+- Supports Chinese / English / mixed warehouse speech more gracefully.
+- Auto mode follows device language while preserving warehouse vocabulary matching.
+- Read-only voice safety remains unchanged.
+- Existing V6.1.0 Voice Assistant, cloud sync, inventory isolation, PAIL and exact-search features remain intact.
