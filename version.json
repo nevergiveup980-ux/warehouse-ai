@@ -1,8 +1,8 @@
 {
-  "version": "6.1.2",
+  "version": "6.1.4",
   "channel": "Voice Assistant Fusion",
   "published": "2026-08-07",
-  "notes": "Integrates the Runlu Voice GPT Beta into Warehouse OS as a read-only voice assistant. Exact inventory, location, carpet-roll, order and today-task questions are answered locally at zero API cost; complex questions can use the optional Cloudflare/OpenAI gateway with read-only warehouse context.",
+  "notes": "Build020: true bilingual auto switch, conversation-language routing, localized replies/TTS, and automatic alternate-language retry when recognition mismatches.",
   "build": "018",
   "name": "Continuous Voice Loop",
   "file": "index.html",

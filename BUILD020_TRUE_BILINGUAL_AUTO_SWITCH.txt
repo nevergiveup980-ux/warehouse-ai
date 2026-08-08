@@ -1,0 +1,15 @@
+RUNLU Warehouse AI V6.1.4 Build020
+True Bilingual Auto Switch
+
+Changes:
+- Auto mode no longer follows navigator.language.
+- Auto starts with Chinese/mixed recognition (zh-CN), then adapts to the language detected in each successful turn.
+- Reply language and TTS voice follow the detected conversation language, not merely device language.
+- Chinese questions containing English product names remain Chinese conversations.
+- English questions switch replies/TTS to English.
+- If an Auto turn cannot be matched locally, the next listening turn automatically tries the other recognition language.
+- Manual 中文 / English modes remain available.
+- Existing Warehouse OS data keys and warehouse features are unchanged.
+
+Browser note:
+Web Speech Recognition accepts one recognition language per listening session. Build020 uses adaptive routing and alternate-language retry to get the closest practical bilingual behavior without adding a paid speech API.
