@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.3.4 Entity Recovery + Phonetic Alias + Location Status Guard Build035</title>
+<title>RUNLU Warehouse AI V6.3.8 Responsive Adaptive Fullscreen Layout Build039</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -144,6 +144,61 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 @keyframes bootRise{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:none}}@keyframes bootFade{to{opacity:1}}@keyframes bootHalo{50%{transform:scale(1.08);opacity:.72}}@keyframes bootDot{50%{box-shadow:0 0 0 10px rgba(62,208,139,0)}}
 .accessStage{width:min(460px,100%);opacity:0;transform:translateY(10px) scale(.985);pointer-events:none;transition:opacity .48s ease,transform .48s ease}.accessStage.ready{opacity:1;transform:none;pointer-events:auto}.accessPanel{width:100%;background:rgba(255,255,255,.985);border-radius:30px;padding:28px 25px 24px;box-shadow:0 30px 85px rgba(0,0,0,.34);text-align:center;border:1px solid rgba(255,255,255,.85);color:#13213c}.accessLogo{width:155px;max-width:52%;height:auto;display:block;margin:0 auto 14px;border-radius:24px;filter:drop-shadow(0 7px 18px rgba(16,54,100,.16))}.accessEyebrow{font-size:11px;font-weight:950;letter-spacing:.12em;color:#6680a3;text-transform:uppercase;margin-bottom:9px}.accessPanel h1{font-size:29px;line-height:1.06;margin:4px 0 7px;color:#13213c}.accessPanel .accessSubtitle{color:#6b7890;font-size:14px;margin-bottom:18px}.accessReadOnly{display:inline-flex;align-items:center;gap:6px;background:#e8f7ef;color:#167447;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:950;letter-spacing:.02em}.accessWelcome{background:linear-gradient(145deg,#f1f7fd,#f9fbfe);border:1px solid #d9e7f5;border-radius:19px;padding:16px;margin:12px 0 4px;text-align:left}.accessWelcomeTop{display:flex;align-items:center;gap:11px}.accessAvatar{width:39px;height:39px;border-radius:13px;background:#153c76;color:white;display:grid;place-items:center;font-size:18px;font-weight:950}.accessWelcome b{display:block;font-size:15px}.accessWelcome .meta{margin-top:2px}.accessCloudLine{display:flex;align-items:center;gap:7px;margin-top:12px;color:#337351;font-size:11px;font-weight:900}.accessFields{text-align:left;margin-top:14px}.accessFields label{font-weight:850;color:#35445c;font-size:12px}.accessFields input{background:#f8fafc;border:1px solid #dbe4ef}.accessPrimary{width:100%;background:linear-gradient(135deg,#173e78,#245aa7);color:#fff;font-size:17px;font-weight:950;margin-top:13px;padding:14px;box-shadow:0 8px 20px rgba(26,72,139,.18)}.accessSecondary{width:100%;margin-top:9px;background:#edf2f8;color:#314159}.accessSwitch{border:0;background:transparent;color:#315e9e;font-weight:850;margin-top:12px;padding:8px}.accessFoot{font-size:11px;line-height:1.5;color:#7b8799;margin-top:14px}.accessError{background:#fff0f1;color:#a62534;border-radius:12px;padding:10px;margin-top:10px;font-size:12px;text-align:left}.accessLoginHead{text-align:left;margin:6px 0 5px}.accessLoginHead b{font-size:20px}.accessLoginHead span{display:block;color:#7a8799;font-size:12px;margin-top:3px}.userChip{display:flex;align-items:center;gap:7px;background:#eef3f9;border-radius:999px;padding:6px 9px;color:#20334e;font-size:10px;font-weight:900;white-space:nowrap}.userChip.viewer{background:#e8f7ef;color:#176d45}.userChip.warehouse{background:#fff4dc;color:#8b5a00}.roleBanner{display:none}.role-viewer .roleBanner{display:block;background:#e8f7ef;color:#176d45;border:1px solid #c9ecd8;border-radius:14px;padding:10px 13px;margin-bottom:12px;font-weight:900;font-size:12px}.role-viewer .operationsPin{display:none}.role-viewer #navOperations,.role-viewer #navSettings{display:none}.role-viewer footer .nav{grid-template-columns:repeat(4,1fr)}.role-viewer .viewerHide{display:none!important}.accessProfileCard{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.accessProfileCard b{display:block;font-size:15px}.accessProfileCard span{font-size:12px;color:var(--muted)}
 @media(max-width:520px){.accessPanel{border-radius:26px;padding:24px 20px 21px}.bootLogoWrap{width:185px;height:122px}.bootTitle{font-size:27px}.accessLogo{width:138px}}
+
+
+/* V6.3.8 Build039 — Responsive Adaptive Fullscreen Layout (based on V6.3.7 Build038) */
+:root{--runlu-content-max:1680px;--runlu-wide-pad:clamp(14px,2.2vw,34px)}
+header .top{max-width:var(--runlu-content-max);width:100%;padding-left:var(--runlu-wide-pad);padding-right:var(--runlu-wide-pad)}
+main{max-width:var(--runlu-content-max);width:100%;padding-left:var(--runlu-wide-pad);padding-right:var(--runlu-wide-pad)}
+footer .nav{max-width:var(--runlu-content-max);width:100%;padding-left:var(--runlu-wide-pad);padding-right:var(--runlu-wide-pad)}
+
+/* Desktop / large tablet: use available screen width without stretching text-heavy forms too far */
+@media (min-width:900px){
+  .grid2{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .quick{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .inventoryActions{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .mapGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+  .reportGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+  .detectGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .manifestRowGrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .modalSheet{width:min(980px,calc(100vw - 48px));max-height:90vh}
+  .card{padding:18px}
+  .hero{padding:22px}
+}
+@media (min-width:1280px){
+  .grid2{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .mapGrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .reportGrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .stats{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .summaryStrip{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .modalSheet{width:min(1120px,calc(100vw - 64px))}
+}
+@media (min-width:1600px){
+  :root{--runlu-content-max:1840px}
+  .grid2{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .mapGrid{grid-template-columns:repeat(7,minmax(0,1fr))}
+}
+
+/* Medium screens */
+@media (min-width:700px) and (max-width:899px){
+  .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .quick{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .inventoryActions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mapGrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* Phones remain compact and touch friendly */
+@media (max-width:699px){
+  :root{--runlu-wide-pad:14px}
+  header .top,footer .nav{padding-left:0;padding-right:0}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* Wide tables and toolbars should scroll instead of crushing columns */
+.carpetListWrap,.tableWrap,.manifestPages{max-width:100%}
+.carpetListTable{min-width:900px}
+.listToolbar,.carpetInventoryToolbar,.actions{max-width:100%}
+img,video,canvas,svg{max-width:100%}
 
 </style>
 </head>
@@ -858,7 +913,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.3.7', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.3.8', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;

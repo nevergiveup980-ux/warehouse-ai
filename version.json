@@ -1,7 +1,7 @@
 {
-  "version": "6.3.7",
-  "build": "038",
-  "title": "Independent Voice + Scan AI Modes",
-  "published": "2026-08-08",
-  "notes": "Adds independent AI controls for Warehouse Voice and AI Scan. Scan supports Local Only, Smart Hybrid, and GPT Vision while reusing the same secure Cloudflare Worker/API key. Smart Hybrid keeps local OCR/Barcode at $0 whenever sufficient and calls GPT Vision only for uncertain photo recognition."
+  "version": "6.3.8",
+  "build": "039",
+  "title": "Responsive Adaptive Fullscreen Layout",
+  "published": "2026-08-09",
+  "notes": "Built directly on V6.3.7 Build038. Adds responsive full-width desktop/tablet layouts while preserving all independent Voice AI and Scan AI modes, inventory logic, cloud sync, carpet workflows, and mobile behavior."
 }

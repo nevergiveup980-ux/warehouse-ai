@@ -1,0 +1,15 @@
+RUNLU Warehouse AI V6.3.8 Build039
+Responsive Adaptive Fullscreen Layout
+
+Base: V6.3.7 Independent Voice + Scan AI Modes Build038
+
+Changes:
+- Removed the old 900px desktop content ceiling.
+- Adaptive max width up to 1680/1840px depending on screen size.
+- Header, main content, and bottom navigation align to the same responsive width.
+- Home/module grids expand to 3/4/5 columns on wider screens.
+- Inventory actions, warehouse map, reports, detection panels, and manifest grids use more desktop width.
+- Modals expand appropriately on desktop while remaining phone-friendly.
+- Carpet tables keep readable columns and horizontal scrolling where needed.
+- Phone layout and touch behavior are preserved.
+- No database keys, inventory rules, cloud sync behavior, Voice AI modes, or Scan AI modes changed.
