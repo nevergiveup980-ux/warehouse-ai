@@ -1,0 +1,10 @@
+RUNLU Warehouse AI V6.3.6 · Build037
+AI Mode Switch + GPT Gateway Control
+
+New Voice AI controls:
+- GPT Gateway ON/OFF master switch. OFF guarantees no GPT API calls.
+- Smart Hybrid: exact warehouse questions are answered locally at $0 API cost; GPT is called only when local logic cannot answer.
+- GPT Always: every completed question can be sent to GPT, while any exact live Warehouse OS answer is included as authoritative grounding.
+- If GPT fails and a local warehouse answer exists, Voice safely falls back to the local answer.
+- Gateway URL and API key separation remain unchanged: the browser stores only the Worker URL; OPENAI_API_KEY stays in the Cloudflare Worker Secret.
+- Existing bilingual recognition, continuous mic controller, warehouse aliases, exact entity resolution, and read-only safety are preserved.

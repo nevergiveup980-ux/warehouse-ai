@@ -1,7 +1,7 @@
 {
-  "version": "6.3.5",
-  "build": "036",
-  "title": "Warehouse Alias Dictionary + Context Override Guard",
+  "version": "6.3.6",
+  "build": "037",
+  "title": "AI Mode Switch + GPT Gateway Control",
   "published": "2026-08-08",
-  "notes": "Adds conservative aliases for recurring warehouse ASR mistakes and guarantees a new explicit product entity overrides prior voice context."
+  "notes": "Adds an explicit GPT Gateway ON/OFF switch with Smart Hybrid and GPT Always policies. Local warehouse queries remain available at zero GPT API cost, and GPT Always is grounded with authoritative live warehouse answers when available."
 }
