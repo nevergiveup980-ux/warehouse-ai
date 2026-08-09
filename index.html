@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.3.2 Mixed-Language Cleanup + Safer Fuzzy Match Build033</title>
+<title>RUNLU Warehouse AI V6.3.3 Hybrid Entity Split + Incomplete Utterance Guard Build034</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -845,7 +845,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.3.2', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.3.3', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -3518,9 +3518,21 @@ function voiceBestTranscript(result){const alts=[];for(let i=0;i<result.length;i
 function voiceIsFragment(text){const q=voiceNorm(text),w=q.split(/\s+/).filter(Boolean);return !q||(w.length===1&&['where','what','how','which','i','the','is','are','do','can','please','哪里','多少','什么'].includes(w[0]))}
 function voiceDetectIntent(text){const q=voiceNorm(text);if(/\b(how many|quantity|count|stock|inventory|left|remaining)\b/.test(q)||/(多少|库存|剩多少)/.test(q))return'quantity';if(/\b(where|location|rack|located)\b/.test(q)||/(哪里|在哪|位置|货架)/.test(q))return'location';if(/transfer|转货|转移/.test(q))return'transfer';if(/\b(today|task|work|job)\b/.test(q)||/(今天|任务|工作)/.test(q))return'today';if(/\b\d{5,8}\b/.test(q))return'order';if(/roll|卷号|地毯/.test(q))return'roll';return'unknown'}
 function voiceExactWarehouseTerm(text){const n=voiceNorm(text);if(!n)return '';const vocab=voiceWarehouseVocabulary().sort((a,b)=>voiceNorm(b).length-voiceNorm(a).length);for(const v of vocab){const vn=voiceNorm(v);if(vn.length>=3&&new RegExp(`(^|\\s)${vn.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')}(?=\\s|$)`,`i`).test(n))return v}return ''}
-// V6.3.2 Build033 — Mixed-Language Cleanup + Safer Fuzzy Match.
-function voiceCleanMixedTranscript(text){
+// V6.3.3 Build034 — Hybrid Entity Split + Incomplete Utterance Guard.
+function voiceSplitHybridEntities(text){
  const raw=String(text||'').replace(/\s+/g,' ').trim();
+ if(!raw)return raw;
+ // iOS often returns mixed speech with no boundary, e.g. “Platinum在哪里” or “Spill Blocker还有多少”.
+ // Insert a safe boundary only at Latin/number <-> Han transitions so Exact Entity Resolver can see the product intact.
+ return raw
+  .replace(/([A-Za-z0-9])([\u3400-\u9fff])/g,'$1 $2')
+  .replace(/([\u3400-\u9fff])([A-Za-z0-9])/g,'$1 $2')
+  .replace(/\s+/g,' ')
+  .trim();
+}
+function voiceCleanMixedTranscript(text){
+ const split=voiceSplitHybridEntities(text);
+ const raw=String(split||'').replace(/\s+/g,' ').trim();
  if(!raw)return raw;
  const hasHan=/[\u3400-\u9fff]/.test(raw), hasLatin=/[A-Za-z]/.test(raw);
  if(!(hasHan&&hasLatin))return raw;
@@ -3540,6 +3552,25 @@ function voiceCleanMixedTranscript(text){
    return close?w:' ';
  });
  return cleaned.replace(/\s+/g,' ').trim()||raw;
+}
+function voiceIsIncompleteUtterance(text){
+ const raw=voiceSplitHybridEntities(text),q=voiceNorm(raw);
+ if(!q)return true;
+ // A real exact product / order / roll makes the utterance actionable even if grammar is short.
+ if(voiceResolveExactProduct(raw)||/\b\d{5,8}\b/.test(q)||/\b(?:rc)?\d{3,}\b/i.test(q))return false;
+ // Context follow-ups such as “Where is it?” / “在哪里？” are actionable only when a successful context exists.
+ const expanded=voiceExpandSafeFollowup(raw);
+ if(expanded!==raw)return false;
+ const english=[
+  /^(where(?: is| are)?(?: the)?)$/,
+  /^(how many(?: do we have)?)$/,
+  /^(what about)$/,
+  /^(show|find|check|tell me|please check)$/,
+  /^(where is it|how many are there)$/
+ ];
+ if(english.some(r=>r.test(q)))return true;
+ const compact=raw.replace(/[\s？?，,。.!！]/g,'');
+ return ['帮我查一下','查一下','帮我查','查询','在哪里','在哪','还有多少','多少','位置','库存','有多少','什么'].includes(compact);
 }
 function voiceCorrectWarehouseTerms(text){
  const cleaned=voiceCleanMixedTranscript(text);
@@ -3614,13 +3645,16 @@ function voiceSetupRecognition(){
   voiceListening=false;const heard=f.trim();try{voiceRecognition.stop()}catch{};
   clearTimeout(voiceUtteranceTimer);voiceUtteranceTimer=setTimeout(()=>{
    if(!heard)return;
-   if(voiceIsFragment(heard)){
-    if($('voiceHeard'))$('voiceHeard').textContent=heard+' …';
-    if(voiceAutoMode()&&voiceAutoFailureCount<2){voiceSwitchAutoLanguage('fragment',300);return}
-    const lang=voiceDetectConversationLanguage(heard,voiceRecognition.lang||voiceAutoListenLang);
-    voiceSetState('idle',lang==='zh-CN'?'听到的是半句话，请继续说。':'Partial phrase heard; keep speaking.');if(voiceContinuous)voiceScheduleListening(350);return
+   const hybrid=voiceSplitHybridEntities(heard);
+   if(voiceIsFragment(hybrid)||voiceIsIncompleteUtterance(hybrid)){
+    if($('voiceHeard'))$('voiceHeard').textContent=hybrid+' …';
+    const lang=voiceDetectConversationLanguage(hybrid,voiceRecognition.lang||voiceAutoListenLang);
+    // Do not send an obviously unfinished phrase into fuzzy matching. Keep the mic alive and let the user finish.
+    voiceSetState('recovering',lang==='zh-CN'?'这句话还没说完整，我继续听…':'That phrase is incomplete; keep speaking…');
+    if(voiceContinuous)voiceScheduleListening(320,voiceLanguageController.choose());
+    return
    }
-   const c=voiceCorrectWarehouseTerms(heard);if(c.cleaned&&$('voiceHeard'))$('voiceHeard').textContent=heard+' → '+c.cleaned;
+   const c=voiceCorrectWarehouseTerms(hybrid);if(c.cleaned&&$('voiceHeard'))$('voiceHeard').textContent=heard+' → '+c.cleaned;
    if(voiceLooksLikeChineseMisheardAsEnglish(heard)&&voiceAutoFailureCount<2){
     if($('voiceHeard'))$('voiceHeard').textContent=heard+' · retry 中文';voiceSwitchAutoLanguage('low-confidence-English',300);return
    }

@@ -1,0 +1,11 @@
+RUNLU Warehouse AI V6.3.3 Build034
+Hybrid Entity Split + Incomplete Utterance Guard
+
+Base: V6.3.2 Build033
+
+Changes:
+- Split Latin/number and Chinese character boundaries before warehouse entity resolution.
+- Handles mixed forms such as Platinum在哪里 and Spill Blocker还有多少 without losing the exact product entity.
+- Added an incomplete-utterance guard so phrases such as “Where is”, “How many”, or “帮我查一下” do not enter fuzzy search prematurely.
+- Valid context follow-ups such as “Where is it?” / “在哪里？” remain supported when a successful previous product context exists.
+- Mic Controller, Dual Language Controller, exact product resolver, and successful fuzzy correction logic are otherwise left intact.

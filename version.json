@@ -1,8 +1,8 @@
 {
-  "version": "6.3.2",
-  "build": "033",
-  "name": "Mixed-Language Cleanup + Safer Fuzzy Match",
-  "base": "6.3.1 Build032",
+  "version": "6.3.3",
+  "build": "034",
+  "name": "Hybrid Entity Split + Incomplete Utterance Guard",
+  "base": "6.3.2 Build033",
   "date": "2026-08-08",
-  "notes": "Mixed-Language Cleanup + Safer Fuzzy Match"
+  "notes": "Hybrid Entity Split + Incomplete Utterance Guard"
 }
