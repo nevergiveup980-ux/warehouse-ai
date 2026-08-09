@@ -1,0 +1,11 @@
+RUNLU Warehouse AI V6.3.5 Build036
+Warehouse Alias Dictionary + Context Override Guard
+
+Changes
+- Adds a conservative Warehouse Alias Dictionary for recurring iOS speech-recognition mistakes observed during testing.
+- Cloud 9 Spill Blocker aliases include common variants such as spell blocker, bill blocker, and spill block/her.
+- Heather Choice aliases include common variants such as heather toys, heather joys, ha the choice, and had the choice.
+- Alias correction only resolves to products that actually exist in Product Master.
+- Adds Context Override Guard: a product explicitly recognized in the current utterance always wins over the previous conversation context.
+- Context memory is still used only for genuinely entity-less follow-ups such as “Where is it?” / “How many?” / “在哪里？”.
+- Does not change inventory data, cloud data, Mic Controller, Dual Controller, TTS, or warehouse business rules.

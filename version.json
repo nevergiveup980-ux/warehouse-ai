@@ -1,8 +1,7 @@
 {
-  "version": "6.3.4",
-  "build": "035",
-  "name": "Entity Recovery + Phonetic Alias + Location Status Guard",
-  "base": "6.3.3 Build034",
-  "date": "2026-08-08",
-  "notes": "Conservative phonetic product alias recovery and protection against speaking workflow/status labels as warehouse locations."
+  "version": "6.3.5",
+  "build": "036",
+  "title": "Warehouse Alias Dictionary + Context Override Guard",
+  "published": "2026-08-08",
+  "notes": "Adds conservative aliases for recurring warehouse ASR mistakes and guarantees a new explicit product entity overrides prior voice context."
 }
