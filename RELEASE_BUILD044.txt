@@ -1,0 +1,13 @@
+RUNLU Warehouse AI
+Version: V6.4.3
+Build: Build044
+Canonical release name: RUNLU_Warehouse_V6.4.3_Build044
+Recommended Git tag: v6.4.3-build044
+
+Version consistency standard:
+- In-app version: V6.4.3
+- In-app build: Build044
+- ZIP filename: RUNLU_Warehouse_V6.4.3_Build044.zip
+- index filename: RUNLU_Warehouse_V6.4.3_Build044_index.html
+- version.json: 6.4.3 / 044
+- Git tag: v6.4.3-build044

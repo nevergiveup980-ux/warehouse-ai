@@ -1,0 +1,12 @@
+RUNLU Warehouse AI V6.4.3
+Build044 · Voice Precision + Warehouse Context
+
+Changes:
+- Phrase-aware ASR alternative scoring for multi-word warehouse product names.
+- Expanded conservative alias recovery for Platinum, Heather Choice, Cloud 9 Spill Blocker.
+- Dynamic warehouse entity resolver (exact > dictionary > phonetic > unique fuzzy).
+- Successful alias/fuzzy queries now become conversational context.
+- More natural follow-ups: "how many left?", "which rack?", "还有多少", "哪个货架", etc.
+- Current-turn entity always overrides stale prior context.
+- Voice UI shows the resolved warehouse product after recognition.
+- Existing Cloud, permissions, inventory, operations and Build043 Home First architecture retained.
