@@ -1,0 +1,24 @@
+RUNLU Warehouse AI V6.4.1
+Build042 · Home First + Background Cloud Recovery
+
+Architecture
+------------
+1. Enter Warehouse opens Home immediately.
+2. Cloud/session/sync work starts only after Home is visible.
+3. Cloud errors can no longer block the Warehouse OS.
+4. If the new domain has no stored cloud session, a non-blocking banner says:
+   "Warehouse open · Cloud sign-in required"
+   and offers Reconnect.
+5. After sign-in, cloud data downloads in the background and dashboard/inventory
+   views refresh automatically.
+6. Cloud polling resumes after successful recovery.
+7. Existing dirty-data protection remains in place.
+
+Why this matters after a domain change
+--------------------------------------
+Browser storage is isolated by origin/domain. Data and login state stored under the
+old github.io address are not automatically available under warehouse.runlu.ca.
+Build042 treats that as a recoverable cloud-auth state instead of an app-start failure.
+
+No warehouse inventory rules, order rules, carpet rules, Voice behavior,
+AI Scan logic, or database schema were intentionally changed.
