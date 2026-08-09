@@ -1,0 +1,14 @@
+RUNLU Warehouse AI V6.3.4 Build035
+Entity Recovery + Phonetic Alias + Location/Status Guard
+
+Based directly on V6.3.3 Build034.
+
+1. Adds conservative phonetic product-name recovery for imperfect iOS ASR/pronunciation.
+   - Example target: "ha the choice" -> Heather Choice when it is the unique high-confidence warehouse product candidate.
+   - Requires a strong unique match; ambiguous candidates are not auto-selected.
+2. Keeps Exact Entity Resolver ahead of phonetic/fuzzy recovery.
+3. Adds Location/Status Guard for Voice answers.
+   - Values such as PHYSICAL COUNT REQUIRED are not spoken as physical rack locations.
+   - Voice instead explains that physical count/location confirmation is required.
+4. Does not alter stored warehouse inventory data.
+5. Dual Controller, Continuous Mic, bilingual handling, Hybrid Entity Split and Incomplete Utterance Guard remain intact.

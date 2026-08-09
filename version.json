@@ -1,8 +1,8 @@
 {
-  "version": "6.3.3",
-  "build": "034",
-  "name": "Hybrid Entity Split + Incomplete Utterance Guard",
-  "base": "6.3.2 Build033",
+  "version": "6.3.4",
+  "build": "035",
+  "name": "Entity Recovery + Phonetic Alias + Location Status Guard",
+  "base": "6.3.3 Build034",
   "date": "2026-08-08",
-  "notes": "Hybrid Entity Split + Incomplete Utterance Guard"
+  "notes": "Conservative phonetic product alias recovery and protection against speaking workflow/status labels as warehouse locations."
 }

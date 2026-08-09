@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.3.3 Hybrid Entity Split + Incomplete Utterance Guard Build034</title>
+<title>RUNLU Warehouse AI V6.3.4 Entity Recovery + Phonetic Alias + Location Status Guard Build035</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -845,7 +845,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.3.3', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.3.4', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -3519,6 +3519,7 @@ function voiceIsFragment(text){const q=voiceNorm(text),w=q.split(/\s+/).filter(B
 function voiceDetectIntent(text){const q=voiceNorm(text);if(/\b(how many|quantity|count|stock|inventory|left|remaining)\b/.test(q)||/(多少|库存|剩多少)/.test(q))return'quantity';if(/\b(where|location|rack|located)\b/.test(q)||/(哪里|在哪|位置|货架)/.test(q))return'location';if(/transfer|转货|转移/.test(q))return'transfer';if(/\b(today|task|work|job)\b/.test(q)||/(今天|任务|工作)/.test(q))return'today';if(/\b\d{5,8}\b/.test(q))return'order';if(/roll|卷号|地毯/.test(q))return'roll';return'unknown'}
 function voiceExactWarehouseTerm(text){const n=voiceNorm(text);if(!n)return '';const vocab=voiceWarehouseVocabulary().sort((a,b)=>voiceNorm(b).length-voiceNorm(a).length);for(const v of vocab){const vn=voiceNorm(v);if(vn.length>=3&&new RegExp(`(^|\\s)${vn.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')}(?=\\s|$)`,`i`).test(n))return v}return ''}
 // V6.3.3 Build034 — Hybrid Entity Split + Incomplete Utterance Guard.
+// V6.3.4 Build035 — Entity Recovery + Phonetic Alias + Location/Status Guard.
 function voiceSplitHybridEntities(text){
  const raw=String(text||'').replace(/\s+/g,' ').trim();
  if(!raw)return raw;
@@ -3572,9 +3573,37 @@ function voiceIsIncompleteUtterance(text){
  const compact=raw.replace(/[\s？?，,。.!！]/g,'');
  return ['帮我查一下','查一下','帮我查','查询','在哪里','在哪','还有多少','多少','位置','库存','有多少','什么'].includes(compact);
 }
+// V6.3.4 Build035 — conservative entity recovery for imperfect iOS pronunciation/ASR.
+function voicePhoneticAliasProduct(text){
+ const raw=voiceSplitHybridEntities(text), q=voiceNorm(raw);if(!q)return null;
+ // Remove only clear intent scaffolding; keep words such as "the" because iOS often inserts them inside product names ("ha the choice").
+ let core=q.replace(/\b(where|is|are|how|many|do|we|have|show|find|check|please|inventory|stock|location|rack)\b/g,' ')
+  .replace(/(在哪里|在哪|哪里|有多少|还有多少|多少|库存|位置|货架|帮我查一下|查一下)/g,' ')
+  .replace(/\s+/g,' ').trim();
+ if(!core||core.length<4)return null;
+ const coreWords=core.split(/\s+/).filter(Boolean), grouped=new Map();
+ for(const m of loadMasters()){
+  const label=String(m.name||'').trim();if(!label)continue;const key=voiceNorm(label);if(!key||key.length<4)continue;
+  if(!grouped.has(key))grouped.set(key,{term:label,masters:[]});grouped.get(key).masters.push(m);
+ }
+ const ranked=[];
+ for(const g of grouped.values()){
+  const name=voiceNorm(g.term), nameWords=name.split(/\s+/).filter(Boolean);
+  const wordAnchor=coreWords.some(w=>w.length>=4&&nameWords.includes(w));
+  const sim=Math.max(voiceSimilarity(core,name),voiceSimilarity(core.replace(/\s+/g,''),name.replace(/\s+/g,'')));
+  // Conservative: one real product token + useful phrase similarity, or an exceptionally close whole-name match.
+  if((wordAnchor&&sim>=.78)||sim>=.89)ranked.push({term:g.term,score:sim,masters:g.masters});
+ }
+ ranked.sort((a,b)=>b.score-a.score);if(!ranked.length)return null;
+ const best=ranked[0],second=ranked[1],margin=second?best.score-second.score:1;
+ if(second&&margin<.065)return null;
+ return best;
+}
 function voiceCorrectWarehouseTerms(text){
  const cleaned=voiceCleanMixedTranscript(text);
  const exact=voiceExactWarehouseTerm(cleaned);if(exact)return {text:cleaned,matched:'',exact,cleaned:cleaned!==text?cleaned:''};
+ const phonetic=voicePhoneticAliasProduct(cleaned);
+ if(phonetic)return {text:cleaned+' '+phonetic.term,matched:phonetic.term,confidence:phonetic.score,phonetic:true,cleaned:cleaned!==text?cleaned:''};
  const n=voiceNorm(cleaned), vocab=voiceWarehouseVocabulary();
  const chunks=n.split(/\s+/).filter(x=>x.length>=4);
  const candidates=[];
@@ -3695,6 +3724,17 @@ function voiceStartListening(autoRestart=false,forceLang=''){if(!voiceMicControl
 function voiceNorm(s){return normKey(String(s||'')).replace(/[^a-z0-9\u3400-\u9fff]+/g,' ').trim()}
 function voiceWords(s){return voiceNorm(s).split(/\s+/).filter(x=>x.length>1&&!['how','many','where','what','is','are','the','do','we','have','inventory','stock','today','please','tell','me','还有','多少','库存','哪里','在哪','位置','今天','几个','查询','查一下','帮我','老伙计'].includes(x))}
 function voiceInventorySummaryForMaster(m){const rows=localInventoryRecordsForProduct(m.id).filter(isCurrentGeneralInventoryRecord),byUnit={};let total=0;for(const r of rows){const unit=r.unit||m.coverageUnit||'unit';const qty=Number(r.quantity||0);byUnit[unit]=(byUnit[unit]||0)+qty;total+=qty}const loc=[...new Set(rows.map(r=>r.location).filter(Boolean))];return {master:m,rows,total,byUnit,locations:loc}}
+// Build035: never read a workflow/status label as if it were a physical rack/location.
+function voiceIsStatusLikeLocation(v){const q=voiceNorm(v);return !q||/(physical count|required|pending|need tm|needs review|review required|check length|unknown location|verify location|count required)/i.test(q)}
+function voiceLocationAnswer(a,zh){
+ const valid=[...new Set((a.locations||[]).filter(x=>!voiceIsStatusLikeLocation(x)))];
+ const pending=(a.rows||[]).some(r=>!!r.quantityPending||voiceIsStatusLikeLocation(r.location));
+ const label=`${a.master.name}${a.master.color?' '+a.master.color:''}`;
+ if(valid.length){const extra=pending?(zh?'；另有记录需要盘点/位置确认。':'; another record still needs physical count/location verification.') : '';
+  return zh?`${label} 目前在 ${valid.join('、')}，共有 ${a.rows.length} 条当前库存记录${extra}`:`${label} is at ${valid.join(', ')}, across ${a.rows.length} current inventory record(s)${extra}`}
+ if(pending)return zh?`${label} 当前需要 Physical Count，仓库位置还需要确认。`:`${label} currently requires a physical count; its warehouse location still needs confirmation.`;
+ return zh?`${label} 当前没有确认的仓库位置。`:`${label} does not currently have a confirmed warehouse location.`;
+}
 function voiceResolveExactProduct(message){
  const q=voiceNorm(message),masters=loadMasters();if(!q)return null;const candidates=[];
  for(const m of masters){const fields=[['name',m.name,120],['sku',m.sku,115],['series',m.series,105],['brand',m.brand,95]].filter(x=>x[1]);for(const [field,val,base] of fields){const vn=voiceNorm(val);if(!vn||vn.length<2)continue;const escaped=vn.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const hit=q===vn||new RegExp(`(^|\\s)${escaped}(?=\\s|$)`,'i').test(q);if(hit)candidates.push({master:m,field,value:String(val),score:base+Math.min(vn.length,30)})}}
@@ -3722,8 +3762,8 @@ function voiceLocalAnswer(message,langOverride=''){const q=voiceNorm(message),zh
  if(q.includes('transfer')||q.includes('转货')||q.includes('转移')){const rows=ops.filter(x=>voiceNorm(x.type).includes('transfer'));const open=rows.filter(x=>x.status!=='Completed').length;return {text:zh?`今天有 ${rows.length} 个 Transfer，其中 ${open} 个还没有完成。`:`Today has ${rows.length} Transfer job(s); ${open} are still open.`,source:'local'}}
  if((q.includes('today')||q.includes('今天'))&&(q.includes('work')||q.includes('task')||q.includes('工作')||q.includes('任务')||q.includes('还有什么'))){const w=ops.filter(x=>x.status!=='Completed'),c=ops.length-w.length;const types={};w.forEach(x=>types[x.type]=(types[x.type]||0)+1);const detail=Object.entries(types).map(([k,v])=>`${k} ${v}`).join(', ');return {text:zh?`今天共有 ${ops.length} 条工作，${c} 条已完成，${w.length} 条未完成。${detail?`未完成包括：${detail}。`:''}`:`Today has ${ops.length} work record(s): ${c} completed and ${w.length} open.${detail?` Open: ${detail}.`:''}`,source:'local'}}
  const carpets=voiceCarpetMatches(message);if(carpets.length&&(/\b(rc)?\d{3,}\b/i.test(message)||q.includes('roll')||q.includes('地毯')||q.includes('卷号'))){const x=carpets[0];return {text:zh?`${x.roll} 是 ${x.collection||'地毯'} ${x.colour||''}，当前 ${feetLabel(x.length)}，位置 ${x.location||'未指定'}，状态 ${x.measure||x.status||'—'}。`:`Roll ${x.roll}: ${x.collection||'carpet'} ${x.colour||''}, ${feetLabel(x.length)} remaining at ${x.location||'unassigned'}, status ${x.measure||x.status||'—'}.`,source:'local'}}
- const exactProduct=voiceResolveExactProduct(message);if(exactProduct){const a=voiceInventorySummaryForMaster(exactProduct.master);if(a.rows.length){if(intent==='location'){return {text:zh?`${a.master.name}${a.master.color?' '+a.master.color:''} 目前在 ${a.locations.join('、')||'未指定位置'}，共有 ${a.rows.length} 条当前库存记录。`:`${a.master.name}${a.master.color?' '+a.master.color:''} is at ${a.locations.join(', ')||'unassigned'}, across ${a.rows.length} current inventory record(s).`,source:'local',resolver:'exact'}}const qty=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');return {text:zh?`当前库存：${a.master.name}${a.master.color?' '+a.master.color:''}：${qty||Number(a.total.toFixed(2))}。`:`Current inventory: ${a.master.name}${a.master.color?' '+a.master.color:''}: ${qty||Number(a.total.toFixed(2))}.`,source:'local',resolver:'exact'}}}
- const products=voiceProductMatches(message);if(products.length){const summaries=products.slice(0,3).map(voiceInventorySummaryForMaster).filter(x=>x.rows.length);if(summaries.length){const wantWhere=q.includes('where')||q.includes('location')||q.includes('rack')||q.includes('哪里')||q.includes('在哪')||q.includes('位置')||q.includes('货架');if(wantWhere){const a=summaries[0];return {text:zh?`${a.master.name}${a.master.color?' '+a.master.color:''} 目前在 ${a.locations.join('、')||'未指定位置'}，共有 ${a.rows.length} 条当前库存记录。`:`${a.master.name}${a.master.color?' '+a.master.color:''} is at ${a.locations.join(', ')||'unassigned'}, across ${a.rows.length} current inventory record(s).`,source:'local'}}const parts=summaries.map(a=>{const qty=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');return `${a.master.name}${a.master.color?' '+a.master.color:''}: ${qty||Number(a.total.toFixed(2))}`});return {text:zh?`当前库存：${parts.join('；')}。`:`Current inventory: ${parts.join('; ')}.`,source:'local'}}}
+ const exactProduct=voiceResolveExactProduct(message);if(exactProduct){const a=voiceInventorySummaryForMaster(exactProduct.master);if(a.rows.length){if(intent==='location'){return {text:voiceLocationAnswer(a,zh),source:'local',resolver:'exact'}}const qty=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');return {text:zh?`当前库存：${a.master.name}${a.master.color?' '+a.master.color:''}：${qty||Number(a.total.toFixed(2))}。`:`Current inventory: ${a.master.name}${a.master.color?' '+a.master.color:''}: ${qty||Number(a.total.toFixed(2))}.`,source:'local',resolver:'exact'}}}
+ const products=voiceProductMatches(message);if(products.length){const summaries=products.slice(0,3).map(voiceInventorySummaryForMaster).filter(x=>x.rows.length);if(summaries.length){const wantWhere=q.includes('where')||q.includes('location')||q.includes('rack')||q.includes('哪里')||q.includes('在哪')||q.includes('位置')||q.includes('货架');if(wantWhere){const a=summaries[0];return {text:voiceLocationAnswer(a,zh),source:'local'}}const parts=summaries.map(a=>{const qty=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');return `${a.master.name}${a.master.color?' '+a.master.color:''}: ${qty||Number(a.total.toFixed(2))}`});return {text:zh?`当前库存：${parts.join('；')}。`:`Current inventory: ${parts.join('; ')}.`,source:'local'}}}
  return null}
 function voiceContextForGateway(message){const products=voiceProductMatches(message).slice(0,5).map(m=>{const a=voiceInventorySummaryForMaster(m);return {name:m.name,color:m.color||'',sku:m.sku||'',quantityByUnit:a.byUnit,locations:a.locations.slice(0,6)}});const carpets=voiceCarpetMatches(message).slice(0,5).map(x=>({roll:x.roll,product:x.collection,colour:x.colour,length:x.length,location:x.location,measure:x.measure,status:x.status}));const today=voiceTodayOps().map(x=>({type:x.type,status:x.status,po:x.po,customer:x.customer,product:x.collection||x.product,quantity:x.quantity,unit:x.unit,location:x.location})).slice(0,30);return {date:todayISO(),products,carpets,todayOperations:today,summary:{products:loadMasters().length,inventoryRecords:loadInventoryRecords().filter(isCurrentGeneralInventoryRecord).length,carpetRolls:carpetRecords().filter(x=>!['Used Up','Split to RAM','Split to REM'].includes(x.status)).length}}}
 async function voiceCallGateway(message,replyLanguage=''){const gateway=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!gateway)throw new Error('No AI Gateway is configured. Exact warehouse questions still work locally.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);try{const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,language:$('voiceLanguage')?.value||'auto',replyLanguage:replyLanguage||voiceLastReplyLang||'en-CA',history:voiceHistory.slice(-8),warehouseContext:voiceContextForGateway(message)}),signal:controller.signal});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);if(!data.reply)throw new Error('Gateway returned no reply.');return data.reply}finally{clearTimeout(timer)}}
