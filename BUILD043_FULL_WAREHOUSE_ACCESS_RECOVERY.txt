@@ -1,0 +1,24 @@
+RUNLU Warehouse AI V6.4.2
+Build043 · Full Warehouse Access Recovery
+
+Purpose
+-------
+Repair the Build042 role regression where a successful warehouse cloud sign-in
+was stored as View Only.
+
+Changes
+-------
+1. Successful warehouse sign-in now sets role = warehouse.
+2. Trusted devices that were incorrectly stored as viewer by Build042
+   automatically recover to warehouse when a valid cloud session exists.
+3. Switch Account no longer pre-forces the next login into viewer mode.
+4. Home First + Background Cloud Recovery from Build042 is retained.
+
+Not changed
+-----------
+- Inventory business rules
+- Carpet rules
+- Receiving / Shipping / Transfer logic
+- AI Scan behavior
+- Voice behavior
+- Cloud schema

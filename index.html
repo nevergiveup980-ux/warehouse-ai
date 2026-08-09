@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.4.1 Home First Background Cloud Recovery Build042</title>
+<title>RUNLU Warehouse AI V6.4.2 Full Warehouse Access Recovery Build043</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -201,7 +201,7 @@ footer .nav{max-width:var(--runlu-content-max);width:100%;padding-left:var(--run
 img,video,canvas,svg{max-width:100%}
 
 
-/* Build042 · Home First / Background Cloud Recovery */
+/* Build043 · Home First / Background Cloud Recovery */
 #runluCloudRecoveryBanner{
  position:fixed;left:12px;right:12px;bottom:84px;z-index:95;
  max-width:720px;margin:auto;padding:11px 12px;border-radius:14px;
@@ -241,7 +241,7 @@ img,video,canvas,svg{max-width:100%}
           <div class="accessCloudLine">● Live Warehouse Connected</div>
         </div>
         <button id="runluCoreEnterButton" class="accessPrimary" type="button" onclick="return RUNLU_CORE_ENTER(event)">Enter Warehouse</button>
-<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">HOME FIRST READY · Build042</div>
+<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">FULL ACCESS READY · Build043</div>
         <button class="accessSwitch" onclick="accessUseAnotherAccount()">Switch account</button>
       </div>
       <div id="accessLoginForm" class="hidden"></div>
@@ -938,11 +938,11 @@ img,video,canvas,svg{max-width:100%}
 
 
 <script>
-/* RUNLU Build042 · Home First / Background Cloud Recovery */
+/* RUNLU Build043 · Home First / Background Cloud Recovery */
 (function(){
   window.RUNLU_CORE_ENTRY_DIAG = {
-    build:'042',
-    version:'6.4.1',
+    build:'043',
+    version:'6.4.2',
     loadedAt:new Date().toISOString(),
     origin:location.origin,
     href:location.href,
@@ -999,7 +999,7 @@ img,video,canvas,svg{max-width:100%}
 
       if(typeof window.accessRevealLogin==='function')window.accessRevealLogin(true);
     }catch(err){
-      console.error('[Build042] Reconnect UI error:',err);
+      console.error('[Build043] Reconnect UI error:',err);
     }
   };
 
@@ -1023,7 +1023,7 @@ img,video,canvas,svg{max-width:100%}
     }
 
     var session=null;
-    try{session=window.cloudSession()}catch(err){console.warn('[Build042] Session read:',err)}
+    try{session=window.cloudSession()}catch(err){console.warn('[Build043] Session read:',err)}
 
     if(!session){
       bannerState('Warehouse open · Cloud sign-in required',
@@ -1055,11 +1055,11 @@ img,video,canvas,svg{max-width:100%}
         if(typeof window.renderCarpetInventory==='function')window.renderCarpetInventory();
         if(typeof window.renderProducts==='function')window.renderProducts();
       }catch(renderErr){
-        console.warn('[Build042] Post-cloud render isolated:',renderErr);
+        console.warn('[Build043] Post-cloud render isolated:',renderErr);
       }
 
       try{window.startCloudPolling()}catch(pollErr){
-        console.warn('[Build042] Polling isolated:',pollErr);
+        console.warn('[Build043] Polling isolated:',pollErr);
       }
 
       if(typeof window.updateHeaderCloudPill==='function')window.updateHeaderCloudPill('auto');
@@ -1067,7 +1067,7 @@ img,video,canvas,svg{max-width:100%}
         'Live warehouse data has been restored in the background.');
       hideBannerSoon(2600);
     }catch(err){
-      console.warn('[Build042] Background cloud recovery:',err);
+      console.warn('[Build043] Background cloud recovery:',err);
       bannerState('Warehouse open · Cloud needs attention',
         String(err&&err.message||err),
         'Reconnect', window.RUNLU_OPEN_CLOUD_RECONNECT);
@@ -1117,8 +1117,8 @@ img,video,canvas,svg{max-width:100%}
 
       // Lightweight local render first; every call isolated.
       setTimeout(function(){
-        try{if(typeof window.renderDashboard==='function')window.renderDashboard()}catch(e){console.warn('[Build042] Dashboard isolated:',e)}
-        try{if(typeof window.applyAccessUI==='function')window.applyAccessUI()}catch(e){console.warn('[Build042] Access UI isolated:',e)}
+        try{if(typeof window.renderDashboard==='function')window.renderDashboard()}catch(e){console.warn('[Build043] Dashboard isolated:',e)}
+        try{if(typeof window.applyAccessUI==='function')window.applyAccessUI()}catch(e){console.warn('[Build043] Access UI isolated:',e)}
       },0);
 
       // Cloud recovery starts only AFTER Home is visible.
@@ -1126,13 +1126,13 @@ img,video,canvas,svg{max-width:100%}
         try{
           if(typeof window.RUNLU_BACKGROUND_CLOUD_RECOVERY==='function')
             window.RUNLU_BACKGROUND_CLOUD_RECOVERY();
-        }catch(e){console.warn('[Build042] Recovery launch isolated:',e)}
+        }catch(e){console.warn('[Build043] Recovery launch isolated:',e)}
       },350);
 
-      console.info('[Build042] HOME FIRST SUCCESS',window.RUNLU_CORE_ENTRY_DIAG);
+      console.info('[Build043] HOME FIRST SUCCESS',window.RUNLU_CORE_ENTRY_DIAG);
       return false;
     }catch(err){
-      console.error('[Build042] HOME FIRST ERROR',err);
+      console.error('[Build043] HOME FIRST ERROR',err);
       try{
         var g=byId('accessGate');
         if(g){g.style.display='none';g.style.pointerEvents='none'}
@@ -1147,7 +1147,7 @@ img,video,canvas,svg{max-width:100%}
     if(b)window.RUNLU_CORE_ENTER(e);
   },true);
 
-  document.documentElement.setAttribute('data-runlu-core-entry','build042-ready');
+  document.documentElement.setAttribute('data-runlu-core-entry','build043-ready');
 })();
 </script>
 
@@ -1155,7 +1155,7 @@ img,video,canvas,svg{max-width:100%}
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.4.1', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.4.2', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1165,8 +1165,25 @@ const SCANTEMPLATES='runlu_scan_supplier_templates_v1';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB,SCANDICT,SCANTEMPLATES];
 
 const ACCESS_ROLE_KEY='runlu_access_role_v620', ACCESS_TRUSTED_KEY='runlu_access_trusted_v620';
+// Build043 access recovery: repair devices that were incorrectly set to View Only by Build042.
+try{
+ const _r=localStorage.getItem(ACCESS_ROLE_KEY);
+ if(_r==='viewer' && localStorage.getItem(ACCESS_TRUSTED_KEY)==='1' && cloudSession()){
+   localStorage.setItem(ACCESS_ROLE_KEY,'warehouse');
+ }
+}catch(_){}
+
 const ACCESS_ROLES={admin:'Administrator',warehouse:'Warehouse Staff',viewer:'View Only'};
-function accessRole(){return localStorage.getItem(ACCESS_ROLE_KEY)||'viewer'}
+function accessRole(){
+ const stored=localStorage.getItem(ACCESS_ROLE_KEY);
+ try{
+  if(stored==='viewer' && localStorage.getItem(ACCESS_TRUSTED_KEY)==='1' && cloudSession()){
+   localStorage.setItem(ACCESS_ROLE_KEY,'warehouse');
+   return 'warehouse';
+  }
+ }catch(_){}
+ return stored||'viewer'
+}
 function accessCanWrite(){return accessRole()!=='viewer'}
 function accessIsAdmin(){return accessRole()==='admin'}
 function accessSetRole(role){role=ACCESS_ROLES[role]?role:'viewer';localStorage.setItem(ACCESS_ROLE_KEY,role);applyAccessUI()}
@@ -1229,7 +1246,7 @@ function accessOpenHomeFallback(){
  try{applyAccessUI()}catch(e){console.warn('Access UI recovery:',e)}
 }
 function accessContinueSaved(){
- // Build042: Home First; cloud recovery runs only after Home is visible.
+ // Build043: Home First; cloud recovery runs only after Home is visible.
  try{
    if(typeof window.RUNLU_CORE_ENTER==='function') return window.RUNLU_CORE_ENTER();
  }catch(e){console.warn('Core entry delegation recovery:',e)}
@@ -1237,7 +1254,7 @@ function accessContinueSaved(){
  try{showPage('home')}catch(e){console.error('Enter Warehouse recovery:',e);accessOpenHomeFallback()}
  return false;
 }
-function accessUseAnotherAccount(){try{localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY)}catch{}localStorage.setItem(ACCESS_ROLE_KEY,'viewer');$('accessSavedSession').classList.add('hidden');accessBuildLoginForm();if($('accessHeading'))$('accessHeading').textContent='Sign in to RUNLU';if($('accessSubtitle'))$('accessSubtitle').textContent='Choose another warehouse account.';if($('accessPassword'))$('accessPassword').value='';if($('accessLoginError'))$('accessLoginError').classList.add('hidden')}
+function accessUseAnotherAccount(){try{localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);localStorage.removeItem(ACCESS_ROLE_KEY)}catch{}$('accessSavedSession').classList.add('hidden');accessBuildLoginForm();if($('accessHeading'))$('accessHeading').textContent='Sign in to RUNLU';if($('accessSubtitle'))$('accessSubtitle').textContent='Choose another warehouse account.';if($('accessPassword'))$('accessPassword').value='';if($('accessLoginError'))$('accessLoginError').classList.add('hidden')}
 async function accessSignIn(){
  const email=normalizeText($('accessEmail').value),password=$('accessPassword').value,
        err=$('accessLoginError'),btn=$('accessSignInBtn');
@@ -1252,11 +1269,11 @@ async function accessSignIn(){
    });
    localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));
    localStorage.setItem(CLOUD_ENABLED_KEY,'1');
-   localStorage.setItem(ACCESS_ROLE_KEY,'viewer');
+   localStorage.setItem(ACCESS_ROLE_KEY,'warehouse');
    localStorage.setItem(ACCESS_TRUSTED_KEY,'1');
    $('accessPassword').value='';
 
-   // Build042 rule: open Home immediately; never wait for cloud download.
+   // Build043 rule: open Home immediately; never wait for cloud download.
    if(typeof window.RUNLU_CORE_ENTER==='function')window.RUNLU_CORE_ENTER();
    else accessOpenHomeFallback();
 
