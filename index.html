@@ -454,6 +454,13 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <section id="scan" class="page hidden">
 <div class="card"><button class="back" onclick="returnFromAIScan()">‹ Back</button><h2>AI Scan</h2>
 <div id="scanContextNotice" class="notice"><b>Shared AI Scan</b><br>Open it from a work page to return the recognized fields to that page. Nothing changes inventory until you review and save.</div>
+<div class="card" style="margin:12px 0 14px"><h3 style="margin-top:0">Scan AI Mode <span id="scanAiMode" class="voiceAiBadge">Local only</span></h3>
+<div class="meta">Scan has its own AI control. Local OCR/Barcode remains available at $0 GPT API cost. Voice and Scan settings are independent.</div>
+<div class="voiceSetting" style="margin-top:12px"><div><b>GPT Vision Gateway</b><div class="meta">OFF = Local Scan only. ON = allow this Scan page to call GPT Vision using the same secure Cloudflare Worker/API key as Voice.</div></div><div id="scanGptToggle" class="voiceToggle"><i></i></div></div>
+<div class="voiceSetting"><div><b>When GPT Vision is ON</b><div class="meta"><b>Smart Hybrid</b> runs local OCR first and uses GPT Vision only when local recognition is weak. <b>GPT Vision</b> sends the reviewed photo directly to GPT Vision for structured extraction.</div></div><select id="scanAiPolicy" style="width:165px"><option value="hybrid">Smart Hybrid</option><option value="vision">GPT Vision</option></select></div>
+<div id="scanAiStatus" class="notice" style="margin-top:10px">⚪ GPT Vision is off · Local OCR / Barcode mode</div>
+<label>Cloudflare Worker URL</label><div style="display:flex;gap:8px"><input id="scanGateway" type="url" inputmode="url" placeholder="Uses the same secure Worker as Voice"><button id="scanSaveGateway" class="primary" type="button">Save & Test</button></div>
+<div class="meta" style="margin-top:8px">The OpenAI API key stays only in the Worker Secret. Switching Scan AI does not change the Voice AI mode.</div></div>
 <div class="sectionTitle">Stop & Snap Camera Test</div>
 <div class="notice"><b>Faster camera-assisted capture</b><br>Scan one sheet or label at a time and let it fill most of the frame. Auto Capture now needs only a brief steady pause. You can also tap Capture at any time.</div>
 <div id="cameraStage" class="cameraStage">
@@ -475,7 +482,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <div class="notice" style="margin-top:8px">On iPhone, use <b>Choose from Photos / Files</b> for an existing picture. This option does not force the camera to open.</div>
 <img id="scanPreview" class="preview hidden">
 <div id="photoReview" class="notice hidden" style="margin-top:10px"><b>Photo captured for review.</b><br>Use Photo keeps it with the pending record. Retake discards it and reopens the camera.<div class="actions"><button class="green" onclick="useCapturedPhoto()">Use Photo</button><button onclick="retakeCapturedPhoto()">Retake</button></div></div>
-<div class="scanTools"><button id="readPhotoTextBtn" class="purple" onclick="readPhotoText()">🔤 Read Photo Text</button><button class="purple" onclick="scanPhotoBarcode()">▦ Scan Barcode</button><button onclick="clearSmartDetection()">Clear Detection</button></div>
+<div class="scanTools"><button id="readPhotoTextBtn" class="purple" onclick="readPhotoText()">✨ Read / Analyze Photo</button><button class="purple" onclick="scanPhotoBarcode()">▦ Scan Barcode</button><button onclick="clearSmartDetection()">Clear Detection</button></div>
 <div id="ocrStatus" class="notice hidden" style="margin-top:10px"></div>
 <label>Document Type</label><select id="scanDocumentType"><option value="auto">Auto Detect</option><option>Carpet Roll Label</option><option>Supplier Pickup / Receiving</option><option>Customer Order / Cutting Sheet</option><option>Product / Carton Label</option><option>Inventory Count Photo</option></select>
 <div class="sectionTitle">Key Information Review</div>
@@ -851,7 +858,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.3.6', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.3.7', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1080,7 +1087,7 @@ accessShowGate();
 document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden')); $(id).classList.remove('hidden');
  document.body.classList.toggle('formEntry',['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].includes(id));
  if(id==='home')renderDashboard(); if(id==='carpetInventory')renderCarpetInventory(); if(id==='products')renderProducts(); if(id==='inventory')renderInventory();if(id==='generalTagCenter')renderGeneralTags();
- if(id==='search')renderSearch(); if(id==='voiceAssistant')renderVoiceAssistant(); if(id==='scan'){refreshProducts();renderScanBatch();updateScanExisting();updateScanContextUI();} if(id==='orderHistory')renderOrders(); if(id==='orderWorkspace')renderOrderWorkspace();
+ if(id==='search')renderSearch(); if(id==='voiceAssistant')renderVoiceAssistant(); if(id==='scan'){refreshProducts();renderScanBatch();updateScanExisting();updateScanContextUI();bindScanAiControls();scanRenderAiControls();} if(id==='orderHistory')renderOrders(); if(id==='orderWorkspace')renderOrderWorkspace();
  if(id==='databaseHealth')runDatabaseHealth(false); if(id==='databaseExplorer')renderDatabaseExplorer();
  if(id==='warehouseMap')renderMap(); if(id==='reports')renderReports();if(id==='operations')renderOperationsDays();if(id==='operationsDay')renderOperationsDay();if(id==='taskCenter')renderTasks();if(id==='receivingHistory')renderReceivingHistory();if(id==='specialOrders')renderSpecialOrders();if(id==='orderDataCenter')renderOrderDataCenter(); if(id==='settings'){loadSettings();renderBackupStatus();renderOrderDataStatus();runDatabaseHealth(false);if($('deviceAccessRole'))$('deviceAccessRole').value=accessRole();if($('settingsAccessSummary'))$('settingsAccessSummary').textContent=accessRoleLabel();setTimeout(()=>checkForUpdate(true),250);} if(id==='developer'){runDiagnostics();inspectStorage();}
  applyAccessUI();
@@ -1533,41 +1540,124 @@ async function recognizeCustomerOrderRegions(worker,source){
  }
  return output.join('\n\n');
 }
+async function scanReadPhotoLocal(){
+ if(!$('scanPreview').src)throw new Error('Take or choose a photo first.');
+ let text='',engine='';
+ if('TextDetector' in window){
+  try{const detector=new TextDetector(),blocks=await detector.detect($('scanPreview'));text=blocks.map(x=>x.rawValue).filter(Boolean).join('\n');engine='Browser photo reader'}catch(error){console.warn('Browser TextDetector failed; using local OCR.',error)}
+ }
+ if(!text.trim()){
+  showOcrStatus('Reading photo locally on this device…',0);
+  const worker=await getLocalOcrWorker(),source=$('scanPreview').src,chosen=$('scanDocumentType')?.value||'auto';
+  if(chosen==='Customer Order / Cutting Sheet'){
+   text=await recognizeCustomerOrderRegions(worker,source);
+   engine='Local form-region OCR';
+  }
+  if(!text.trim()){
+   const result=await worker.recognize(source);
+   text=String(result?.data?.text||'');engine='Local iPhone-compatible OCR';
+  }
+ }
+ return {text:String(text||''),engine:engine||'Local OCR'};
+}
+function scanGptEnabled(){return localStorage.getItem(SCAN_GPT_ENABLED_KEY)==='1'}
+function scanAiPolicy(){const v=localStorage.getItem(SCAN_AI_POLICY_KEY)||'hybrid';return v==='vision'?'vision':'hybrid'}
+function scanRenderAiControls(){
+ const enabled=scanGptEnabled(),policy=scanAiPolicy();
+ if($('scanGptToggle'))$('scanGptToggle').classList.toggle('on',enabled);
+ if($('scanAiPolicy'))$('scanAiPolicy').value=policy;
+ if($('scanAiMode'))$('scanAiMode').textContent=!enabled?'Local only':(policy==='vision'?'GPT Vision':'Smart Hybrid');
+ const gateway=(($('scanGateway')?.value||localStorage.getItem(VOICE_GATEWAY_KEY)||'').trim());
+ if($('scanAiStatus')){
+  if(!enabled)$('scanAiStatus').textContent='⚪ GPT Vision is off · Local OCR / Barcode mode';
+  else if(!gateway)$('scanAiStatus').textContent='🟡 GPT Vision is ON, but no Gateway URL is configured';
+  else $('scanAiStatus').textContent=policy==='vision'?'🟣 GPT Vision mode · photo analysis uses the Gateway':'🟢 Smart Hybrid · local first, GPT Vision only when needed';
+ }
+}
+async function scanPrepareImageForGpt(src,maxDim=1600,quality=.76){
+ return await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{const scale=Math.min(1,maxDim/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(img,0,0,w,h);resolve(c.toDataURL('image/jpeg',quality))}catch(e){reject(e)}};img.onerror=()=>reject(new Error('Could not prepare the photo for GPT Vision.'));img.src=src});
+}
+function scanNeedsGpt(localText=''){
+ const raw=String(localText||'').trim();
+ const product=normalizeText($('scanProduct')?.value),qty=Number($('scanQty')?.value||0),po=normalizeText($('scanPo')?.value),doc=$('scanDocumentType')?.value||'auto';
+ if(raw.length<35)return true;
+ if(!product)return true;
+ if(['Supplier Pickup / Receiving','Customer Order / Cutting Sheet','Inventory Count Photo'].includes(doc)&&!(qty>0))return true;
+ if(['Supplier Pickup / Receiving','Customer Order / Cutting Sheet'].includes(doc)&&!po)return true;
+ return false;
+}
+function scanApplyGptResult(data){
+ if(!data||typeof data!=='object')return;
+ const set=(id,v)=>{if(v!==undefined&&v!==null&&String(v).trim()!==''&&$(id))$(id).value=String(v).trim()};
+ if(data.rawText){$('scanLabelText').value=normalizeOcrText([$('scanLabelText').value,data.rawText].filter(Boolean).join('\n'))}
+ set('scanProduct',data.product);set('scanLocation',data.location);set('scanLot',data.lot);set('scanPo',data.po);set('scanQty',data.quantity);set('scanNotes',data.notes);
+ if(data.unit&&$('scanUnit')){const allowed=[...$('scanUnit').options].map(o=>o.value);const hit=allowed.find(x=>x.toLowerCase()===String(data.unit).toLowerCase());if(hit)$('scanUnit').value=hit}
+ if(data.documentType&&$('scanDocumentType')){const allowed=[...$('scanDocumentType').options].map(o=>o.value);const hit=allowed.find(x=>x.toLowerCase()===String(data.documentType).toLowerCase());if(hit)$('scanDocumentType').value=hit}
+ analyzeLabelText();updateScanExisting();updateDuplicateWarning();
+}
+async function scanCallGatewayVision(){
+ const gateway=(($('scanGateway')?.value||localStorage.getItem(VOICE_GATEWAY_KEY)||'').trim()).replace(/\/+$/,'');
+ if(!gateway)throw new Error('No AI Gateway is configured.');
+ const image=await scanPrepareImageForGpt($('scanPreview').src);
+ const knownProducts=loadMasters().slice(0,500).map(m=>({name:m.name,color:m.color||'',sku:m.sku||'',series:m.series||''}));
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+ try{
+  const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:'scan',image,documentType:$('scanDocumentType')?.value||'auto',knownProducts}),signal:controller.signal});
+  let data={};try{data=await res.json()}catch{}
+  if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);
+  if(!data.scan||typeof data.scan!=='object')throw new Error('Gateway returned no structured scan result.');
+  return data.scan;
+ }finally{clearTimeout(timer)}
+}
+async function scanTestGateway(){
+ const g=(($('scanGateway')?.value||localStorage.getItem(VOICE_GATEWAY_KEY)||'').trim()).replace(/\/+$/,'');
+ if(!g){if($('scanAiStatus'))$('scanAiStatus').textContent='⚪ No Gateway configured. Local Scan is ready.';return}
+ localStorage.setItem(VOICE_GATEWAY_KEY,g);if($('voiceGateway'))$('voiceGateway').value=g;
+ if($('scanAiStatus'))$('scanAiStatus').textContent='🟡 Testing AI Gateway…';
+ try{const r=await fetch(g,{method:'GET'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Health check failed');if($('scanAiStatus'))$('scanAiStatus').textContent=`🟢 Gateway online · ${d.version||'unknown'} · Scan ${scanGptEnabled()?'GPT allowed':'Local only'}`}
+ catch(e){if($('scanAiStatus'))$('scanAiStatus').textContent='🔴 Gateway test failed: '+e.message}
+}
+function bindScanAiControls(){
+ if(!$('scanGptToggle')||$('scanGptToggle').dataset.bound)return;
+ $('scanGptToggle').dataset.bound='1';
+ $('scanGptToggle').onclick=()=>{localStorage.setItem(SCAN_GPT_ENABLED_KEY,scanGptEnabled()?'0':'1');scanRenderAiControls()};
+ $('scanAiPolicy').onchange=()=>{localStorage.setItem(SCAN_AI_POLICY_KEY,$('scanAiPolicy').value==='vision'?'vision':'hybrid');scanRenderAiControls()};
+ $('scanSaveGateway').onclick=scanTestGateway;
+ $('scanGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';
+ scanRenderAiControls();
+}
 async function readPhotoText(){
  if(!$('scanPreview').src){alert('Take or choose a photo first.');return}
  if(localOcrBusy)return;
  localOcrBusy=true;
- const button=$('readPhotoTextBtn');if(button){button.disabled=true;button.textContent='Reading Photo…'}
+ const button=$('readPhotoTextBtn');if(button){button.disabled=true;button.textContent='Analyzing Photo…'}
  try{
-  let text='',engine='';
-  if('TextDetector' in window){
-   try{const detector=new TextDetector(),blocks=await detector.detect($('scanPreview'));text=blocks.map(x=>x.rawValue).filter(Boolean).join('\n');engine='Browser photo reader'}catch(error){console.warn('Browser TextDetector failed; using local OCR.',error)}
-  }
-  if(!text.trim()){
-   showOcrStatus('Reading photo locally on this device…',0);
-   const worker=await getLocalOcrWorker(),source=$('scanPreview').src,chosen=$('scanDocumentType')?.value||'auto';
-   if(chosen==='Customer Order / Cutting Sheet'){
-    text=await recognizeCustomerOrderRegions(worker,source);
-    engine='Local form-region OCR';
+  const enabled=scanGptEnabled(),policy=scanAiPolicy();
+  if(enabled&&policy==='vision'){
+   showOcrStatus('Sending a resized review copy to GPT Vision…',.2);
+   const gpt=await scanCallGatewayVision();scanApplyGptResult(gpt);showOcrStatus('GPT Vision finished. Review every field before saving.',1);if($('scanAiStatus'))$('scanAiStatus').textContent='🟣 GPT Vision completed · Review required';
+  }else{
+   const local=await scanReadPhotoLocal();
+   if(!local.text.trim()){
+    if(enabled&&policy==='hybrid'){showOcrStatus('Local reading was weak. Asking GPT Vision…',.35);const gpt=await scanCallGatewayVision();scanApplyGptResult(gpt);showOcrStatus('Smart Hybrid used GPT Vision. Review every field before saving.',1);if($('scanAiStatus'))$('scanAiStatus').textContent='🟢 Smart Hybrid · GPT Vision fallback used';}
+    else {alert('No readable text found. Retake closer, keep the paper flat and reduce glare.');return}
+   }else{
+    $('scanLabelText').value=normalizeOcrText([$('scanLabelText').value,local.text].filter(Boolean).join('\n'));showOcrStatus(local.engine+' finished. Review the detected fields before saving.',1);analyzeLabelText();
+    if(enabled&&policy==='hybrid'&&scanNeedsGpt(local.text)){
+     try{showOcrStatus('Local OCR finished; key fields are uncertain. Asking GPT Vision…',.6);const gpt=await scanCallGatewayVision();scanApplyGptResult(gpt);showOcrStatus('Smart Hybrid finished. GPT Vision was used only for uncertain fields. Review before saving.',1);if($('scanAiStatus'))$('scanAiStatus').textContent='🟢 Smart Hybrid · GPT Vision fallback used'}catch(e){console.warn('Smart Hybrid GPT fallback failed',e);showOcrStatus(local.engine+' finished. GPT Vision fallback was unavailable; local result kept.',1);if($('scanAiStatus'))$('scanAiStatus').textContent='🟠 GPT fallback unavailable · local scan kept'}
+    }else if($('scanAiStatus'))$('scanAiStatus').textContent=enabled?'🟢 Smart Hybrid · local scan was sufficient ($0 GPT call)':'⚪ Local Scan completed · $0 GPT call';
    }
-   if(!text.trim()){
-    const result=await worker.recognize(source);
-    text=String(result?.data?.text||'');engine='Local iPhone-compatible OCR';
-   }
   }
-  if(!text.trim()){alert('No readable text found. Retake closer, keep the paper flat and reduce glare.');return}
-  $('scanLabelText').value=normalizeOcrText([$('scanLabelText').value,text].filter(Boolean).join('\n'));
-  showOcrStatus(engine+' finished. Review the detected fields before saving.',1);
-  analyzeLabelText();
   if($('scanRawTextDetails'))$('scanRawTextDetails').open=false;
   setTimeout(()=>$('scanKeyInfoReview')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
  }catch(err){
-  showOcrStatus('Photo reading could not finish.',null);
-  alert('Photo text reading failed: '+err.message+'. You can still paste iPhone Live Text into Visible Label Text.');
+  showOcrStatus('Photo analysis could not finish.',null);
+  alert('Photo analysis failed: '+(err.name==='AbortError'?'AI Gateway timed out.':err.message)+'. Local Scan remains available.');
  }finally{
-  localOcrBusy=false;if(button){button.disabled=false;button.textContent='🔤 Read Photo Text'}
+  localOcrBusy=false;if(button){button.disabled=false;button.textContent='✨ Read / Analyze Photo'}
  }
 }
+
 async function scanPhotoBarcode(){
   if(!$('scanPreview').src){alert('Take or choose a photo first.');return}
   if(!('BarcodeDetector' in window)){alert('Barcode scanning is not supported by this browser. You can type or paste the barcode/SKU into Visible Label Text.');return}
@@ -3454,6 +3544,8 @@ const VOICE_GATEWAY_KEY='runlu_voice_gateway_v610';
 const VOICE_LANGUAGE_KEY='runlu_voice_language_v610';
 const VOICE_GPT_ENABLED_KEY='runlu_voice_gpt_enabled_v637';
 const VOICE_AI_POLICY_KEY='runlu_voice_ai_policy_v637';
+const SCAN_GPT_ENABLED_KEY='runlu_scan_gpt_enabled_v638';
+const SCAN_AI_POLICY_KEY='runlu_scan_ai_policy_v638';
 let voiceRecognition=null,voiceListening=false,voiceSpeaking=false,voiceContinuous=false,voiceAsking=false,voiceRestartTimer=null,voiceSpeechTimer=null,voiceSessionToken=0,voiceHistory=[],voiceRestartAttempts=0,voiceLastSpeechStartedAt=0,voiceUtteranceTimer=null,voicePendingTranscript='',voiceAutoListenLang=localStorage.getItem('runlu_voice_auto_last_lang_v614')||'zh-CN',voiceLastDetectedLang=voiceAutoListenLang,voiceLastReplyLang=voiceAutoListenLang,voiceAutoRetryFlip=false,voiceTurnCounter=0,voiceActiveTurn=0,voiceSoundTesting=false,voiceLastAnswer='',voiceAutoFailureCount=0,voiceAutoSwitchPending=false,voiceLastRecognitionError='',voiceMicWanted=false,voiceAbortIntent='',voiceStartInFlight=false,voiceLastStartAt=0,voiceContext={product:null,updatedAt:0};
 function voiceEsc(t){return esc(String(t??''))}
 function voiceAddLog(who,text){const log=$('voiceLog');if(!log)return;if(log.querySelector('.meta'))log.innerHTML='';log.insertAdjacentHTML('afterbegin',`<div class="voiceMsg"><span class="voiceWho">${voiceEsc(who)}:</span> ${voiceEsc(text)}</div>`)}
@@ -3828,7 +3920,7 @@ async function voiceHandle(text,meta={}){if(!text)return;const turnId=++voiceTur
  if(policy==='hybrid'&&local){voiceRememberSuccessfulContext(text);voiceAsking=false;if($('voiceAiMode'))$('voiceAiMode').textContent=lang==='zh-CN'?'本地 · Smart Hybrid':'Local · Smart Hybrid';voiceAutoRetryFlip=false;voiceSpeak(local.text,true,lang,turnId);return}
  voiceSetState('thinking',policy==='always'?(lang==='zh-CN'?'正在让 GPT 基于实时仓库数据组织回答…':'Asking GPT with live warehouse grounding…'):(lang==='zh-CN'?'本地没有精确答案，正在询问 GPT…':'No exact local answer; asking GPT…'));if($('voiceAiMode'))$('voiceAiMode').textContent=policy==='always'?'GPT Always':'GPT fallback';
  try{const reply=await voiceCallGateway(text,lang,{localAnswer:local?.text||''});if(turnId!==voiceActiveTurn)return;if(local)voiceRememberSuccessfulContext(text);voiceHistory.push({role:'user',content:text,language:lang},{role:'assistant',content:reply,language:lang});voiceHistory=voiceHistory.slice(-10);voiceAsking=false;voiceSpeak(reply,true,lang,turnId);if($('voiceAiStatus'))$('voiceAiStatus').textContent='🟢 GPT Gateway connected'}catch(e){if(turnId!==voiceActiveTurn)return;voiceAsking=false;if(local){if($('voiceAiStatus'))$('voiceAiStatus').textContent='🟠 GPT unavailable · used local warehouse answer';voiceRememberSuccessfulContext(text);voiceSpeak(local.text,true,lang,turnId);return}const msg=e.name==='AbortError'?(lang==='zh-CN'?'GPT Gateway 超时，我会继续监听。':'GPT Gateway timed out; I will keep listening.'):String(e.message||e);voiceSpeak(msg,true,lang,turnId)}}
-async function voiceTestGateway(){const g=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!g){$('voiceAiStatus').textContent='⚪ No Gateway configured. Local warehouse queries are ready.';voiceRenderAiControls();return}localStorage.setItem(VOICE_GATEWAY_KEY,g);$('voiceAiStatus').textContent='🟡 Testing GPT Gateway…';try{const r=await fetch(g,{method:'GET'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Health check failed');$('voiceAiStatus').textContent=`🟢 Gateway online · ${d.version||'unknown'} · ${voiceGptEnabled()?'GPT ON':'GPT OFF'}`}catch(e){$('voiceAiStatus').textContent='🔴 Gateway test failed: '+e.message}}
+async function voiceTestGateway(){const g=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!g){$('voiceAiStatus').textContent='⚪ No Gateway configured. Local warehouse queries are ready.';voiceRenderAiControls();return}localStorage.setItem(VOICE_GATEWAY_KEY,g);if($('scanGateway'))$('scanGateway').value=g;$('voiceAiStatus').textContent='🟡 Testing GPT Gateway…';try{const r=await fetch(g,{method:'GET'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Health check failed');$('voiceAiStatus').textContent=`🟢 Gateway online · ${d.version||'unknown'} · ${voiceGptEnabled()?'GPT ON':'GPT OFF'}`}catch(e){$('voiceAiStatus').textContent='🔴 Gateway test failed: '+e.message}}
 function renderVoiceAssistant(){if(!$('voiceMic'))return;if(!$('voiceGateway').value)$('voiceGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';$('voiceLanguage').value=localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto';voiceLastDetectedLang=localStorage.getItem('runlu_voice_auto_last_lang_v614')||voiceLastDetectedLang||'zh-CN';if((localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto')==='auto')voiceLanguageController.reset();else voiceLanguageController.set(localStorage.getItem(VOICE_LANGUAGE_KEY));voiceApplyLanguage();if(!voiceRecognition)voiceSetupRecognition();voiceUpdateLaneStatus();voiceRenderAiControls()}
 function bindVoiceAssistant(){if(!$('voiceMic')||$('voiceMic').dataset.bound)return;$('voiceMic').dataset.bound='1';$('voiceMic').onclick=()=>{if(voiceListening||voiceStartInFlight){voiceMicWanted=false;voiceStopRecognition('user-stop');voiceSetState('idle','Stopped listening.')}else if(voiceSpeaking){voiceMicWanted=false;voiceStopSpeech();voiceSetState('idle','Stopped speaking.')}else{voiceMicWanted=true;voiceStartListening()}};$('voiceSoundTest').onclick=()=>{const prior=voiceLastAnswer||$('voiceAnswer')?.textContent||'';voiceSoundTesting=true;voiceStopRecognition('sound-test');voiceStopSpeech();const lang=voiceLastReplyLang||'zh-CN';voiceSetState('speaking',lang==='zh-CN'?'正在测试扬声器…':'Testing speaker…');if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(lang==='zh-CN'?'声音测试成功。':'Sound test successful.');u.lang=lang;const v=voiceChooseVoice(lang);if(v)u.voice=v;u.onend=u.onerror=()=>{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior;voiceSetState('idle',lang==='zh-CN'?'声音测试完成。':'Sound test complete.');if(voiceContinuous)voiceScheduleListening(500)};try{speechSynthesis.cancel();speechSynthesis.speak(u)}catch{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior}}};$('voiceStop').onclick=voiceStopAll;$('voiceToggle').onclick=()=>{voiceContinuous=!voiceContinuous;voiceMicWanted=voiceContinuous;$('voiceToggle').classList.toggle('on',voiceContinuous);$('voiceDetail').textContent=voiceContinuous?'Continuous conversation is on. Mic Controller keeps listening; Language Controller chooses the recognition lane independently.':'Continuous conversation is off.';if(voiceContinuous&&!voiceListening&&!voiceSpeaking&&!voiceAsking)voiceScheduleListening(250);else if(!voiceContinuous){clearTimeout(voiceRestartTimer);voiceRestartTimer=null;voiceStopRecognition('user-stop')}};$('voiceLanguage').onchange=()=>{const mode=$('voiceLanguage').value;localStorage.setItem(VOICE_LANGUAGE_KEY,mode);if(mode==='auto'){voiceLanguageController.reset();voiceSetState('idle','Dual Controller Auto is ready. 中文和 English 可以自然切换。')}else voiceLanguageController.set(mode,'manual');voiceApplyLanguage();voiceUpdateLaneStatus()};$('voiceSend').onclick=()=>{const v=$('voiceManual').value.trim();if(!v)return;$('voiceManual').value='';const lang=voiceDetectConversationLanguage(v,voiceLastDetectedLang||'zh-CN');voiceHandle(v,{detectedLang:lang})};$('voiceManual').addEventListener('keydown',e=>{if(e.key==='Enter')$('voiceSend').click()});if($('voiceGptToggle'))$('voiceGptToggle').onclick=()=>{const next=!voiceGptEnabled();localStorage.setItem(VOICE_GPT_ENABLED_KEY,next?'1':'0');voiceRenderAiControls();if(next&&($('voiceGateway')?.value||'').trim())voiceTestGateway()};if($('voiceAiPolicy'))$('voiceAiPolicy').onchange=()=>{localStorage.setItem(VOICE_AI_POLICY_KEY,$('voiceAiPolicy').value==='always'?'always':'hybrid');voiceRenderAiControls()};$('voiceSaveGateway').onclick=voiceTestGateway;$('voiceGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';voiceRenderAiControls();if($('voiceGateway').value&&voiceGptEnabled())voiceTestGateway();if('speechSynthesis'in window)speechSynthesis.getVoices()}
 

@@ -1,7 +1,7 @@
 {
-  "version": "6.3.6",
-  "build": "037",
-  "title": "AI Mode Switch + GPT Gateway Control",
+  "version": "6.3.7",
+  "build": "038",
+  "title": "Independent Voice + Scan AI Modes",
   "published": "2026-08-08",
-  "notes": "Adds an explicit GPT Gateway ON/OFF switch with Smart Hybrid and GPT Always policies. Local warehouse queries remain available at zero GPT API cost, and GPT Always is grounded with authoritative live warehouse answers when available."
+  "notes": "Adds independent AI controls for Warehouse Voice and AI Scan. Scan supports Local Only, Smart Hybrid, and GPT Vision while reusing the same secure Cloudflare Worker/API key. Smart Hybrid keeps local OCR/Barcode at $0 whenever sufficient and calls GPT Vision only for uncertain photo recognition."
 }

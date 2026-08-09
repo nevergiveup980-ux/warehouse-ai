@@ -1,0 +1,24 @@
+RUNLU Warehouse AI V6.3.7 · Build038
+Independent Voice + Scan AI Modes
+
+What changed
+- Voice and AI Scan now have independent GPT enable/mode controls.
+- Voice keeps Local Only / Smart Hybrid / GPT Always behavior from Build037.
+- AI Scan now supports:
+  1) Local Only — browser/local OCR + Barcode/QR only; zero GPT API calls.
+  2) Smart Hybrid — local OCR first; GPT Vision is called only when the local result is weak or key fields are missing.
+  3) GPT Vision — sends a resized review copy of the current photo directly to GPT Vision for structured field extraction.
+- Voice and Scan can use different modes at the same time. Example: Voice = Smart Hybrid, Scan = Local Only.
+- Both modules reuse the same Cloudflare Worker URL and OPENAI_API_KEY secret, while maintaining separate ON/OFF and policy settings in the app.
+- The browser never stores the OpenAI API key.
+- GPT Vision results are review-only. They populate fields but never save or change inventory automatically.
+- Photos are resized before GPT Vision transmission to reduce image payload and cost.
+
+Cloudflare Worker
+- Replace the previous voice_worker/worker.js with the Build038 worker to enable the new task:'scan' endpoint.
+- Keep OPENAI_API_KEY as a Worker Secret.
+- Optional: set OPENAI_VISION_MODEL separately; otherwise it uses OPENAI_MODEL (or gpt-5-mini by default).
+
+Safety
+- Existing warehouse data keys and inventory structures are unchanged.
+- Local Scan remains available even when GPT is disabled or the Gateway is unavailable.
