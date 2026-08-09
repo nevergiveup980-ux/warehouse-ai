@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.2.6 Bilingual Engine 2.0 Build027</title>
+<title>RUNLU Warehouse AI V6.3.2 Mixed-Language Cleanup + Safer Fuzzy Match Build033</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -845,7 +845,7 @@ footer button{background:#fff;padding:8px 2px;font-size:10px}footer button b{dis
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.3.1', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.3.2', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -3518,7 +3518,55 @@ function voiceBestTranscript(result){const alts=[];for(let i=0;i<result.length;i
 function voiceIsFragment(text){const q=voiceNorm(text),w=q.split(/\s+/).filter(Boolean);return !q||(w.length===1&&['where','what','how','which','i','the','is','are','do','can','please','哪里','多少','什么'].includes(w[0]))}
 function voiceDetectIntent(text){const q=voiceNorm(text);if(/\b(how many|quantity|count|stock|inventory|left|remaining)\b/.test(q)||/(多少|库存|剩多少)/.test(q))return'quantity';if(/\b(where|location|rack|located)\b/.test(q)||/(哪里|在哪|位置|货架)/.test(q))return'location';if(/transfer|转货|转移/.test(q))return'transfer';if(/\b(today|task|work|job)\b/.test(q)||/(今天|任务|工作)/.test(q))return'today';if(/\b\d{5,8}\b/.test(q))return'order';if(/roll|卷号|地毯/.test(q))return'roll';return'unknown'}
 function voiceExactWarehouseTerm(text){const n=voiceNorm(text);if(!n)return '';const vocab=voiceWarehouseVocabulary().sort((a,b)=>voiceNorm(b).length-voiceNorm(a).length);for(const v of vocab){const vn=voiceNorm(v);if(vn.length>=3&&new RegExp(`(^|\\s)${vn.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')}(?=\\s|$)`,`i`).test(n))return v}return ''}
-function voiceCorrectWarehouseTerms(text){const exact=voiceExactWarehouseTerm(text);if(exact)return {text,matched:'',exact};const n=voiceNorm(text);let best=null;for(const v of voiceWarehouseVocabulary()){const vn=voiceNorm(v);if(!vn||vn.length<5)continue;const chunks=n.split(/\s+/).filter(x=>x.length>=4);for(const chunk of chunks){const sim=voiceSimilarity(chunk,vn);const threshold=vn.includes(' ')?0.86:0.88;if(sim>=threshold&&(!best||sim>best.score))best={term:v,score:sim}}}return best&&best.score>=.88?{text:text+' '+best.term,matched:best.term,confidence:best.score}:{text,matched:'',confidence:0}}
+// V6.3.2 Build033 — Mixed-Language Cleanup + Safer Fuzzy Match.
+function voiceCleanMixedTranscript(text){
+ const raw=String(text||'').replace(/\s+/g,' ').trim();
+ if(!raw)return raw;
+ const hasHan=/[\u3400-\u9fff]/.test(raw), hasLatin=/[A-Za-z]/.test(raw);
+ if(!(hasHan&&hasLatin))return raw;
+ // Preserve English warehouse entities, units and intent words inside Chinese speech, but remove obvious ASR filler fragments.
+ const keepEnglish=new Set(['how','many','where','what','which','inventory','stock','rack','location','po','roll','box','pallet','piece','foot','pail','transfer','shipping','receiving','return','customer','supplier','do','we','have','is','are','the','it','about']);
+ const vocab=voiceWarehouseVocabulary().map(v=>String(v));
+ const lower=raw.toLowerCase();
+ const protectedTerms=[];
+ for(const v of vocab){const vn=voiceNorm(v);if(vn.length>=3&&lower.includes(String(v).toLowerCase()))protectedTerms.push(v)}
+ let cleaned=raw.replace(/\b(?:uh|um|er|ah|hmm|you know)\b/gi,' ');
+ // Drop isolated English fragments inside an otherwise Chinese sentence only when they are neither warehouse vocabulary nor useful intent words.
+ cleaned=cleaned.replace(/\b[A-Za-z][A-Za-z'-]{1,12}\b/g,w=>{
+   const wn=voiceNorm(w);
+   if(keepEnglish.has(wn))return w;
+   if(protectedTerms.some(v=>voiceNorm(v).split(' ').includes(wn)||voiceNorm(v)===wn))return w;
+   const close=vocab.some(v=>{const vn=voiceNorm(v);return vn===wn||(wn.length>=4&&voiceSimilarity(wn,vn)>=.92)});
+   return close?w:' ';
+ });
+ return cleaned.replace(/\s+/g,' ').trim()||raw;
+}
+function voiceCorrectWarehouseTerms(text){
+ const cleaned=voiceCleanMixedTranscript(text);
+ const exact=voiceExactWarehouseTerm(cleaned);if(exact)return {text:cleaned,matched:'',exact,cleaned:cleaned!==text?cleaned:''};
+ const n=voiceNorm(cleaned), vocab=voiceWarehouseVocabulary();
+ const chunks=n.split(/\s+/).filter(x=>x.length>=4);
+ const candidates=[];
+ for(const v of vocab){
+   const vn=voiceNorm(v);if(!vn||vn.length<4)continue;
+   for(const chunk of chunks){
+     const sim=voiceSimilarity(chunk,vn);
+     const threshold=vn.includes(' ')?0.90:0.91;
+     if(sim>=threshold)candidates.push({term:v,score:sim,chunk,vn});
+   }
+ }
+ candidates.sort((a,b)=>b.score-a.score);
+ if(!candidates.length)return {text:cleaned,matched:'',confidence:0,cleaned:cleaned!==text?cleaned:''};
+ const best=candidates[0], second=candidates.find(x=>voiceNorm(x.term)!==voiceNorm(best.term));
+ // If a short token such as "choice" plausibly points to multiple warehouse terms, never auto-correct.
+ const containing=vocab.filter(v=>{const vn=voiceNorm(v);return best.chunk.length>=4&&(vn===best.chunk||vn.split(' ').includes(best.chunk)||vn.includes(best.chunk))});
+ const uniqueContaining=[...new Set(containing.map(voiceNorm))];
+ const ambiguousByContainment=uniqueContaining.length>1;
+ const margin=!second?1:best.score-second.score;
+ const uniqueHighConfidence=best.score>=.92&&margin>=.055&&!ambiguousByContainment;
+ if(!uniqueHighConfidence)return {text:cleaned,matched:'',confidence:best.score,ambiguous:true,cleaned:cleaned!==text?cleaned:''};
+ return {text:cleaned+' '+best.term,matched:best.term,confidence:best.score,cleaned:cleaned!==text?cleaned:''};
+}
 function voiceAutoMode(){return (localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto')==='auto'}
 function voiceLooksLikeChineseMisheardAsEnglish(text){
  const q=voiceNorm(text), raw=String(text||'').trim();
@@ -3572,7 +3620,7 @@ function voiceSetupRecognition(){
     const lang=voiceDetectConversationLanguage(heard,voiceRecognition.lang||voiceAutoListenLang);
     voiceSetState('idle',lang==='zh-CN'?'听到的是半句话，请继续说。':'Partial phrase heard; keep speaking.');if(voiceContinuous)voiceScheduleListening(350);return
    }
-   const c=voiceCorrectWarehouseTerms(heard);
+   const c=voiceCorrectWarehouseTerms(heard);if(c.cleaned&&$('voiceHeard'))$('voiceHeard').textContent=heard+' → '+c.cleaned;
    if(voiceLooksLikeChineseMisheardAsEnglish(heard)&&voiceAutoFailureCount<2){
     if($('voiceHeard'))$('voiceHeard').textContent=heard+' · retry 中文';voiceSwitchAutoLanguage('low-confidence-English',300);return
    }

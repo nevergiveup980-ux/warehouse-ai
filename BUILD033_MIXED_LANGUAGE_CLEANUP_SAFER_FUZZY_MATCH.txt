@@ -1,0 +1,9 @@
+RUNLU Warehouse AI V6.3.2 Build033
+Mixed-Language Cleanup + Safer Fuzzy Match
+
+Changes:
+- Added a conservative mixed Chinese/English transcript cleanup layer before intent/entity resolution.
+- Keeps warehouse product names, SKU-like terms, units and useful intent words while filtering obvious stray ASR filler fragments.
+- Safer fuzzy correction now requires a high-confidence UNIQUE candidate and a clear score margin over the runner-up.
+- Ambiguous short terms such as "choice" are no longer allowed to auto-resolve when multiple warehouse products contain the same token.
+- Existing Dual Controller Architecture, Continuous Mic Controller, exact entity resolution, local warehouse query pipeline and TTS latency polish remain unchanged.

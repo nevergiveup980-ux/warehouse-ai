@@ -1,8 +1,8 @@
 {
-  "version": "6.3.1",
-  "build": "032",
-  "name": "Continuous Mic Controller",
-  "base": "6.2.8 Build029",
+  "version": "6.3.2",
+  "build": "033",
+  "name": "Mixed-Language Cleanup + Safer Fuzzy Match",
+  "base": "6.3.1 Build032",
   "date": "2026-08-08",
-  "notes": "TTS Latency Polish + Smarter Lane Handoff"
+  "notes": "Mixed-Language Cleanup + Safer Fuzzy Match"
 }
