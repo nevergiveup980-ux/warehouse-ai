@@ -1,0 +1,8 @@
+RUNLU Warehouse AI V6.3.9 Build040
+Custom Domain Entry Recovery
+
+- Enter Warehouse no longer depends on cloud/session side work completing successfully.
+- Gate, permission UI, cloud polling and cloud download errors are isolated from navigation.
+- Added a direct Home fallback for iOS/custom-domain transitions.
+- Sign-in opens Home immediately after authentication; cloud refresh continues in background.
+- Intended for warehouse.runlu.ca and the legacy GitHub Pages URL.
