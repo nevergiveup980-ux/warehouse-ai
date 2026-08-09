@@ -1,0 +1,16 @@
+RUNLU Warehouse AI V6.4.0
+Build041 · Boot Isolation / Safe Mode
+
+Purpose:
+Diagnostic build to isolate Enter Warehouse from the large Warehouse runtime.
+
+Key change:
+The Enter Warehouse button is handled by a tiny early-loading DOM-only entry layer.
+It does not depend on Supabase, Cloud, OCR/Tesseract, Voice, Scan, migrations,
+renderers, or the main Warehouse JavaScript.
+
+Expected test:
+- If Home opens: the domain/button path is healthy and a later Warehouse runtime module is interfering.
+- If Home still does not open: the failure is outside the normal Warehouse runtime path and we change diagnostic direction.
+
+No inventory/business rules were changed.
