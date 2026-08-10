@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.4.6 Conversational Intelligence + AI Usage Ledger Build047</title>
+<title>RUNLU Warehouse AI V6.4.7 Multi-AI Gateway Build048</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -241,7 +241,7 @@ img,video,canvas,svg{max-width:100%}
           <div class="accessCloudLine">● Live Warehouse Connected</div>
         </div>
         <button id="runluCoreEnterButton" class="accessPrimary" type="button" onclick="return RUNLU_CORE_ENTER(event)">Enter Warehouse</button>
-<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">CONVERSATIONAL AI READY · Build047</div>
+<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">MULTI-AI GATEWAY READY · Build048</div>
         <button class="accessSwitch" onclick="accessUseAnotherAccount()">Switch account</button>
       </div>
       <div id="accessLoginForm" class="hidden"></div>
@@ -528,12 +528,13 @@ img,video,canvas,svg{max-width:100%}
 <div class="card"><button class="back" onclick="returnFromAIScan()">‹ Back</button><h2>AI Scan</h2>
 <div id="scanContextNotice" class="notice"><b>Shared AI Scan</b><br>Open it from a work page to return the recognized fields to that page. Nothing changes inventory until you review and save.</div>
 <div class="card" style="margin:12px 0 14px"><h3 style="margin-top:0">Scan AI Mode <span id="scanAiMode" class="voiceAiBadge">Local only</span></h3>
-<div class="meta">Scan has its own AI control. Local OCR/Barcode remains available at $0 GPT API cost. Voice and Scan settings are independent.</div>
-<div class="voiceSetting" style="margin-top:12px"><div><b>GPT Vision Gateway</b><div class="meta">OFF = Local Scan only. ON = allow this Scan page to call GPT Vision using the same secure Cloudflare Worker/API key as Voice.</div></div><div id="scanGptToggle" class="voiceToggle"><i></i></div></div>
-<div class="voiceSetting"><div><b>When GPT Vision is ON</b><div class="meta"><b>Smart Hybrid</b> runs local OCR first and uses GPT Vision only when local recognition is weak. <b>GPT Vision</b> sends the reviewed photo directly to GPT Vision for structured extraction.</div></div><select id="scanAiPolicy" style="width:165px"><option value="hybrid">Smart Hybrid</option><option value="vision">GPT Vision</option></select></div>
-<div id="scanAiStatus" class="notice" style="margin-top:10px">⚪ GPT Vision is off · Local OCR / Barcode mode</div>
+<div class="meta">Scan has its own AI control. Local OCR/Barcode remains available at $0 cloud-AI API cost. Voice and Scan settings are independent.</div>
+<div class="voiceSetting" style="margin-top:12px"><div><b>Cloud Vision Gateway</b><div class="meta">OFF = Local Scan only. ON = allow this page to call the selected vision-capable provider through the same secure Worker as Voice.</div></div><div id="scanGptToggle" class="voiceToggle"><i></i></div></div>
+<div class="voiceSetting"><div><b>AI Provider</b><div class="meta">Auto prefers Gemini when configured and falls back to OpenAI. DeepSeek, Kimi K3 and Grok slots are reserved for later activation.</div></div><select id="scanAiProvider" style="width:170px"><option value="auto">Auto · Gemini → GPT</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI GPT</option><option value="deepseek" disabled>DeepSeek · Reserved</option><option value="kimi" disabled>Kimi K3 · Reserved</option><option value="grok" disabled>Grok · Reserved</option></select></div>
+<div class="voiceSetting"><div><b>When Cloud Vision is ON</b><div class="meta"><b>Smart Hybrid</b> runs local OCR first and uses Cloud Vision only when local recognition is weak. <b>Cloud Vision</b> sends the reviewed photo directly to the selected provider for structured extraction.</div></div><select id="scanAiPolicy" style="width:165px"><option value="hybrid">Smart Hybrid</option><option value="vision">Cloud Vision</option></select></div>
+<div id="scanAiStatus" class="notice" style="margin-top:10px">⚪ Cloud Vision is off · Local OCR / Barcode mode</div>
 <label>Cloudflare Worker URL</label><div style="display:flex;gap:8px"><input id="scanGateway" type="url" inputmode="url" placeholder="Uses the same secure Worker as Voice"><button id="scanSaveGateway" class="primary" type="button">Save & Test</button></div>
-<div class="meta" style="margin-top:8px">The OpenAI API key stays only in the Worker Secret. Switching Scan AI does not change the Voice AI mode.</div></div>
+<div class="meta" style="margin-top:8px">OpenAI/Gemini API keys stay only in Worker Secrets. Switching Scan AI does not change the Voice AI mode.</div></div>
 <div class="sectionTitle">Stop & Snap Camera Test</div>
 <div class="notice"><b>Faster camera-assisted capture</b><br>Scan one sheet or label at a time and let it fill most of the frame. Auto Capture now needs only a brief steady pause. You can also tap Capture at any time.</div>
 <div id="cameraStage" class="cameraStage">
@@ -742,12 +743,13 @@ img,video,canvas,svg{max-width:100%}
 <div class="formgrid" style="margin-top:12px"><div class="full"><label>Type instead of speaking</label><div style="display:flex;gap:8px"><input id="voiceManual" placeholder="Ask Warehouse OS"><button id="voiceSend" class="primary">Send</button></div></div></div>
 <div class="voiceQuick"><button onclick="voiceHandle('How many Platinum?')">How many Platinum?</button><button onclick="voiceHandle('Where is Heather Choice?')">Where is Heather Choice?</button><button onclick="voiceHandle('今天还有几个 Transfer？')">Today Transfer</button><button onclick="voiceHandle('今天还有什么工作？')">Today Tasks</button></div></div>
 <div class="card"><h3>AI Mode <span id="voiceAiMode" class="voiceAiBadge">Local only</span></h3>
-<div class="meta">Warehouse facts stay grounded in live RUNLU data. GPT can be enabled only when you want richer natural-language conversation.</div>
-<div class="voiceSetting" style="margin-top:12px"><div><b>GPT Gateway</b><div class="meta">OFF = zero GPT API calls. ON = use the Cloudflare/OpenAI gateway according to the mode below.</div></div><div id="voiceGptToggle" class="voiceToggle"><i></i></div></div>
-<div class="voiceSetting"><div><b>When GPT is ON</b><div class="meta">Smart Hybrid uses local warehouse answers first. GPT Always asks GPT every turn but still sends live warehouse facts as authoritative context.</div></div><select id="voiceAiPolicy" style="width:165px"><option value="hybrid">Smart Hybrid</option><option value="always">GPT Always</option></select></div>
-<div id="voiceAiStatus" class="notice" style="margin-top:10px">⚪ GPT Gateway is off · Local warehouse mode</div>
+<div class="meta">Warehouse facts stay grounded in live RUNLU data. Cloud AI is optional and routed through the secure RUNLU Multi-AI Gateway.</div>
+<div class="voiceSetting" style="margin-top:12px"><div><b>Cloud AI Gateway</b><div class="meta">OFF = zero cloud-AI API calls. ON = use the selected provider through the secure Worker.</div></div><div id="voiceGptToggle" class="voiceToggle"><i></i></div></div>
+<div class="voiceSetting"><div><b>AI Provider</b><div class="meta">Auto prefers Gemini when configured and falls back to OpenAI. Future provider slots are reserved without exposing API keys to the browser.</div></div><select id="voiceAiProvider" style="width:170px"><option value="auto">Auto · Gemini → GPT</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI GPT</option><option value="deepseek" disabled>DeepSeek · Reserved</option><option value="kimi" disabled>Kimi K3 · Reserved</option><option value="grok" disabled>Grok · Reserved</option></select></div>
+<div class="voiceSetting"><div><b>When Cloud AI is ON</b><div class="meta">Smart Hybrid uses local warehouse answers first. Cloud AI Always asks the selected model every turn but still sends live warehouse facts as authoritative context.</div></div><select id="voiceAiPolicy" style="width:165px"><option value="hybrid">Smart Hybrid</option><option value="always">Cloud AI Always</option></select></div>
+<div id="voiceAiStatus" class="notice" style="margin-top:10px">⚪ Cloud AI Gateway is off · Local warehouse mode</div>
 <label>Cloudflare Worker URL</label><div style="display:flex;gap:8px"><input id="voiceGateway" type="url" inputmode="url" placeholder="https://...workers.dev"><button id="voiceSaveGateway" class="primary">Save & Test</button></div>
-<div class="meta" style="margin-top:8px">Keep the OpenAI API key only inside the Worker Secret. The browser never stores the API key. Turning GPT OFF never disables local Warehouse Voice.</div></div>
+<div class="meta" style="margin-top:8px">Keep OpenAI/Gemini API keys only inside Worker Secrets. The browser never stores API keys. Turning Cloud AI OFF never disables local Warehouse Voice.</div></div>
 <div class="card"><h3>Conversation</h3><div id="voiceLog" class="voiceLog"><div class="meta">Voice and typed questions will appear here.</div></div></div>
 </section>
 
@@ -756,13 +758,13 @@ img,video,canvas,svg{max-width:100%}
 
 <div class="settingRow">
   <div class="name">💰 AI Usage & Cost</div>
-  <div class="meta">Local usage ledger for GPT calls made by this Warehouse OS. Token counts come from the gateway response. Estimated cost is shown only when pricing rates are configured in the Worker; official billing remains the source of truth.</div>
+  <div class="meta">Local usage ledger for cloud-AI calls made by this Warehouse OS. Provider/model/token counts come from the gateway response. Estimated cost is shown only when pricing rates are configured in the Worker; official provider billing remains the source of truth.</div>
   <div class="reportGrid" style="margin-top:10px">
     <div class="reportBox"><span class="meta">Today</span><b id="aiUsageToday">$0.0000</b><span id="aiUsageTodayTokens" class="meta">0 tokens</span></div>
     <div class="reportBox"><span class="meta">This Month</span><b id="aiUsageMonth">$0.00</b><span id="aiUsageMonthTokens" class="meta">0 tokens</span></div>
   </div>
   <div class="actions"><button onclick="renderAiUsageLedger()">Refresh Ledger</button><button onclick="exportAiUsageLedger()">Export JSON</button><button class="red" onclick="clearAiUsageLedger()">Clear Local Ledger</button></div>
-  <div id="aiUsageLedgerList" class="notice" style="margin-top:10px">No GPT usage recorded on this device yet.</div>
+  <div id="aiUsageLedgerList" class="notice" style="margin-top:10px">No cloud-AI usage recorded on this device yet.</div>
 </div>
 <div class="settingRow"><div class="name">Cloud Sync</div><div class="meta">Sign in to keep this device's warehouse data synchronized with the Runlu Supabase project. Local storage remains active for offline work.</div>
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
@@ -1166,7 +1168,7 @@ img,video,canvas,svg{max-width:100%}
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.4.6', APP_BUILD='047', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.4.7', APP_BUILD='048', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1282,7 +1284,7 @@ function accessOpenHomeFallback(){
  try{applyAccessUI()}catch(e){console.warn('Access UI recovery:',e)}
 }
 function accessContinueSaved(){
- // Build047: Home First; cloud recovery runs only after Home is visible.
+ // Build048: Home First + Multi-AI Gateway; cloud recovery runs only after Home is visible.
  try{
    if(typeof window.RUNLU_CORE_ENTER==='function') return window.RUNLU_CORE_ENTER();
  }catch(e){console.warn('Core entry delegation recovery:',e)}
@@ -1969,16 +1971,19 @@ async function scanReadPhotoLocal(){
 }
 function scanGptEnabled(){return localStorage.getItem(SCAN_GPT_ENABLED_KEY)==='1'}
 function scanAiPolicy(){const v=localStorage.getItem(SCAN_AI_POLICY_KEY)||'hybrid';return v==='vision'?'vision':'hybrid'}
+function scanAiProvider(){const v=localStorage.getItem(SCAN_AI_PROVIDER_KEY)||'auto';return ['auto','gemini','openai'].includes(v)?v:'auto'}
+function aiProviderLabel(v){return v==='gemini'?'Gemini':v==='openai'?'GPT':'Auto'}
 function scanRenderAiControls(){
- const enabled=scanGptEnabled(),policy=scanAiPolicy();
+ const enabled=scanGptEnabled(),policy=scanAiPolicy(),provider=scanAiProvider();
  if($('scanGptToggle'))$('scanGptToggle').classList.toggle('on',enabled);
  if($('scanAiPolicy'))$('scanAiPolicy').value=policy;
- if($('scanAiMode'))$('scanAiMode').textContent=!enabled?'Local only':(policy==='vision'?'GPT Vision':'Smart Hybrid');
+ if($('scanAiProvider'))$('scanAiProvider').value=provider;
+ if($('scanAiMode'))$('scanAiMode').textContent=!enabled?'Local only':(policy==='vision'?`${aiProviderLabel(provider)} Vision`:`Smart Hybrid · ${aiProviderLabel(provider)}`);
  const gateway=(($('scanGateway')?.value||localStorage.getItem(VOICE_GATEWAY_KEY)||'').trim());
  if($('scanAiStatus')){
-  if(!enabled)$('scanAiStatus').textContent='⚪ GPT Vision is off · Local OCR / Barcode mode';
-  else if(!gateway)$('scanAiStatus').textContent='🟡 GPT Vision is ON, but no Gateway URL is configured';
-  else $('scanAiStatus').textContent=policy==='vision'?'🟣 GPT Vision mode · photo analysis uses the Gateway':'🟢 Smart Hybrid · local first, GPT Vision only when needed';
+  if(!enabled)$('scanAiStatus').textContent='⚪ Cloud Vision is off · Local OCR / Barcode mode';
+  else if(!gateway)$('scanAiStatus').textContent='🟡 Cloud Vision is ON, but no Gateway URL is configured';
+  else $('scanAiStatus').textContent=policy==='vision'?`🟣 ${aiProviderLabel(provider)} Vision mode · photo analysis uses the Gateway`:`🟢 Smart Hybrid · local first, ${aiProviderLabel(provider)} only when needed`;
  }
 }
 async function scanPrepareImageForGpt(src,maxDim=1600,quality=.76){
@@ -2009,11 +2014,11 @@ async function scanCallGatewayVision(){
  const knownProducts=loadMasters().slice(0,500).map(m=>({name:m.name,color:m.color||'',sku:m.sku||'',series:m.series||''}));
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
  try{
-  const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:'scan',image,documentType:$('scanDocumentType')?.value||'auto',knownProducts}),signal:controller.signal});
+  const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:'scan',provider:scanAiProvider(),image,documentType:$('scanDocumentType')?.value||'auto',knownProducts}),signal:controller.signal});
   let data={};try{data=await res.json()}catch{}
   if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);
   if(!data.scan||typeof data.scan!=='object')throw new Error('Gateway returned no structured scan result.');
-  aiUsageRecord('GPT Vision Scan',data);return data.scan;
+  aiUsageRecord(`Vision · ${data.provider||aiProviderLabel(scanAiProvider())}`,data);return data.scan;
  }finally{clearTimeout(timer)}
 }
 async function scanTestGateway(){
@@ -2029,6 +2034,7 @@ function bindScanAiControls(){
  $('scanGptToggle').dataset.bound='1';
  $('scanGptToggle').onclick=()=>{localStorage.setItem(SCAN_GPT_ENABLED_KEY,scanGptEnabled()?'0':'1');scanRenderAiControls()};
  $('scanAiPolicy').onchange=()=>{localStorage.setItem(SCAN_AI_POLICY_KEY,$('scanAiPolicy').value==='vision'?'vision':'hybrid');scanRenderAiControls()};
+ if($('scanAiProvider'))$('scanAiProvider').onchange=()=>{localStorage.setItem(SCAN_AI_PROVIDER_KEY,$('scanAiProvider').value);scanRenderAiControls()};
  $('scanSaveGateway').onclick=scanTestGateway;
  $('scanGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';
  scanRenderAiControls();
@@ -2041,8 +2047,8 @@ async function readPhotoText(){
  try{
   const enabled=scanGptEnabled(),policy=scanAiPolicy();
   if(enabled&&policy==='vision'){
-   showOcrStatus('Sending a resized review copy to GPT Vision…',.2);
-   const gpt=await scanCallGatewayVision();scanApplyGptResult(gpt);showOcrStatus('GPT Vision finished. Review every field before saving.',1);if($('scanAiStatus'))$('scanAiStatus').textContent='🟣 GPT Vision completed · Review required';
+   showOcrStatus('Sending a resized review copy to Cloud Vision…',.2);
+   const gpt=await scanCallGatewayVision();scanApplyGptResult(gpt);showOcrStatus('Cloud Vision finished. Review every field before saving.',1);if($('scanAiStatus'))$('scanAiStatus').textContent=`🟣 ${aiProviderLabel(scanAiProvider())} Vision completed · Review required`;
   }else{
    const local=await scanReadPhotoLocal();
    if(!local.text.trim()){
@@ -3953,6 +3959,8 @@ const VOICE_GPT_ENABLED_KEY='runlu_voice_gpt_enabled_v637';
 const VOICE_AI_POLICY_KEY='runlu_voice_ai_policy_v637';
 const SCAN_GPT_ENABLED_KEY='runlu_scan_gpt_enabled_v638';
 const SCAN_AI_POLICY_KEY='runlu_scan_ai_policy_v638';
+const VOICE_AI_PROVIDER_KEY='runlu_voice_ai_provider_v647';
+const SCAN_AI_PROVIDER_KEY='runlu_scan_ai_provider_v647';
 let voiceRecognition=null,voiceListening=false,voiceSpeaking=false,voiceContinuous=false,voiceAsking=false,voiceRestartTimer=null,voiceSpeechTimer=null,voiceSessionToken=0,voiceHistory=[],voiceRestartAttempts=0,voiceLastSpeechStartedAt=0,voiceUtteranceTimer=null,voicePendingTranscript='',voiceAutoListenLang=localStorage.getItem('runlu_voice_auto_last_lang_v614')||'zh-CN',voiceLastDetectedLang=voiceAutoListenLang,voiceLastReplyLang=voiceAutoListenLang,voiceAutoRetryFlip=false,voiceTurnCounter=0,voiceActiveTurn=0,voiceSoundTesting=false,voiceLastAnswer='',voiceAutoFailureCount=0,voiceAutoSwitchPending=false,voiceLastRecognitionError='',voiceMicWanted=false,voiceAbortIntent='',voiceStartInFlight=false,voiceLastStartAt=0,voiceContext={product:null,updatedAt:0};
 function voiceEsc(t){return esc(String(t??''))}
 function voiceAddLog(who,text){const log=$('voiceLog');if(!log)return;if(log.querySelector('.meta'))log.innerHTML='';log.insertAdjacentHTML('afterbegin',`<div class="voiceMsg"><span class="voiceWho">${voiceEsc(who)}:</span> ${voiceEsc(text)}</div>`)}
@@ -4478,7 +4486,7 @@ function renderAiUsageLedger(){
  if($('aiUsageMonth'))$('aiUsageMonth').textContent=aiUsageFormatCost(ms.cost,2);
  if($('aiUsageTodayTokens'))$('aiUsageTodayTokens').textContent=`${ts.tokens.toLocaleString()} tokens`;
  if($('aiUsageMonthTokens'))$('aiUsageMonthTokens').textContent=`${ms.tokens.toLocaleString()} tokens`;
- if(!rows.length){$('aiUsageLedgerList').innerHTML='No GPT usage recorded on this device yet.';return}
+ if(!rows.length){$('aiUsageLedgerList').innerHTML='No cloud-AI usage recorded on this device yet.';return}
  $('aiUsageLedgerList').innerHTML=rows.slice(0,20).map(r=>{
   const d=new Date(r.at),time=d.toLocaleString();
   const tokenText=`${Number(r.totalTokens||0).toLocaleString()} tokens`;
@@ -4496,18 +4504,20 @@ function clearAiUsageLedger(){
 }
 function voiceGptEnabled(){return localStorage.getItem(VOICE_GPT_ENABLED_KEY)==='1'}
 function voiceAiPolicy(){const v=localStorage.getItem(VOICE_AI_POLICY_KEY)||'hybrid';return v==='always'?'always':'hybrid'}
+function voiceAiProvider(){const v=localStorage.getItem(VOICE_AI_PROVIDER_KEY)||'auto';return ['auto','gemini','openai'].includes(v)?v:'auto'}
 function voiceRenderAiControls(){
- const enabled=voiceGptEnabled(),policy=voiceAiPolicy();
+ const enabled=voiceGptEnabled(),policy=voiceAiPolicy(),provider=voiceAiProvider();
  if($('voiceGptToggle'))$('voiceGptToggle').classList.toggle('on',enabled);
  if($('voiceAiPolicy'))$('voiceAiPolicy').value=policy;
- if($('voiceAiMode'))$('voiceAiMode').textContent=!enabled?'Local only':(policy==='always'?'GPT Always':'Smart Hybrid');
+ if($('voiceAiProvider'))$('voiceAiProvider').value=provider;
+ if($('voiceAiMode'))$('voiceAiMode').textContent=!enabled?'Local only':(policy==='always'?`${aiProviderLabel(provider)} Always`:`Smart Hybrid · ${aiProviderLabel(provider)}`);
  if($('voiceAiStatus')){
   const gateway=(($('voiceGateway')?.value||localStorage.getItem(VOICE_GATEWAY_KEY)||'').trim());
-  if(!enabled)$('voiceAiStatus').textContent='⚪ GPT Gateway is off · Local warehouse mode';
-  else if(!gateway)$('voiceAiStatus').textContent='🟡 GPT is ON, but no Gateway URL is configured';
+  if(!enabled)$('voiceAiStatus').textContent='⚪ Cloud AI Gateway is off · Local warehouse mode';
+  else if(!gateway)$('voiceAiStatus').textContent='🟡 Cloud AI is ON, but no Gateway URL is configured';
  }
 }
-async function voiceCallGateway(message,replyLanguage='',options={}){const gateway=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!gateway)throw new Error('No AI Gateway is configured. Exact warehouse questions still work locally.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);try{const warehouseContext=voiceContextForGateway(message);if(options.localAnswer)warehouseContext.authoritativeLocalAnswer=options.localAnswer;warehouseContext.aiPolicy=voiceAiPolicy();const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,language:$('voiceLanguage')?.value||'auto',replyLanguage:replyLanguage||voiceLastReplyLang||'en-CA',history:voiceHistory.slice(-8),warehouseContext}),signal:controller.signal});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);if(!data.reply)throw new Error('Gateway returned no reply.');aiUsageRecord('Voice GPT',data);return data.reply}finally{clearTimeout(timer)}}
+async function voiceCallGateway(message,replyLanguage='',options={}){const gateway=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!gateway)throw new Error('No AI Gateway is configured. Exact warehouse questions still work locally.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);try{const warehouseContext=voiceContextForGateway(message);if(options.localAnswer)warehouseContext.authoritativeLocalAnswer=options.localAnswer;warehouseContext.aiPolicy=voiceAiPolicy();const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:voiceAiProvider(),message,language:$('voiceLanguage')?.value||'auto',replyLanguage:replyLanguage||voiceLastReplyLang||'en-CA',history:voiceHistory.slice(-8),warehouseContext}),signal:controller.signal});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);if(!data.reply)throw new Error('Gateway returned no reply.');aiUsageRecord(`Voice · ${data.provider||aiProviderLabel(voiceAiProvider())}`,data);return data.reply}finally{clearTimeout(timer)}}
 function voiceEntityFamilyKey(master){
  if(!master)return'';
  const q=voiceNorm([master.name,master.series,master.category,master.sku].filter(Boolean).join(' '));
@@ -4560,13 +4570,13 @@ async function voiceHandle(text,meta={}){if(!text)return;const turnId=++voiceTur
   if(local){voiceRememberSuccessfulContext(text);voiceAsking=false;if($('voiceAiMode'))$('voiceAiMode').textContent=lang==='zh-CN'?'本地 · $0 API':'Local · $0 API';voiceAutoRetryFlip=false;voiceSpeak(local.text,true,lang,turnId);return}
   voiceAsking=false;const auto=(localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto')==='auto';let msg;if(auto){voiceLanguageController.fallback('no exact match');voiceAutoRetryFlip=true;msg=lang==='zh-CN'?'我没有准确匹配到。请再说一次，我会继续听。':'I could not match that confidently. Please say it once more; I am still listening.'}else msg=lang==='zh-CN'?'我没有匹配到仓库记录，请再说一次产品、货架、PO 或完整问题。':'I could not match that to a warehouse record. Please repeat the product, rack, PO, or full question.';voiceSpeak(msg,true,lang,turnId);return
  }
- if(!gateway){voiceAsking=false;if(local){voiceRememberSuccessfulContext(text);voiceSpeak(local.text,true,lang,turnId)}else voiceSpeak(lang==='zh-CN'?'GPT 已开启，但还没有设置 Gateway URL。':'GPT is enabled, but no Gateway URL is configured.',true,lang,turnId);voiceRenderAiControls();return}
+ if(!gateway){voiceAsking=false;if(local){voiceRememberSuccessfulContext(text);voiceSpeak(local.text,true,lang,turnId)}else voiceSpeak(lang==='zh-CN'?'Cloud AI 已开启，但还没有设置 Gateway URL。':'Cloud AI is enabled, but no Gateway URL is configured.',true,lang,turnId);voiceRenderAiControls();return}
  if(policy==='hybrid'&&local){voiceRememberSuccessfulContext(text);voiceAsking=false;if($('voiceAiMode'))$('voiceAiMode').textContent=lang==='zh-CN'?'本地 · Smart Hybrid':'Local · Smart Hybrid';voiceAutoRetryFlip=false;voiceSpeak(local.text,true,lang,turnId);return}
- voiceSetState('thinking',policy==='always'?(lang==='zh-CN'?'正在让 GPT 基于实时仓库数据组织回答…':'Asking GPT with live warehouse grounding…'):(lang==='zh-CN'?'本地没有精确答案，正在询问 GPT…':'No exact local answer; asking GPT…'));if($('voiceAiMode'))$('voiceAiMode').textContent=policy==='always'?'GPT Always':'GPT fallback';
- try{const reply=await voiceCallGateway(text,lang,{localAnswer:local?.text||''});if(turnId!==voiceActiveTurn)return;if(local)voiceRememberSuccessfulContext(text);voiceHistory.push({role:'user',content:text,language:lang},{role:'assistant',content:reply,language:lang});voiceHistory=voiceHistory.slice(-10);voiceAsking=false;voiceSpeak(reply,true,lang,turnId);if($('voiceAiStatus'))$('voiceAiStatus').textContent='🟢 GPT Gateway connected'}catch(e){if(turnId!==voiceActiveTurn)return;voiceAsking=false;if(local){if($('voiceAiStatus'))$('voiceAiStatus').textContent='🟠 GPT unavailable · used local warehouse answer';voiceRememberSuccessfulContext(text);voiceSpeak(local.text,true,lang,turnId);return}const msg=e.name==='AbortError'?(lang==='zh-CN'?'GPT Gateway 超时，我会继续监听。':'GPT Gateway timed out; I will keep listening.'):String(e.message||e);voiceSpeak(msg,true,lang,turnId)}}
-async function voiceTestGateway(){const g=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!g){$('voiceAiStatus').textContent='⚪ No Gateway configured. Local warehouse queries are ready.';voiceRenderAiControls();return}localStorage.setItem(VOICE_GATEWAY_KEY,g);if($('scanGateway'))$('scanGateway').value=g;$('voiceAiStatus').textContent='🟡 Testing GPT Gateway…';try{const r=await fetch(g,{method:'GET'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Health check failed');$('voiceAiStatus').textContent=`🟢 Gateway online · ${d.version||'unknown'} · ${voiceGptEnabled()?'GPT ON':'GPT OFF'}`}catch(e){$('voiceAiStatus').textContent='🔴 Gateway test failed: '+e.message}}
+ voiceSetState('thinking',policy==='always'?(lang==='zh-CN'?'正在让云端 AI 基于实时仓库数据组织回答…':'Asking cloud AI with live warehouse grounding…'):(lang==='zh-CN'?'本地没有精确答案，正在询问云端 AI…':'No exact local answer; asking cloud AI…'));if($('voiceAiMode'))$('voiceAiMode').textContent=policy==='always'?`${aiProviderLabel(voiceAiProvider())} Always`:`${aiProviderLabel(voiceAiProvider())} fallback`;
+ try{const reply=await voiceCallGateway(text,lang,{localAnswer:local?.text||''});if(turnId!==voiceActiveTurn)return;if(local)voiceRememberSuccessfulContext(text);voiceHistory.push({role:'user',content:text,language:lang},{role:'assistant',content:reply,language:lang});voiceHistory=voiceHistory.slice(-10);voiceAsking=false;voiceSpeak(reply,true,lang,turnId);if($('voiceAiStatus'))$('voiceAiStatus').textContent=`🟢 ${aiProviderLabel(voiceAiProvider())} Gateway connected`}catch(e){if(turnId!==voiceActiveTurn)return;voiceAsking=false;if(local){if($('voiceAiStatus'))$('voiceAiStatus').textContent='🟠 Cloud AI unavailable · used local warehouse answer';voiceRememberSuccessfulContext(text);voiceSpeak(local.text,true,lang,turnId);return}const msg=e.name==='AbortError'?(lang==='zh-CN'?'Cloud AI Gateway 超时，我会继续监听。':'Cloud AI Gateway timed out; I will keep listening.'):String(e.message||e);voiceSpeak(msg,true,lang,turnId)}}
+async function voiceTestGateway(){const g=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!g){$('voiceAiStatus').textContent='⚪ No Gateway configured. Local warehouse queries are ready.';voiceRenderAiControls();return}localStorage.setItem(VOICE_GATEWAY_KEY,g);if($('scanGateway'))$('scanGateway').value=g;$('voiceAiStatus').textContent='🟡 Testing Multi-AI Gateway…';try{const r=await fetch(g,{method:'GET'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Health check failed');$('voiceAiStatus').textContent=`🟢 Gateway online · ${d.version||'unknown'} · ${voiceGptEnabled()?'GPT ON':'GPT OFF'}`}catch(e){$('voiceAiStatus').textContent='🔴 Gateway test failed: '+e.message}}
 function renderVoiceAssistant(){if(!$('voiceMic'))return;if(!$('voiceGateway').value)$('voiceGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';$('voiceLanguage').value=localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto';voiceLastDetectedLang=localStorage.getItem('runlu_voice_auto_last_lang_v614')||voiceLastDetectedLang||'zh-CN';if((localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto')==='auto')voiceLanguageController.reset();else voiceLanguageController.set(localStorage.getItem(VOICE_LANGUAGE_KEY));voiceApplyLanguage();if(!voiceRecognition)voiceSetupRecognition();voiceUpdateLaneStatus();voiceRenderAiControls()}
-function bindVoiceAssistant(){if(!$('voiceMic')||$('voiceMic').dataset.bound)return;$('voiceMic').dataset.bound='1';$('voiceMic').onclick=()=>{if(voiceListening||voiceStartInFlight){voiceMicWanted=false;voiceStopRecognition('user-stop');voiceSetState('idle','Stopped listening.')}else if(voiceSpeaking){voiceMicWanted=false;voiceStopSpeech();voiceSetState('idle','Stopped speaking.')}else{voiceMicWanted=true;voiceStartListening()}};$('voiceSoundTest').onclick=()=>{const prior=voiceLastAnswer||$('voiceAnswer')?.textContent||'';voiceSoundTesting=true;voiceStopRecognition('sound-test');voiceStopSpeech();const lang=voiceLastReplyLang||'zh-CN';voiceSetState('speaking',lang==='zh-CN'?'正在测试扬声器…':'Testing speaker…');if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(lang==='zh-CN'?'声音测试成功。':'Sound test successful.');u.lang=lang;const v=voiceChooseVoice(lang);if(v)u.voice=v;u.onend=u.onerror=()=>{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior;voiceSetState('idle',lang==='zh-CN'?'声音测试完成。':'Sound test complete.');if(voiceContinuous)voiceScheduleListening(500)};try{speechSynthesis.cancel();speechSynthesis.speak(u)}catch{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior}}};$('voiceStop').onclick=voiceStopAll;$('voiceToggle').onclick=()=>{voiceContinuous=!voiceContinuous;voiceMicWanted=voiceContinuous;$('voiceToggle').classList.toggle('on',voiceContinuous);$('voiceDetail').textContent=voiceContinuous?'Continuous conversation is on. Mic Controller keeps listening; Language Controller chooses the recognition lane independently.':'Continuous conversation is off.';if(voiceContinuous&&!voiceListening&&!voiceSpeaking&&!voiceAsking)voiceScheduleListening(250);else if(!voiceContinuous){clearTimeout(voiceRestartTimer);voiceRestartTimer=null;voiceStopRecognition('user-stop')}};$('voiceLanguage').onchange=()=>{const mode=$('voiceLanguage').value;localStorage.setItem(VOICE_LANGUAGE_KEY,mode);if(mode==='auto'){voiceLanguageController.reset();voiceSetState('idle','Dual Controller Auto is ready. 中文和 English 可以自然切换。')}else voiceLanguageController.set(mode,'manual');voiceApplyLanguage();voiceUpdateLaneStatus()};$('voiceSend').onclick=()=>{const v=$('voiceManual').value.trim();if(!v)return;$('voiceManual').value='';const lang=voiceDetectConversationLanguage(v,voiceLastDetectedLang||'zh-CN');voiceHandle(v,{detectedLang:lang})};$('voiceManual').addEventListener('keydown',e=>{if(e.key==='Enter')$('voiceSend').click()});if($('voiceGptToggle'))$('voiceGptToggle').onclick=()=>{const next=!voiceGptEnabled();localStorage.setItem(VOICE_GPT_ENABLED_KEY,next?'1':'0');voiceRenderAiControls();if(next&&($('voiceGateway')?.value||'').trim())voiceTestGateway()};if($('voiceAiPolicy'))$('voiceAiPolicy').onchange=()=>{localStorage.setItem(VOICE_AI_POLICY_KEY,$('voiceAiPolicy').value==='always'?'always':'hybrid');voiceRenderAiControls()};$('voiceSaveGateway').onclick=voiceTestGateway;$('voiceGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';voiceRenderAiControls();if($('voiceGateway').value&&voiceGptEnabled())voiceTestGateway();if('speechSynthesis'in window)speechSynthesis.getVoices()}
+function bindVoiceAssistant(){if(!$('voiceMic')||$('voiceMic').dataset.bound)return;$('voiceMic').dataset.bound='1';$('voiceMic').onclick=()=>{if(voiceListening||voiceStartInFlight){voiceMicWanted=false;voiceStopRecognition('user-stop');voiceSetState('idle','Stopped listening.')}else if(voiceSpeaking){voiceMicWanted=false;voiceStopSpeech();voiceSetState('idle','Stopped speaking.')}else{voiceMicWanted=true;voiceStartListening()}};$('voiceSoundTest').onclick=()=>{const prior=voiceLastAnswer||$('voiceAnswer')?.textContent||'';voiceSoundTesting=true;voiceStopRecognition('sound-test');voiceStopSpeech();const lang=voiceLastReplyLang||'zh-CN';voiceSetState('speaking',lang==='zh-CN'?'正在测试扬声器…':'Testing speaker…');if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(lang==='zh-CN'?'声音测试成功。':'Sound test successful.');u.lang=lang;const v=voiceChooseVoice(lang);if(v)u.voice=v;u.onend=u.onerror=()=>{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior;voiceSetState('idle',lang==='zh-CN'?'声音测试完成。':'Sound test complete.');if(voiceContinuous)voiceScheduleListening(500)};try{speechSynthesis.cancel();speechSynthesis.speak(u)}catch{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior}}};$('voiceStop').onclick=voiceStopAll;$('voiceToggle').onclick=()=>{voiceContinuous=!voiceContinuous;voiceMicWanted=voiceContinuous;$('voiceToggle').classList.toggle('on',voiceContinuous);$('voiceDetail').textContent=voiceContinuous?'Continuous conversation is on. Mic Controller keeps listening; Language Controller chooses the recognition lane independently.':'Continuous conversation is off.';if(voiceContinuous&&!voiceListening&&!voiceSpeaking&&!voiceAsking)voiceScheduleListening(250);else if(!voiceContinuous){clearTimeout(voiceRestartTimer);voiceRestartTimer=null;voiceStopRecognition('user-stop')}};$('voiceLanguage').onchange=()=>{const mode=$('voiceLanguage').value;localStorage.setItem(VOICE_LANGUAGE_KEY,mode);if(mode==='auto'){voiceLanguageController.reset();voiceSetState('idle','Dual Controller Auto is ready. 中文和 English 可以自然切换。')}else voiceLanguageController.set(mode,'manual');voiceApplyLanguage();voiceUpdateLaneStatus()};$('voiceSend').onclick=()=>{const v=$('voiceManual').value.trim();if(!v)return;$('voiceManual').value='';const lang=voiceDetectConversationLanguage(v,voiceLastDetectedLang||'zh-CN');voiceHandle(v,{detectedLang:lang})};$('voiceManual').addEventListener('keydown',e=>{if(e.key==='Enter')$('voiceSend').click()});if($('voiceGptToggle'))$('voiceGptToggle').onclick=()=>{const next=!voiceGptEnabled();localStorage.setItem(VOICE_GPT_ENABLED_KEY,next?'1':'0');voiceRenderAiControls();if(next&&($('voiceGateway')?.value||'').trim())voiceTestGateway()};if($('voiceAiPolicy'))$('voiceAiPolicy').onchange=()=>{localStorage.setItem(VOICE_AI_POLICY_KEY,$('voiceAiPolicy').value==='always'?'always':'hybrid');voiceRenderAiControls()};if($('voiceAiProvider'))$('voiceAiProvider').onchange=()=>{localStorage.setItem(VOICE_AI_PROVIDER_KEY,$('voiceAiProvider').value);voiceRenderAiControls()};$('voiceSaveGateway').onclick=voiceTestGateway;$('voiceGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';voiceRenderAiControls();if($('voiceGateway').value&&voiceGptEnabled())voiceTestGateway();if('speechSynthesis'in window)speechSynthesis.getVoices()}
 
 
 function autoInitializeSeed(){initializeSeedDatabase(false)}
