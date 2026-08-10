@@ -1,7 +1,7 @@
 {
-  "version": "6.4.4",
-  "build": "045",
+  "version": "6.4.5",
+  "build": "046",
   "published": "2026-08-09",
   "channel": "Stable",
-  "notes": "Build045 · Semantic Voice + Admin Recovery. Adds authorized Administrator recovery, current-turn intent priority, low-confidence context confirmation, and physical-count-aware inventory answers. Build044 Voice Precision and Build043 Home First/Cloud architecture retained."
+  "notes": "Build046 · Context Intelligence + Entity Safety. Expands safe product follow-ups such as '有多少', 'How many do you have', and 'Where is'; prevents fuzzy/phonetic jumps to unrelated products without confirmation; retains Build045 Admin Recovery, intent priority, and physical-count-aware inventory answers."
 }

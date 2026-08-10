@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.4.4 Semantic Voice + Admin Recovery Build045</title>
+<title>RUNLU Warehouse AI V6.4.5 Context Intelligence + Entity Safety Build046</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -241,7 +241,7 @@ img,video,canvas,svg{max-width:100%}
           <div class="accessCloudLine">● Live Warehouse Connected</div>
         </div>
         <button id="runluCoreEnterButton" class="accessPrimary" type="button" onclick="return RUNLU_CORE_ENTER(event)">Enter Warehouse</button>
-<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">SEMANTIC VOICE READY · Build045</div>
+<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">CONTEXT INTELLIGENCE READY · Build046</div>
         <button class="accessSwitch" onclick="accessUseAnotherAccount()">Switch account</button>
       </div>
       <div id="accessLoginForm" class="hidden"></div>
@@ -1155,7 +1155,7 @@ img,video,canvas,svg{max-width:100%}
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.4.4', APP_BUILD='045', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.4.5', APP_BUILD='046', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1271,7 +1271,7 @@ function accessOpenHomeFallback(){
  try{applyAccessUI()}catch(e){console.warn('Access UI recovery:',e)}
 }
 function accessContinueSaved(){
- // Build045: Home First; cloud recovery runs only after Home is visible.
+ // Build046: Home First; cloud recovery runs only after Home is visible.
  try{
    if(typeof window.RUNLU_CORE_ENTER==='function') return window.RUNLU_CORE_ENTER();
  }catch(e){console.warn('Core entry delegation recovery:',e)}
@@ -1299,7 +1299,7 @@ async function accessSignIn(){
    localStorage.setItem(ACCESS_ROLE_KEY,ACCESS_ADMIN_EMAILS.has(signedInEmail)?'admin':'warehouse');
    $('accessPassword').value='';
 
-   // Build045 rule: open Home immediately; never wait for cloud download.
+   // Build046 rule: open Home immediately; never wait for cloud download.
    if(typeof window.RUNLU_CORE_ENTER==='function')window.RUNLU_CORE_ENTER();
    else accessOpenHomeFallback();
 
@@ -4040,7 +4040,7 @@ function voiceBestTranscript(result){const alts=[];for(let i=0;i<result.length;i
 function voiceIsFragment(text){const q=voiceNorm(text),w=q.split(/\s+/).filter(Boolean);return !q||(w.length===1&&['where','what','how','which','i','the','is','are','do','can','please','哪里','多少','什么'].includes(w[0]))}
 function voiceDetectIntent(text){
  const raw=String(text||''),q=voiceNorm(raw);
- // Build045: the CURRENT turn owns intent. Quantity phrases always beat stale location context.
+ // Build046: the CURRENT turn owns intent; safe follow-ups may inherit only the product entity. Quantity phrases always beat stale location context.
  if(/\b(how many|how much|quantity|count|stock|inventory|left|remaining|do we have|any left)\b/.test(q)||/(有多少|还有多少|还剩多少|剩多少|多少个|多少卷|几卷|几个|库存数量|数量)/.test(raw))return'quantity';
  if(/\b(where|location|rack|located|which rack|what location)\b/.test(q)||/(哪里|在哪|位置|货架|哪个货架)/.test(raw))return'location';
  if(/transfer|转货|转移/.test(q))return'transfer';
@@ -4091,7 +4091,7 @@ function voiceIsIncompleteUtterance(text){
  if(!q)return true;
  // A real exact product / order / roll makes the utterance actionable even if grammar is short.
  if(voiceResolveExactProduct(raw)||/\b\d{5,8}\b/.test(q)||/\b(?:rc)?\d{3,}\b/i.test(q))return false;
- // Context follow-ups such as “Where is it?” / “在哪里？” are actionable only when a successful context exists.
+ // Build046: a legal short follow-up becomes actionable when a successful product context exists.
  const expanded=voiceExpandSafeFollowup(raw);
  if(expanded!==raw)return false;
  const english=[
@@ -4385,21 +4385,32 @@ function voiceResolveExactProduct(message){
 function voiceProductMatches(message){const exactResolved=voiceResolveExactProduct(message);if(exactResolved)return exactResolved.all.filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i).slice(0,8);const q=voiceNorm(message),words=voiceWords(message),masters=loadMasters();const exact=[];for(const m of masters){const name=voiceNorm(m.name),sku=voiceNorm(m.sku),color=voiceNorm(m.color);if((name&&q.includes(name))||(sku&&q.includes(sku))){let score=(name&&q.includes(name)?100:0)+(sku&&q.includes(sku)?80:0)+(color&&q.includes(color)?10:0);exact.push([score,m])}}if(exact.length)return exact.sort((a,b)=>b[0]-a[0]).map(x=>x[1]).slice(0,8);let scored=[];for(const m of masters){const fields=[m.name,m.color,m.brand,m.series,m.sku,m.category].filter(Boolean).map(voiceNorm),hay=fields.join(' ');let score=0;for(const w of words){if(w.length<4)continue;if(hay.split(' ').includes(w))score+=4;else for(const f of fields){const sim=voiceSimilarity(w,f);if(sim>=.88)score+=sim*3}}for(const f of fields){const sim=voiceSimilarity(q,f);if(sim>=.86)score+=sim*6}if(score>=5.0)scored.push([score,m])}return scored.sort((a,b)=>b[0]-a[0]).map(x=>x[1]).slice(0,5)}
 function voiceCarpetMatches(message){const q=voiceNorm(message),words=voiceWords(message);return carpetRecords().filter(x=>!['Used Up','Split to RAM','Split to REM'].includes(x.status)).map(x=>{const hay=voiceNorm([x.roll,x.collection,x.colour,x.location,x.lot].join(' '));let score=(x.roll&&q.includes(voiceNorm(x.roll)))?10:0;for(const w of words)if(hay.includes(w))score++;return [score,x]}).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).map(x=>x[1]).slice(0,8)}
 function voiceTodayOps(){const today=todayISO();return operationRecords().filter(x=>x.date===today)}
+// V6.4.5 Build046 — Context Intelligence + Entity Safety.
+function voiceIsSafeContextFollowup(message){
+ const raw=String(message||'').trim(),q=voiceNorm(raw);
+ if(!raw)return false;
+ const short=q.split(/\s+/).filter(Boolean).length<=8;
+ if(!short)return false;
+ const english=/^(how many|how many left|how many do we have|how many do you have|how much stock|do we have any left|do you have any left|where|where is|where are|where is it|where are they|what about|what about it|and how many|and where|which rack|what location)\??$/.test(q);
+ const chinese=/^(多少|有多少|还有多少|还剩多少|剩多少|有几个|有几卷|几卷|几个|在哪里|在哪|位置|哪个货架|它在哪里|它在哪|还有吗|还有没有|呢)[？?]?$/.test(raw);
+ return english||chinese
+}
 function voiceRememberSuccessfulContext(message){
  const resolved=voiceResolveWarehouseEntity(message);
- if(resolved?.master){voiceContext.product=resolved.master;voiceContext.updatedAt=Date.now()}
+ if(resolved?.master){
+  const family=voiceProductFamilyMasters(message,resolved);
+  // Prefer the canonical family master when available so follow-ups do not get trapped in a random variant.
+  const canonical=family.find(m=>voiceNorm(m.name)===voiceNorm(resolved.master.name)&&!m.color)||resolved.master;
+  voiceContext.product=canonical;voiceContext.updatedAt=Date.now()
+ }
 }
 function voiceExpandSafeFollowup(message){
- const raw=String(message||'').trim(),q=voiceNorm(raw);
+ const raw=String(message||'').trim();
  if(!raw)return raw;
- // Build036 Context Override Guard: any explicit/current-turn entity wins immediately over previous context.
- // Alias Dictionary is also considered an explicit current-turn entity. Context may only fill a truly entity-less follow-up.
+ // Any explicit current-turn entity wins over previous context.
  if(voiceResolveExactProduct(raw)||voiceWarehouseAliasDictionary(raw))return raw;
  if(!voiceContext.product||Date.now()-(voiceContext.updatedAt||0)>15*60*1000)return raw;
- // Context is allowed ONLY for clearly incomplete follow-up phrases. It never rewrites a full utterance.
- const short=q.split(/\s+/).filter(Boolean).length<=7;
- const follow=short&&( /^(how many|how many left|where|where is it|where are they|what about|what about it|and how many|and where|which rack|what location|how much stock|do we have any left)\??$/.test(q) || /^(多少|还有多少|还剩多少|在哪里|在哪|位置|哪个货架|它在哪里|它在哪|还有吗|还有没有|呢)[？?]?$/.test(raw) );
- if(!follow)return raw;
+ if(!voiceIsSafeContextFollowup(raw))return raw;
  return `${raw} ${voiceContext.product.name}${voiceContext.product.color?' '+voiceContext.product.color:''}`;
 }
 function voiceLocalAnswer(message,langOverride=''){const q=voiceNorm(message),zh=voicePreferredReplyLanguage(message,langOverride)==='zh-CN';const ops=voiceTodayOps(),intent=voiceDetectIntent(message);
@@ -4433,11 +4444,37 @@ function voiceRenderAiControls(){
  }
 }
 async function voiceCallGateway(message,replyLanguage='',options={}){const gateway=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!gateway)throw new Error('No AI Gateway is configured. Exact warehouse questions still work locally.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);try{const warehouseContext=voiceContextForGateway(message);if(options.localAnswer)warehouseContext.authoritativeLocalAnswer=options.localAnswer;warehouseContext.aiPolicy=voiceAiPolicy();const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,language:$('voiceLanguage')?.value||'auto',replyLanguage:replyLanguage||voiceLastReplyLang||'en-CA',history:voiceHistory.slice(-8),warehouseContext}),signal:controller.signal});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);if(!data.reply)throw new Error('Gateway returned no reply.');return data.reply}finally{clearTimeout(timer)}}
+function voiceEntityFamilyKey(master){
+ if(!master)return'';
+ const q=voiceNorm([master.name,master.series,master.category,master.sku].filter(Boolean).join(' '));
+ if(q.includes('heather choice'))return'heather choice';
+ if(q.includes('spill blocker'))return'spill blocker';
+ if(q.includes('platinum'))return'platinum';
+ return voiceNorm(master.name||master.sku||master.id||'')
+}
+function voiceEntitySwitchNeedsConfirmation(resolved){
+ if(!resolved?.master)return false;
+ if(!voiceContext.product||Date.now()-(voiceContext.updatedAt||0)>15*60*1000)return false;
+ const oldKey=voiceEntityFamilyKey(voiceContext.product),newKey=voiceEntityFamilyKey(resolved.master);
+ if(!oldKey||!newKey||oldKey===newKey)return false;
+ // Exact names and explicit alias-dictionary matches are intentional switches.
+ if(['exact','dictionary'].includes(resolved.source))return false;
+ // A phonetic/fuzzy jump to a different product family must be confirmed.
+ return ['phonetic','fuzzy'].includes(resolved.source)
+}
 function voiceContextClarification(text,resolved){
  const raw=String(text||'').trim(),q=voiceNorm(raw),intent=voiceDetectIntent(raw);
  const words=q.split(/\s+/).filter(Boolean);
  const exact=voiceResolveExactProduct(raw),dict=voiceWarehouseAliasDictionary(raw);
+ // Legal entity-less followups should inherit context, not be rejected as unclear.
+ if(!exact&&!dict&&voiceIsSafeContextFollowup(raw)&&voiceContext.product&&Date.now()-(voiceContext.updatedAt||0)<=15*60*1000)return '';
  if(exact||dict)return '';
+ // Build046 Entity Safety: a fuzzy/phonetic jump to another product family is never silently accepted.
+ if(voiceEntitySwitchNeedsConfirmation(resolved)){
+  const oldLabel=`${voiceContext.product.name}${voiceContext.product.color?' '+voiceContext.product.color:''}`;
+  const newLabel=resolved.master?.name||'another product';
+  return voicePreferredReplyLanguage(raw)==='zh-CN'?`我不确定这一句。你是要从 ${oldLabel} 切换到 ${newLabel} 吗？请再说一次产品名确认。`:`I'm not certain about that product switch. Did you mean to switch from ${oldLabel} to ${newLabel}? Please repeat the product name to confirm.`
+ }
  // A short unknown token should never silently inherit or invent warehouse context.
  if(intent==='unknown'&&words.length<=2){
   if(voiceContext.product){
@@ -4446,9 +4483,10 @@ function voiceContextClarification(text,resolved){
   }
   return voicePreferredReplyLanguage(raw)==='zh-CN'?'我没有听清这一句，请再说一次产品名或完整问题。':`I didn't catch that clearly. Please repeat the product name or the full question.`
  }
- if(resolved&&['fuzzy','phonetic'].includes(resolved.source)&&(resolved.score||0)<.94&&intent==='unknown'){
+ // Any low-confidence fuzzy/phonetic entity should be confirmed before answering.
+ if(resolved&&['fuzzy','phonetic'].includes(resolved.source)&&(resolved.score||0)<.94){
   const label=resolved.master?.name||'this product';
-  return voicePreferredReplyLanguage(raw)==='zh-CN'?`我听到的可能是 ${label}，请再确认一次。`:`I may have heard ${label}. Please confirm the product name once more.`
+  return voicePreferredReplyLanguage(raw)==='zh-CN'?`我听到的可能是 ${label}，请再确认一次产品名。`:`I may have heard ${label}. Please confirm the product name once more.`
  }
  return ''
 }

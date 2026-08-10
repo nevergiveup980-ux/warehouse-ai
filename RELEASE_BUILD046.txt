@@ -1,0 +1,36 @@
+RUNLU Warehouse AI
+Version: V6.4.5
+Build: Build046
+Release: Context Intelligence + Entity Safety
+Git tag: v6.4.5-build046
+
+Build046 changes
+----------------
+1. Safe Context Follow-ups
+   - Supports: 有多少 / 还有多少 / 有几卷 / How many do we have / How many do you have / Where is / Which rack.
+   - These inherit only the last confirmed product entity.
+   - Current-turn quantity/location intent remains authoritative.
+
+2. Entity Safety
+   - Fuzzy or phonetic jumps to a different product family are not answered automatically.
+   - The assistant asks the user to confirm the new product.
+   - Exact product names and explicit alias-dictionary matches still switch immediately.
+
+3. Context Quality
+   - Successful context prefers a canonical product-family entity rather than a random color/variant when possible.
+   - Short unclear fragments still trigger clarification.
+
+Retained from Build045
+----------------------
+- Authorized Admin Recovery
+- Current-turn intent priority
+- Physical-count / COUNT PENDING awareness
+- Confirmed vs pending inventory separation
+
+Version consistency
+-------------------
+App: V6.4.5
+Build: Build046
+version.json: 6.4.5 / 046
+ZIP: RUNLU_Warehouse_V6.4.5_Build046.zip
+Git tag: v6.4.5-build046
