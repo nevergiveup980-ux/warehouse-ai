@@ -1,7 +1,7 @@
 {
-  "version": "6.4.9",
+  "version": "6.5.0",
   "published": "2026-08-10",
   "channel": "stable",
-  "name": "Full Roll Finish + Add Work Validation Fix",
-  "notes": "Carpet Cutting now automatically consumes the entire remaining roll and sets balance to zero when the normal cut allowance would leave a tail under 3 ft. Record Only / Non-stock work records no longer require an inventory product link. Private Administrator access and Build048 Multi-AI Gateway behavior are unchanged."
+  "name": "Carpet Cut Count Sync Fix",
+  "notes": "Fixes a desktop Carpet Cutting bug where Number of Cuts / Pieces could show 2 in the form but the completion confirmation reverted to 1 cut, causing the 3-inch-per-cut deduction to be wrong. Build051 persists the entered cut count on the saved work record so confirmation, stock deduction, cutting history and completion all use the same value. Build050 Full Roll Finish, Add Work validation fix, Private Administrator access and Multi-AI Gateway behavior are retained."
 }
