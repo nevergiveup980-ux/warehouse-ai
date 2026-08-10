@@ -1,7 +1,7 @@
 {
-  "version": "6.4.5",
-  "build": "046",
+  "version": "6.4.6",
+  "build": "047",
   "published": "2026-08-09",
   "channel": "Stable",
-  "notes": "Build046 · Context Intelligence + Entity Safety. Expands safe product follow-ups such as '有多少', 'How many do you have', and 'Where is'; prevents fuzzy/phonetic jumps to unrelated products without confirmation; retains Build045 Admin Recovery, intent priority, and physical-count-aware inventory answers."
+  "notes": "Build047 · Conversational Warehouse Intelligence + AI Usage Ledger. Adds local GPT usage/token ledger, optional Worker-side cost estimates, and carries forward Build046 context/entity safety, Build045 Admin Recovery, and physical-count-aware inventory answers."
 }

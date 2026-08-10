@@ -1,0 +1,26 @@
+RUNLU Warehouse AI
+Version: V6.4.6
+Build: Build047
+Release: Conversational Warehouse Intelligence + AI Usage Ledger
+Git tag: v6.4.6-build047
+
+AI Usage Ledger
+---------------
+- Records successful Voice GPT and GPT Vision calls.
+- Stores model, input/output/total tokens, timestamp, and optional estimated USD cost.
+- Worker returns token usage from OpenAI Responses API.
+- Optional cost estimate uses Worker variables:
+  OPENAI_INPUT_USD_PER_1M
+  OPENAI_OUTPUT_USD_PER_1M
+  OPENAI_VISION_INPUT_USD_PER_1M
+  OPENAI_VISION_OUTPUT_USD_PER_1M
+- If rates are not configured, the ledger still records exact token usage and shows cost as unavailable.
+- Official OpenAI billing remains the financial source of truth.
+
+Deployment
+----------
+Full archive: RUNLU_Warehouse_V6.4.6_Build047.zip
+Delta upload: RUNLU_Warehouse_V6.4.6_Build047_DEPLOY_DELTA.zip
+Git tag: v6.4.6-build047
+
+For normal upgrades, upload only the delta files that changed.
