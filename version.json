@@ -1,7 +1,7 @@
 {
-  "version": "6.4.8",
+  "version": "6.4.9",
   "published": "2026-08-10",
   "channel": "stable",
-  "name": "Private Administrator Access",
-  "notes": "Removes the public/View Only interface. Warehouse OS now requires the authorized administrator sign-in; unauthenticated devices stay at the login gate. Keeps Build048 Multi-AI Voice/Scan gateway behavior unchanged."
+  "name": "Full Roll Finish + Add Work Validation Fix",
+  "notes": "Carpet Cutting now automatically consumes the entire remaining roll and sets balance to zero when the normal cut allowance would leave a tail under 3 ft. Record Only / Non-stock work records no longer require an inventory product link. Private Administrator access and Build048 Multi-AI Gateway behavior are unchanged."
 }
