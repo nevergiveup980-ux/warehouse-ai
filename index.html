@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#14213d">
-<title>RUNLU Warehouse AI V6.4.3 Voice Precision Context Build044</title>
+<title>RUNLU Warehouse AI V6.4.4 Semantic Voice + Admin Recovery Build045</title>
 <style>
 :root{
   --navy:#14213d;--blue:#2563eb;--bg:#f3f5f8;--card:#fff;--text:#182033;
@@ -241,7 +241,7 @@ img,video,canvas,svg{max-width:100%}
           <div class="accessCloudLine">● Live Warehouse Connected</div>
         </div>
         <button id="runluCoreEnterButton" class="accessPrimary" type="button" onclick="return RUNLU_CORE_ENTER(event)">Enter Warehouse</button>
-<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">VOICE PRECISION READY · Build044</div>
+<div id="runluCoreBootStatus" style="margin-top:10px;font-size:11px;opacity:.76;text-align:center">SEMANTIC VOICE READY · Build045</div>
         <button class="accessSwitch" onclick="accessUseAnotherAccount()">Switch account</button>
       </div>
       <div id="accessLoginForm" class="hidden"></div>
@@ -752,7 +752,7 @@ img,video,canvas,svg{max-width:100%}
 </section>
 
 <section id="settings" class="page hidden">
-<div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Settings</h2><div class="settingRow"><div class="accessProfileCard"><div><b>🔐 Device Access</b><span id="settingsAccessSummary">Administrator</span></div><button onclick="accessLogout()">Sign Out</button></div><label>Role on this trusted device</label><select id="deviceAccessRole" onchange="if(!accessIsAdmin()){this.value=accessRole();alert('Only an Administrator can change device access.');return}accessSetRole(this.value);$('settingsAccessSummary').textContent=accessRoleLabel();"><option value="admin">Administrator</option><option value="warehouse">Warehouse Staff</option><option value="viewer">View Only</option></select><div class="meta">New devices default to View Only. Administrator can intentionally change this trusted device to Warehouse Staff or View Only.</div></div>
+<div class="card"><button class="back" onclick="showPage('home')">‹ Back</button><h2>Settings</h2><div class="settingRow"><div class="accessProfileCard"><div><b>🔐 Device Access</b><span id="settingsAccessSummary">Administrator</span></div><button onclick="accessLogout()">Sign Out</button></div><label>Role on this trusted device</label><select id="deviceAccessRole" onchange="if(!accessCanManageRoles()){this.value=accessRole();alert('Only an authorized Administrator can change device access.');return}if(!accessSetRole(this.value)){this.value=accessRole();return}$('settingsAccessSummary').textContent=accessRoleLabel();"><option value="admin">Administrator</option><option value="warehouse">Warehouse Staff</option><option value="viewer">View Only</option></select><div class="actions"><button id="adminRecoveryBtn" type="button" onclick="accessRecoverAdmin()">Restore Administrator Access</button></div><div class="meta">New devices default to View Only. An authorized RUNLU administrator account can restore Administrator access on a trusted device.</div></div>
 <div class="settingRow"><div class="name">Cloud Sync</div><div class="meta">Sign in to keep this device's warehouse data synchronized with the Runlu Supabase project. Local storage remains active for offline work.</div>
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
 <label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
@@ -1155,7 +1155,7 @@ img,video,canvas,svg{max-width:100%}
 <script src="tesseract.min.js"></script>
 <script src="carpet_seed.js"></script>
 <script>
-const APP_VERSION='6.4.3', APP_BUILD='044', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
+const APP_VERSION='6.4.4', APP_BUILD='045', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
 let editId=null,customerEditId=null,specialEditId=null,operationEditId=null,activeCarpetId=null,activeOperationsDate='',operationsStatusFilter='All',photoData='',scanPhoto='',orderPhotoData='',receivingPhotoData='',scanBatch=[],operationItemsDraft=[],operationDraftTimer=null,operationDraftDirty=false,operationContinuationId=null;
 let aiScanContext=null;
 let stopSnapStream=null,stopSnapTimer=null,stopSnapReadySince=0,stopSnapLastFrame=null,stopSnapCaptured=false;
@@ -1174,6 +1174,7 @@ try{
 }catch(_){}
 
 const ACCESS_ROLES={admin:'Administrator',warehouse:'Warehouse Staff',viewer:'View Only'};
+const ACCESS_ADMIN_EMAILS=new Set(['nevergiveup980@gmail.com']);
 function accessRole(){
  const stored=localStorage.getItem(ACCESS_ROLE_KEY);
  try{
@@ -1186,9 +1187,33 @@ function accessRole(){
 }
 function accessCanWrite(){return accessRole()!=='viewer'}
 function accessIsAdmin(){return accessRole()==='admin'}
-function accessSetRole(role){role=ACCESS_ROLES[role]?role:'viewer';localStorage.setItem(ACCESS_ROLE_KEY,role);applyAccessUI()}
-function accessRoleLabel(role=accessRole()){return ACCESS_ROLES[role]||ACCESS_ROLES.viewer}
 function accessCurrentEmail(){return cloudSession()?.user?.email||''}
+function accessAdminEmailAuthorized(){
+ const email=normalizeText(accessCurrentEmail()).toLowerCase();
+ return !!email&&ACCESS_ADMIN_EMAILS.has(email)
+}
+function accessCanManageRoles(){return accessIsAdmin()||accessAdminEmailAuthorized()}
+function accessSetRole(role){
+ role=ACCESS_ROLES[role]?role:'viewer';
+ if(role==='admin'&&!accessCanManageRoles()){
+  alert('Administrator access can only be restored by an authorized RUNLU administrator account.');
+  return false
+ }
+ localStorage.setItem(ACCESS_ROLE_KEY,role);applyAccessUI();return true
+}
+function accessRecoverAdmin(){
+ if(!accessAdminEmailAuthorized()){
+  alert('This signed-in account is not authorized for Administrator recovery.');
+  return
+ }
+ localStorage.setItem(ACCESS_TRUSTED_KEY,'1');
+ localStorage.setItem(ACCESS_ROLE_KEY,'admin');
+ applyAccessUI();
+ if($('deviceAccessRole'))$('deviceAccessRole').value='admin';
+ if($('settingsAccessSummary'))$('settingsAccessSummary').textContent=accessRoleLabel();
+ alert('Administrator access restored on this trusted device.')
+}
+function accessRoleLabel(role=accessRole()){return ACCESS_ROLES[role]||ACCESS_ROLES.viewer}
 let accessUnlocked=false,accessBootTimer=null,accessBootFailsafe=null,accessBootStartedAt=0;
 function accessRevealLogin(force=false){
  const boot=$('bootStage'),stage=$('accessStage');
@@ -1246,7 +1271,7 @@ function accessOpenHomeFallback(){
  try{applyAccessUI()}catch(e){console.warn('Access UI recovery:',e)}
 }
 function accessContinueSaved(){
- // Build044: Home First; cloud recovery runs only after Home is visible.
+ // Build045: Home First; cloud recovery runs only after Home is visible.
  try{
    if(typeof window.RUNLU_CORE_ENTER==='function') return window.RUNLU_CORE_ENTER();
  }catch(e){console.warn('Core entry delegation recovery:',e)}
@@ -1269,11 +1294,12 @@ async function accessSignIn(){
    });
    localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));
    localStorage.setItem(CLOUD_ENABLED_KEY,'1');
-   localStorage.setItem(ACCESS_ROLE_KEY,'warehouse');
    localStorage.setItem(ACCESS_TRUSTED_KEY,'1');
+   const signedInEmail=normalizeText(data?.user?.email||email).toLowerCase();
+   localStorage.setItem(ACCESS_ROLE_KEY,ACCESS_ADMIN_EMAILS.has(signedInEmail)?'admin':'warehouse');
    $('accessPassword').value='';
 
-   // Build044 rule: open Home immediately; never wait for cloud download.
+   // Build045 rule: open Home immediately; never wait for cloud download.
    if(typeof window.RUNLU_CORE_ENTER==='function')window.RUNLU_CORE_ENTER();
    else accessOpenHomeFallback();
 
@@ -4012,7 +4038,17 @@ function voiceTranscriptScore(t){
 function voiceBestTranscript(result){const alts=[];for(let i=0;i<result.length;i++){const t=(result[i].transcript||'').trim();if(t)alts.push({text:t,score:voiceTranscriptScore(t)+(Number(result[i].confidence)||0)*2})}alts.sort((a,b)=>b.score-a.score);return alts[0]?.text||result[0]?.transcript||''}
 
 function voiceIsFragment(text){const q=voiceNorm(text),w=q.split(/\s+/).filter(Boolean);return !q||(w.length===1&&['where','what','how','which','i','the','is','are','do','can','please','哪里','多少','什么'].includes(w[0]))}
-function voiceDetectIntent(text){const q=voiceNorm(text);if(/\b(how many|quantity|count|stock|inventory|left|remaining)\b/.test(q)||/(多少|库存|剩多少)/.test(q))return'quantity';if(/\b(where|location|rack|located)\b/.test(q)||/(哪里|在哪|位置|货架)/.test(q))return'location';if(/transfer|转货|转移/.test(q))return'transfer';if(/\b(today|task|work|job)\b/.test(q)||/(今天|任务|工作)/.test(q))return'today';if(/\b\d{5,8}\b/.test(q))return'order';if(/roll|卷号|地毯/.test(q))return'roll';return'unknown'}
+function voiceDetectIntent(text){
+ const raw=String(text||''),q=voiceNorm(raw);
+ // Build045: the CURRENT turn owns intent. Quantity phrases always beat stale location context.
+ if(/\b(how many|how much|quantity|count|stock|inventory|left|remaining|do we have|any left)\b/.test(q)||/(有多少|还有多少|还剩多少|剩多少|多少个|多少卷|几卷|几个|库存数量|数量)/.test(raw))return'quantity';
+ if(/\b(where|location|rack|located|which rack|what location)\b/.test(q)||/(哪里|在哪|位置|货架|哪个货架)/.test(raw))return'location';
+ if(/transfer|转货|转移/.test(q))return'transfer';
+ if(/\b(today|task|work|job)\b/.test(q)||/(今天|任务|工作)/.test(raw))return'today';
+ if(/\b\d{5,8}\b/.test(q))return'order';
+ if(/roll|卷号|地毯/.test(q))return'roll';
+ return'unknown'
+}
 function voiceExactWarehouseTerm(text){const n=voiceNorm(text);if(!n)return '';const vocab=voiceWarehouseVocabulary().sort((a,b)=>voiceNorm(b).length-voiceNorm(a).length);for(const v of vocab){const vn=voiceNorm(v);if(vn.length>=3&&new RegExp(`(^|\\s)${vn.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')}(?=\\s|$)`,`i`).test(n))return v}return ''}
 // V6.3.3 Build034 — Hybrid Entity Split + Incomplete Utterance Guard.
 // V6.3.4 Build035 — Entity Recovery + Phonetic Alias + Location/Status Guard.
@@ -4268,7 +4304,68 @@ function voiceApplyLanguage(forceLang=''){if(!voiceRecognition)return;const lang
 function voiceStartListening(autoRestart=false,forceLang=''){if(!voiceMicController.canStart())return;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){voiceMicWanted=false;voiceSetState('idle',(voiceLastReplyLang||'en-CA')==='zh-CN'?'这里不支持语音识别，请使用下面的文字输入框。':'Speech recognition is unavailable here. Use the text box below.');return}if(!voiceRecognition)voiceSetupRecognition();if(voiceContinuous)voiceMicWanted=true;const lane=voiceLanguageController.choose(forceLang);voiceApplyLanguage(lane);voiceAbortIntent='';voiceStartInFlight=true;voiceSetState('recovering',lane==='zh-CN'?'正在启动中文/混合语音监听…':'Starting English recognition…');try{voiceRecognition.start()}catch{voiceStartInFlight=false;if(autoRestart&&voiceMicController.keepAlive()&&voiceRestartAttempts<6){voiceRestartAttempts++;voiceScheduleListening(350+voiceRestartAttempts*220,lane)}else{voiceMicWanted=false;voiceSetState('idle',(voiceLastReplyLang||'en-CA')==='zh-CN'?'麦克风还没准备好，请再点一次。':'Microphone is not ready yet. Tap once more.')}}}
 function voiceNorm(s){return normKey(String(s||'')).replace(/[^a-z0-9\u3400-\u9fff]+/g,' ').trim()}
 function voiceWords(s){return voiceNorm(s).split(/\s+/).filter(x=>x.length>1&&!['how','many','where','what','is','are','the','do','we','have','inventory','stock','today','please','tell','me','还有','多少','库存','哪里','在哪','位置','今天','几个','查询','查一下','帮我','老伙计'].includes(x))}
-function voiceInventorySummaryForMaster(m){const rows=localInventoryRecordsForProduct(m.id).filter(isCurrentGeneralInventoryRecord),byUnit={};let total=0;for(const r of rows){const unit=r.unit||m.coverageUnit||'unit';const qty=Number(r.quantity||0);byUnit[unit]=(byUnit[unit]||0)+qty;total+=qty}const loc=[...new Set(rows.map(r=>r.location).filter(Boolean))];return {master:m,rows,total,byUnit,locations:loc}}
+function voiceInventoryRowPending(r){
+ return !!r?.quantityPending||voiceIsStatusLikeLocation(r?.location)||String(r?.quantity??'').trim()===''||!Number.isFinite(Number(r?.quantity))
+}
+function voiceInventorySummaryForMaster(m){
+ const rows=localInventoryRecordsForProduct(m.id).filter(isCurrentGeneralInventoryRecord),byUnit={};
+ let total=0;const confirmedRows=[],pendingRows=[];
+ for(const r of rows){
+  if(voiceInventoryRowPending(r)){pendingRows.push(r);continue}
+  const unit=r.unit||m.coverageUnit||'unit',qty=Number(r.quantity||0);
+  byUnit[unit]=(byUnit[unit]||0)+qty;total+=qty;confirmedRows.push(r)
+ }
+ const loc=[...new Set(rows.map(r=>r.location).filter(Boolean))];
+ return {master:m,rows,confirmedRows,pendingRows,total,byUnit,locations:loc,hasPending:pendingRows.length>0}
+}
+function voiceCanonicalFamilyName(message,resolved){
+ const dict=voiceWarehouseAliasDictionary(message);
+ if(dict?.term)return dict.term;
+ return resolved?.master?.name||''
+}
+function voiceProductFamilyMasters(message,resolved){
+ const master=resolved?.master;if(!master)return[];
+ const name=voiceNorm(master.name);
+ // Generic underlayment names may have a confirmed stock variant plus a separate physical-count record.
+ const familyNames=['heather choice','cloud 9 spill blocker','platinum'];
+ const family=familyNames.find(x=>name===x);
+ if(!family)return[master];
+ const rows=loadMasters().filter(m=>{
+  const fields=[m.name,m.series,m.category,m.sku].filter(Boolean).map(voiceNorm);
+  return fields.some(f=>f.includes(family))
+ });
+ return rows.length?rows:[master]
+}
+function voiceInventorySummaryForFamily(message,resolved){
+ const masters=voiceProductFamilyMasters(message,resolved);
+ const summaries=masters.map(voiceInventorySummaryForMaster);
+ const rows=summaries.flatMap(x=>x.rows),confirmedRows=summaries.flatMap(x=>x.confirmedRows),pendingRows=summaries.flatMap(x=>x.pendingRows);
+ const byUnit={};let total=0;
+ for(const s of summaries){for(const [u,v] of Object.entries(s.byUnit)){byUnit[u]=(byUnit[u]||0)+v;total+=v}}
+ const locations=[...new Set(rows.map(r=>r.location).filter(Boolean))];
+ return {master:resolved.master,masters,rows,confirmedRows,pendingRows,byUnit,total,locations,hasPending:pendingRows.length>0,label:voiceCanonicalFamilyName(message,resolved)||resolved.master.name}
+}
+function voiceQuantityAnswer(a,zh){
+ const quantities=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');
+ const confirmed=quantities||Number(a.total.toFixed(2));
+ if(a.confirmedRows.length&&a.pendingRows.length){
+  return zh?`${a.label} 目前有 ${confirmed} 已确认库存；另外 ${a.pendingRows.length} 条库存记录正在等待实物盘点，所以最终总数还没有确认。`:`${a.label} has ${confirmed} confirmed inventory. ${a.pendingRows.length} additional inventory record(s) are pending physical count, so the final total is not yet confirmed.`
+ }
+ if(a.pendingRows.length&&!a.confirmedRows.length){
+  return zh?`${a.label} 的数量目前还没有确认；有 ${a.pendingRows.length} 条库存记录需要实物盘点。`:`${a.label} quantity is not confirmed yet. ${a.pendingRows.length} inventory record(s) require a physical count.`
+ }
+ return zh?`当前库存：${a.label}：${confirmed}。`:`Current inventory: ${a.label}: ${confirmed}.`
+}
+function voiceFamilyLocationAnswer(a,zh){
+ const valid=[...new Set((a.locations||[]).filter(x=>!voiceIsStatusLikeLocation(x)))];
+ const pending=a.pendingRows.length>0;
+ if(valid.length){
+  const extra=pending?(zh?'；另外还有库存记录等待实物盘点/位置确认。':'; another inventory record is pending physical count/location confirmation.'):'';
+  return zh?`${a.label} 目前在 ${valid.join('、')}${extra}`:`${a.label} is at ${valid.join(', ')}${extra}`
+ }
+ if(pending)return zh?`${a.label} 当前需要实物盘点，仓库位置还没有完全确认。`:`${a.label} currently requires a physical count; its warehouse location is not fully confirmed.`;
+ return zh?`${a.label} 当前没有确认的仓库位置。`:`${a.label} does not currently have a confirmed warehouse location.`
+}
 // Build035: never read a workflow/status label as if it were a physical rack/location.
 function voiceIsStatusLikeLocation(v){const q=voiceNorm(v);return !q||/(physical count|required|pending|need tm|needs review|review required|check length|unknown location|verify location|count required)/i.test(q)}
 function voiceLocationAnswer(a,zh){
@@ -4312,11 +4409,10 @@ function voiceLocalAnswer(message,langOverride=''){const q=voiceNorm(message),zh
  const carpets=voiceCarpetMatches(message);if(carpets.length&&(/\b(rc)?\d{3,}\b/i.test(message)||q.includes('roll')||q.includes('地毯')||q.includes('卷号'))){const x=carpets[0];return {text:zh?`${x.roll} 是 ${x.collection||'地毯'} ${x.colour||''}，当前 ${feetLabel(x.length)}，位置 ${x.location||'未指定'}，状态 ${x.measure||x.status||'—'}。`:`Roll ${x.roll}: ${x.collection||'carpet'} ${x.colour||''}, ${feetLabel(x.length)} remaining at ${x.location||'unassigned'}, status ${x.measure||x.status||'—'}.`,source:'local'}}
  const resolvedProduct=voiceResolveWarehouseEntity(message);
  if(resolvedProduct?.master){
-  const a=voiceInventorySummaryForMaster(resolvedProduct.master);
+  const a=voiceInventorySummaryForFamily(message,resolvedProduct);
   if(a.rows.length){
-   if(intent==='location')return {text:voiceLocationAnswer(a,zh),source:'local',resolver:resolvedProduct.source};
-   const qty=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');
-   return {text:zh?`当前库存：${a.master.name}${a.master.color?' '+a.master.color:''}：${qty||Number(a.total.toFixed(2))}。`:`Current inventory: ${a.master.name}${a.master.color?' '+a.master.color:''}: ${qty||Number(a.total.toFixed(2))}.`,source:'local',resolver:resolvedProduct.source}
+   if(intent==='location')return {text:voiceFamilyLocationAnswer(a,zh),source:'local',resolver:resolvedProduct.source,intent:'location'};
+   return {text:voiceQuantityAnswer(a,zh),source:'local',resolver:resolvedProduct.source,intent:intent==='quantity'?'quantity':'inventory'}
   }
  }
  const exactProduct=voiceResolveExactProduct(message);if(exactProduct){const a=voiceInventorySummaryForMaster(exactProduct.master);if(a.rows.length){if(intent==='location'){return {text:voiceLocationAnswer(a,zh),source:'local',resolver:'exact'}}const qty=Object.entries(a.byUnit).map(([u,v])=>`${Number(v.toFixed(2))} ${u}`).join(' + ');return {text:zh?`当前库存：${a.master.name}${a.master.color?' '+a.master.color:''}：${qty||Number(a.total.toFixed(2))}。`:`Current inventory: ${a.master.name}${a.master.color?' '+a.master.color:''}: ${qty||Number(a.total.toFixed(2))}.`,source:'local',resolver:'exact'}}}
@@ -4337,7 +4433,26 @@ function voiceRenderAiControls(){
  }
 }
 async function voiceCallGateway(message,replyLanguage='',options={}){const gateway=($('voiceGateway')?.value||'').trim().replace(/\/+$/,'');if(!gateway)throw new Error('No AI Gateway is configured. Exact warehouse questions still work locally.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);try{const warehouseContext=voiceContextForGateway(message);if(options.localAnswer)warehouseContext.authoritativeLocalAnswer=options.localAnswer;warehouseContext.aiPolicy=voiceAiPolicy();const res=await fetch(gateway,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,language:$('voiceLanguage')?.value||'auto',replyLanguage:replyLanguage||voiceLastReplyLang||'en-CA',history:voiceHistory.slice(-8),warehouseContext}),signal:controller.signal});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Gateway returned ${res.status}`);if(!data.reply)throw new Error('Gateway returned no reply.');return data.reply}finally{clearTimeout(timer)}}
-async function voiceHandle(text,meta={}){if(!text)return;const turnId=++voiceTurnCounter;voiceActiveTurn=turnId;voiceSoundTesting=false;const originalText=text;const display=meta.displayText||originalText;const lang=meta.detectedLang||voiceDetectConversationLanguage(originalText,meta.recognitionLang||voiceLastDetectedLang||'zh-CN');const explicitTurnEntity=voiceResolveWarehouseEntity(originalText);text=explicitTurnEntity?originalText:voiceExpandSafeFollowup(originalText);if((localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto')==='auto')voiceRememberLanguage(lang);voiceAddLog('You',display+(meta.matched?' → '+meta.matched:''));if($('voiceHeard')&&!meta.matched)$('voiceHeard').textContent=display;voiceAsking=true;voiceStopRecognition();voiceSetState('thinking',lang==='zh-CN'?'正在查询实时仓库数据…':'Checking live warehouse data…');let local=null;try{local=voiceLocalAnswer(text,lang)}catch(e){console.error('Voice local answer failed',e)}if(turnId!==voiceActiveTurn)return;
+function voiceContextClarification(text,resolved){
+ const raw=String(text||'').trim(),q=voiceNorm(raw),intent=voiceDetectIntent(raw);
+ const words=q.split(/\s+/).filter(Boolean);
+ const exact=voiceResolveExactProduct(raw),dict=voiceWarehouseAliasDictionary(raw);
+ if(exact||dict)return '';
+ // A short unknown token should never silently inherit or invent warehouse context.
+ if(intent==='unknown'&&words.length<=2){
+  if(voiceContext.product){
+   const label=`${voiceContext.product.name}${voiceContext.product.color?' '+voiceContext.product.color:''}`;
+   return voicePreferredReplyLanguage(raw)==='zh-CN'?`我没有听清这一句。你还是在问 ${label} 吗？`:`I didn't catch that clearly. Are you still asking about ${label}?`
+  }
+  return voicePreferredReplyLanguage(raw)==='zh-CN'?'我没有听清这一句，请再说一次产品名或完整问题。':`I didn't catch that clearly. Please repeat the product name or the full question.`
+ }
+ if(resolved&&['fuzzy','phonetic'].includes(resolved.source)&&(resolved.score||0)<.94&&intent==='unknown'){
+  const label=resolved.master?.name||'this product';
+  return voicePreferredReplyLanguage(raw)==='zh-CN'?`我听到的可能是 ${label}，请再确认一次。`:`I may have heard ${label}. Please confirm the product name once more.`
+ }
+ return ''
+}
+async function voiceHandle(text,meta={}){if(!text)return;const turnId=++voiceTurnCounter;voiceActiveTurn=turnId;voiceSoundTesting=false;const originalText=text;const display=meta.displayText||originalText;const lang=meta.detectedLang||voiceDetectConversationLanguage(originalText,meta.recognitionLang||voiceLastDetectedLang||'zh-CN');const explicitTurnEntity=voiceResolveWarehouseEntity(originalText);const clarification=voiceContextClarification(originalText,explicitTurnEntity);if(clarification){voiceAddLog('You',display);if($('voiceHeard'))$('voiceHeard').textContent=display;voiceAsking=false;voiceSpeak(clarification,true,lang,turnId);return}text=explicitTurnEntity?originalText:voiceExpandSafeFollowup(originalText);if((localStorage.getItem(VOICE_LANGUAGE_KEY)||'auto')==='auto')voiceRememberLanguage(lang);voiceAddLog('You',display+(meta.matched?' → '+meta.matched:''));if($('voiceHeard')&&!meta.matched)$('voiceHeard').textContent=display;voiceAsking=true;voiceStopRecognition();voiceSetState('thinking',lang==='zh-CN'?'正在查询实时仓库数据…':'Checking live warehouse data…');let local=null;try{local=voiceLocalAnswer(text,lang)}catch(e){console.error('Voice local answer failed',e)}if(turnId!==voiceActiveTurn)return;
  const gptOn=voiceGptEnabled(),policy=voiceAiPolicy(),gateway=($('voiceGateway')?.value||'').trim();
  if(!gptOn){
   if(local){voiceRememberSuccessfulContext(text);voiceAsking=false;if($('voiceAiMode'))$('voiceAiMode').textContent=lang==='zh-CN'?'本地 · $0 API':'Local · $0 API';voiceAutoRetryFlip=false;voiceSpeak(local.text,true,lang,turnId);return}

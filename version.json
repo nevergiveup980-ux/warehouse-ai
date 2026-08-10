@@ -1,7 +1,7 @@
 {
-  "version": "6.4.3",
-  "build": "044",
+  "version": "6.4.4",
+  "build": "045",
   "published": "2026-08-09",
   "channel": "Stable",
-  "notes": "Build044 · Voice Precision + Warehouse Context. Improved warehouse product-name recovery, bilingual mixed speech, conversational follow-up context, and ASR alternative scoring. Build043 cloud, permissions, and Home First architecture retained."
+  "notes": "Build045 · Semantic Voice + Admin Recovery. Adds authorized Administrator recovery, current-turn intent priority, low-confidence context confirmation, and physical-count-aware inventory answers. Build044 Voice Precision and Build043 Home First/Cloud architecture retained."
 }

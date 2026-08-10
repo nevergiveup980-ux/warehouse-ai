@@ -1,0 +1,33 @@
+RUNLU Warehouse AI
+Version: V6.4.4
+Build: Build045
+Release: Semantic Voice + Admin Recovery
+Recommended Git tag: v6.4.4-build045
+
+Build045 changes
+----------------
+1. Admin Recovery
+   - Authorized RUNLU administrator account can restore Administrator on a trusted device.
+   - Unauthorized Warehouse Staff cannot self-promote.
+   - Authorized owner sign-in restores Administrator automatically.
+
+2. Voice Intent Priority
+   - Every new utterance re-evaluates quantity/location intent.
+   - Chinese quantity phrases such as 有多少 / 还有多少 / 几卷 are explicit quantity intent.
+
+3. Context Confidence Guard
+   - Short unclear recognition such as an unknown one-word fragment will not silently reuse old context.
+   - Voice asks for confirmation instead.
+
+4. Inventory Certainty Awareness
+   - COUNT PENDING / PHYSICAL COUNT REQUIRED is never treated as zero.
+   - Confirmed quantity and pending-count records are reported separately.
+   - Generic Heather Choice queries aggregate confirmed variants plus pending physical-count records.
+
+Version consistency
+-------------------
+App: V6.4.4
+Build: Build045
+version.json: 6.4.4 / 045
+ZIP: RUNLU_Warehouse_V6.4.4_Build045.zip
+Git tag: v6.4.4-build045
