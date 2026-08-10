@@ -1,7 +1,8 @@
 {
-  "version": "6.5.0",
+  "version": "6.5.1",
   "published": "2026-08-10",
   "channel": "stable",
-  "name": "Carpet Cut Count Sync Fix",
-  "notes": "Fixes a desktop Carpet Cutting bug where Number of Cuts / Pieces could show 2 in the form but the completion confirmation reverted to 1 cut, causing the 3-inch-per-cut deduction to be wrong. Build051 persists the entered cut count on the saved work record so confirmation, stock deduction, cutting history and completion all use the same value. Build050 Full Roll Finish, Add Work validation fix, Private Administrator access and Multi-AI Gateway behavior are retained."
+  "name": "Exact Carpet Inventory Link Fix",
+  "notes": "Locks Carpet Cutting to the exact Carpet Inventory record selected by the operator. Persists carpetRecordId from Carpet Inventory through drafts, saved operations, completion, stock deduction and Cutting History; completion resolves by ID first and exact roll number second, preventing sourceRoll/parentRoll child records from receiving the deduction. Build051 cut-count persistence, Build050 Full Roll Finish, Add Work validation, Private Administrator access and Multi-AI Gateway are retained.",
+  "build": "052"
 }
