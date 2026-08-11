@@ -1,8 +1,7 @@
 {
-  "version": "6.5.2",
-  "published": "2026-08-10",
+  "version": "6.5.3",
+  "build": "054",
+  "date": "2026-08-11",
   "channel": "stable",
-  "name": "Historical Carpet Cut Reconciliation",
-  "notes": "Build053 fixes version-label consistency and adds a guarded Historical Carpet Cut Reconciliation tool. Older Completed cuts are never auto-replayed. Settings can repair only safe candidates where the exact source roll still equals its untouched Original Size; the operator confirms the real Cuts/Pieces count, then the exact Carpet Inventory record, Cutting History, locked operation audit trail and event log are updated together. Build052 exact carpetRecordId linking, Build051 cut-count persistence, Build050 Full Roll Finish, Private Administrator access and Multi-AI Gateway are retained.",
-  "build": "053"
+  "notes": "Historical Carpet Cut Reconciliation persistence fix. Reconciliation now waits for cloud push + verification of Carpet Inventory, Cutting History, Operations and Event History before reporting success, preventing stale cloud data from restoring the old roll balance. The exact carpet record is re-read and verified after save. Retains Build053 reconciliation, Build052 exact carpetRecordId linkage, Build051 cut-count persistence, Build050 Full Roll Finish, Private Administrator access and Multi-AI Gateway."
 }

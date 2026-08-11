@@ -3305,7 +3305,7 @@ function historicalCarpetCutCandidates(){
  }
  return rows.sort((a,b)=>String(b.op.date||'').localeCompare(String(a.op.date||''))||Number(b.op.id)-Number(a.op.id));
 }
-function repairHistoricalCarpetCutInteractive(){
+async function repairHistoricalCarpetCutInteractive(){
  const status=$('carpetCutRepairStatus'),rows=historicalCarpetCutCandidates();
  if(!rows.length){if(status)status.innerHTML='✅ No safe historical cut-repair candidates were found. A candidate appears only when a Completed cut exists and the exact roll still equals its untouched Original Size.';alert('No safe historical cut-repair candidates were found.');return}
  const summary=rows.slice(0,12).map((x,i)=>`${i+1}. ${x.op.date||''} · PO ${x.op.po||'—'} · Roll ${x.roll.roll} · ${x.op.collection||x.roll.collection||'Carpet'} ${x.op.colour||x.roll.colour||''} · requested ${feetLabel(Number((x.op.requestedQuantity??x.op.quantity) || 0))} · current/original ${feetLabel(x.current)}`).join('\n');
@@ -3323,7 +3323,29 @@ function repairHistoricalCarpetCutInteractive(){
  const allOps=operationRecords(),stored=allOps.find(r=>String(r.id)===String(op.id));if(stored){stored.carpetRecordId=target.id;stored.inventoryMode='Stock';stored.numberOfCuts=numberOfCuts;stored.requestedQuantity=requested;stored.plannedStockQuantity=planned;stored.actualStockQuantity=actual;stored.allowanceInches=numberOfCuts*3;stored.fullRollConsumed=plan.useFullRoll;stored.impactApplied=true;stored.impactResult=`HISTORICAL CUT RECONCILIATION · Roll ${target.roll}: ${feetLabel(current)} → ${feetLabel(after)} · requested ${feetLabel(requested)} + ${numberOfCuts} cut(s) × 3″`;stored.appliedAt=new Date().toISOString();stored.reconciledAt=stored.appliedAt;stored.reconciledBuild=APP_BUILD;save(LOGDB,allOps)}
  const allCuts=cuttingRecords();let linked=allCuts.find(c=>String(c.operationId)===String(op.id));const now=new Date().toISOString();if(!linked){linked={id:Date.now()+Math.random(),operationId:op.id,date:op.date,time:op.time,roll:target.roll,collection:op.collection||target.collection,colour:op.colour||target.colour,po:op.po,customer:op.customer||'',operator:op.operator,notes:op.notes||'',createdAt:now};allCuts.unshift(linked)}Object.assign(linked,{carpetRecordId:target.id,roll:target.roll,cutLength:requested,requestedCutLength:requested,plannedCutLength:planned,actualCutLength:actual,numberOfCuts,allowanceInches:numberOfCuts*3,beforeLength:current,remainingLength:after,fullRollConsumed:plan.useFullRoll,reconciledAt:now,reconciledBuild:APP_BUILD});save(CUTDB,allCuts);
  const events=load(EVENTDB);events.unshift({id:Date.now()+Math.random(),operationId:op.id,time:now,type:'Historical Carpet Cut Reconciliation',reference:target.roll,result:`Exact roll ${target.roll} corrected ${feetLabel(current)} → ${feetLabel(after)}; requested ${feetLabel(requested)}; ${numberOfCuts} cut(s) × 3″; Build${APP_BUILD}`});save(EVENTDB,events);
- renderCarpetInventory();renderDashboard();if(status)status.innerHTML=`✅ Repaired <b>${esc(target.roll)}</b>: ${feetLabel(current)} → <b>${feetLabel(after)}</b> · ${numberOfCuts} cut(s) · ${feetLabel(actual)} deducted. Audit trail saved.`;alert(`Repair completed.\n\nRoll ${target.roll}: ${feetLabel(current)} → ${feetLabel(after)}\nCuts / Pieces: ${numberOfCuts}\nDeduction: ${feetLabel(actual)}`)
+ // Build054: the reconciliation is not considered finished until the four linked datasets
+ // have been pushed and verified in the cloud. This prevents a silent cloud refresh from
+ // restoring the pre-repair carpet balance while Cutting History already shows the repair.
+ const savedKeys=[CARPETDB,CUTDB,LOGDB,EVENTDB];
+ try{
+  if(cloudSession()&&localStorage.getItem(CLOUD_ENABLED_KEY)==='1')await flushAndVerifyDatasets(savedKeys);
+ }catch(err){
+  localStorage.setItem(CLOUD_LAST_ERROR_KEY,err.message);
+  renderCloudStatus();
+  alert('Repair was saved on this device, but cloud verification did not finish. Keep this page open and use Settings → Sync Now before reloading.\n\n'+err.message);
+  return;
+ }
+ // Re-read the exact record from storage after save/cloud verification instead of relying on
+ // the stale object reference that existed before reconciliation.
+ const verified=carpetRecords().find(r=>String(r.id)===String(target.id));
+ if(!verified||Math.abs(Number(verified.length||0)-after)>0.011){
+  alert('Repair verification stopped: the Carpet Inventory balance did not persist. No success message will be shown.');
+  return;
+ }
+ renderCarpetInventory();renderDashboard();
+ if(activeCarpetId&&String(activeCarpetId)===String(verified.id))openCarpetDetail(verified.id);
+ if(status)status.innerHTML=`✅ Repaired and verified <b>${esc(verified.roll)}</b>: ${feetLabel(current)} → <b>${feetLabel(verified.length)}</b> · ${numberOfCuts} cut(s) · ${feetLabel(actual)} deducted.`;
+ alert(`Repair completed and verified.\n\nRoll ${verified.roll}: ${feetLabel(current)} → ${feetLabel(verified.length)}\nCuts / Pieces: ${numberOfCuts}\nDeduction: ${feetLabel(actual)}`)
 }
 function resolveOperationMaster(operation){
  const masters=loadMasters();if(operation.productId){const linked=masters.find(m=>String(m.id)===String(operation.productId));if(linked)return linked}
