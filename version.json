@@ -1,8 +1,8 @@
 {
-  "version": "6.5.1",
+  "version": "6.5.2",
   "published": "2026-08-10",
   "channel": "stable",
-  "name": "Exact Carpet Inventory Link Fix",
-  "notes": "Locks Carpet Cutting to the exact Carpet Inventory record selected by the operator. Persists carpetRecordId from Carpet Inventory through drafts, saved operations, completion, stock deduction and Cutting History; completion resolves by ID first and exact roll number second, preventing sourceRoll/parentRoll child records from receiving the deduction. Build051 cut-count persistence, Build050 Full Roll Finish, Add Work validation, Private Administrator access and Multi-AI Gateway are retained.",
-  "build": "052"
+  "name": "Historical Carpet Cut Reconciliation",
+  "notes": "Build053 fixes version-label consistency and adds a guarded Historical Carpet Cut Reconciliation tool. Older Completed cuts are never auto-replayed. Settings can repair only safe candidates where the exact source roll still equals its untouched Original Size; the operator confirms the real Cuts/Pieces count, then the exact Carpet Inventory record, Cutting History, locked operation audit trail and event log are updated together. Build052 exact carpetRecordId linking, Build051 cut-count persistence, Build050 Full Roll Finish, Private Administrator access and Multi-AI Gateway are retained.",
+  "build": "053"
 }
