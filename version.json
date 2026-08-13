@@ -1,7 +1,7 @@
 {
-  "version": "6.5.4",
-  "build": "055",
+  "version": "6.5.5",
+  "build": "056",
   "date": "2026-08-13",
   "channel": "stable",
-  "notes": "Warehouse Active Scope + Move Inventory clarity. Active means physically present and available in the warehouse. Whole carpet rolls transferred out of Warehouse are assigned destination-specific external statuses and excluded from current warehouse inventory. Move Inventory Record now clearly shows the current product and explains why it is excluded from the destination list."
+  "notes": "Cloud Recovery. Cloud status now follows real Supabase requests instead of relying on browser navigator.onLine. Cloud requests time out after 12 seconds instead of hanging indefinitely. Sync Now reports when another sync is already running. Automatic refresh can retry even when Edge/Windows reports an uncertain offline state. Adds Last successful live request to Cloud Sync diagnostics. Retains Build055 Warehouse Active Scope and Move Inventory clarity."
 }
