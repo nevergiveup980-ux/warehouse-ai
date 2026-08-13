@@ -1,7 +1,7 @@
 {
-  "version": "6.5.5",
-  "build": "056",
+  "version": "6.5.6",
+  "build": "057",
   "date": "2026-08-13",
   "channel": "stable",
-  "notes": "Cloud Recovery. Cloud status now follows real Supabase requests instead of relying on browser navigator.onLine. Cloud requests time out after 12 seconds instead of hanging indefinitely. Sync Now reports when another sync is already running. Automatic refresh can retry even when Edge/Windows reports an uncertain offline state. Adds Last successful live request to Cloud Sync diagnostics. Retains Build055 Warehouse Active Scope and Move Inventory clarity."
+  "notes": "Unified Label System. Carpet and general product/inventory labels now share one balanced visual language. Colour/variant is enlarged for faster warehouse recognition, label branding text is removed, QR placement is standardized, general Letter 2-Up matches the carpet landscape print system, and all newly generated QR codes are permanently anchored to https://warehouse.runlu.ca/ instead of the current browser/preview origin. Existing data, Cloud Sync, Private Administrator access and Multi-AI/GPT Gateway are unchanged."
 }
