@@ -1,0 +1,12 @@
+RUNLU Warehouse OS V6.5.4 · Build055
+Warehouse Active Scope + Move Inventory Clarity
+Date: 2026-08-13
+
+- Active means physically present and available in the warehouse.
+- Whole carpet rolls leaving Warehouse become destination-specific external statuses: At Store, With Installer, At Branch, or With Customer, and are excluded from current warehouse inventory.
+- Returned rolls can become Active again after transfer back to Warehouse.
+- Partial transfers keep the warehouse source remainder Active while transferred child pieces are external.
+- General inventory records fully transferred out are archived from current warehouse stock.
+- Move Inventory Record clearly labels CURRENT PRODUCT, quantity and rack/location and explains why the current product is not repeated in the destination list.
+- Startup reconciliation repairs older whole-roll transfers that were left incorrectly Active.
+- Cloudflare Multi-AI worker is unchanged; no Worker redeployment is required.
