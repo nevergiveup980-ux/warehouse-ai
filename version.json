@@ -1,7 +1,7 @@
 {
-  "version": "6.6.8",
-  "build": "069",
+  "version": "6.6.9",
+  "build": "070",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Safe Merge Both Sides. Replaces dataset-level device-vs-cloud conflict choice for mergeable warehouse datasets with record-level union and reconciliation. Records present only on the phone/device are preserved; records present only in the cloud are restored locally; matching records are reconciled by stable record identity and latest timestamp while retaining nonblank older fields. Product Master, Product Inventory, Customer Orders, Special Orders, Operations, Cutting History, Carpet Inventory and other array datasets can be merged safely. Sync Now performs the safe merge before normal sync when mergeable conflicts exist. The old Keep Cloud / Keep This Device controls remain only as emergency manual overrides. No database schema change."
+  "notes": "Lifecycle-Aware Safe Merge. Prevents one-sided Product Inventory records from being blindly resurrected during phone/cloud conflict resolution. A record that exists on only one side is paused for review because absence may mean either a new record that has not synced yet or inventory that was already Used Up, Archived, Transferred Out, Shipped, Sold or Deleted. Adds One-Sided Inventory Review with Restore as Active or Keep Ended / Do Not Restore decisions and persistent inventory tombstones. Sync Now is guarded so Product Inventory cannot be overwritten while unresolved one-sided records remain. Legacy Build069 union-merge controls are disabled once Build070 loads. No database schema change; prior Hybrid Carpet Tag and Cut Piece Return fixes remain intact."
 }
