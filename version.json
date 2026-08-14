@@ -1,7 +1,7 @@
 {
-  "version": "6.6.4",
-  "build": "065",
+  "version": "6.6.5",
+  "build": "066",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Verified Cut Piece Return. Fixes completed carpet-return operations that could show 'Completed and linked to inventory' even when the returned child roll was not actually present in Carpet Inventory. Cut Piece Return and Installer Return now use idempotent source-operation matching, create the next child roll only once, read the saved Carpet Inventory back for verification, and refuse the green completed-linked state if verification fails. Build065 also repairs previously completed return operations whose child inventory is missing, including the RC2323 28'9\" field case, while preserving existing child returns such as RC2323A. Build064 cloud no-replace guard and earlier desktop/tag fixes remain unchanged. No database schema change."
+  "notes": "Hotfix Scope Bridge + Return Recovery. Fixes the runtime namespace mismatch that prevented Build064/Build065 isolated hotfixes from seeing the main app's lexical CARPETDB, CUTDB, LOGDB and DATA_KEYS constants. Restores the missing completed Cut Piece Return child-roll recovery path, including the RC2323 28'9\" case, while preserving RC2323A and source-roll balance. Completed Stock returns are recovered idempotently and verified by sourceOperationId, child roll and returned length. Also allows the prior Carpet Cloud no-replace guard to attach to the real Carpet Inventory dataset. No schema change."
 }
