@@ -1,7 +1,7 @@
 {
-  "version": "6.6.7",
-  "build": "068",
+  "version": "6.6.8",
+  "build": "069",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Hybrid Carpet Tag. Combines the proven visual hierarchy of the office Word carpet tags with RUNLU QR intelligence and the existing double-sided cutting-history back. Front labels now emphasize Roll # first, Product/Collection second, Colour third, then enlarged LOT, SIZE and MFG ROLL fields while preserving QR Scan to View & Edit. Browser preview/print and Word export use the same hierarchy. Back-side Original Size, DATE/PO/NAME/SALES/CUT/BAL cutting table, reversed duplex alignment and QR remain intact. No inventory, cloud-sync, Cut Piece Return or database schema changes."
+  "notes": "Safe Merge Both Sides. Replaces dataset-level device-vs-cloud conflict choice for mergeable warehouse datasets with record-level union and reconciliation. Records present only on the phone/device are preserved; records present only in the cloud are restored locally; matching records are reconciled by stable record identity and latest timestamp while retaining nonblank older fields. Product Master, Product Inventory, Customer Orders, Special Orders, Operations, Cutting History, Carpet Inventory and other array datasets can be merged safely. Sync Now performs the safe merge before normal sync when mergeable conflicts exist. The old Keep Cloud / Keep This Device controls remain only as emergency manual overrides. No database schema change."
 }
