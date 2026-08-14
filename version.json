@@ -1,7 +1,7 @@
 {
-  "version": "6.5.8",
-  "build": "059",
+  "version": "6.5.9",
+  "build": "060",
   "date": "2026-08-13",
   "channel": "stable",
-  "notes": "Cloud Dataset Conflict Guard + Carpet Receiving Verification. Prevents an older device from silently overwriting a dataset changed by another device, tracks per-dataset cloud versions, blocks stale background uploads safely, verifies each completed Carpet Receiving roll actually exists in Carpet Inventory before marking the operation Linked, and performs a one-time reconciliation of missing rolls from completed linked receiving history. Retains Build058 Product 2-Up labels, Build057 unified labels, Cloud Recovery, Warehouse Active Scope and all existing data/workflows."
+  "notes": "Dataset Smart Sync + Conflict-Only Resolver. Sync Now now evaluates each synchronized dataset independently: safe uploads and downloads continue while only datasets changed on both devices pause for review. Adds conflict-only Keep Cloud / Keep This Device actions, fixes full Cloud Download so resolved pending keys are actually cleared, keeps exact per-dataset cloud version markers, and preserves Build059 stale-overwrite protection, Carpet Receiving verification, Build058 Product 2-Up labels and all existing workflows."
 }
