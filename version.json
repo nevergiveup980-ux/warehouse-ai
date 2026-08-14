@@ -1,7 +1,7 @@
 {
-  "version": "6.6.5",
-  "build": "066",
+  "version": "6.6.6",
+  "build": "067",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Hotfix Scope Bridge + Return Recovery. Fixes the runtime namespace mismatch that prevented Build064/Build065 isolated hotfixes from seeing the main app's lexical CARPETDB, CUTDB, LOGDB and DATA_KEYS constants. Restores the missing completed Cut Piece Return child-roll recovery path, including the RC2323 28'9\" case, while preserving RC2323A and source-roll balance. Completed Stock returns are recovered idempotently and verified by sourceOperationId, child roll and returned length. Also allows the prior Carpet Cloud no-replace guard to attach to the real Carpet Inventory dataset. No schema change."
+  "notes": "Robust Cut Piece Return Recovery. Broadens historical completed carpet-return recovery so it can reconstruct a missing returned child roll even when older operation records omit inventoryMode or store returned length in legacy text/feet-inch fields. Completed Cut Piece Return / Installer Return records are matched to the source carpet roll, preserve existing prior children such as RC2323A, allocate the next child suffix, write and verify the child inventory, link matching cutting history when available, and keep the source roll balance unchanged. No database schema change."
 }
