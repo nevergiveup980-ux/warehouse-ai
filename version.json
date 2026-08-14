@@ -1,7 +1,7 @@
 {
-  "version": "6.6.0",
-  "build": "061",
-  "date": "2026-08-13",
+  "version": "6.6.1",
+  "build": "062",
+  "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Cloud Status Recovery. Fixes the header getting stuck on Checking after a cloud sync or automatic refresh has already finished. The header now recalculates after cloudSyncBusy is cleared and correctly returns to Cloud ✓, pending, conflict, or Cloud issue. Retains Build060 Dataset Smart Sync, Build059 stale-overwrite protection and Carpet Receiving verification, Build058 Product 2-Up labels, and all existing data/workflows."
+  "notes": "Record-Level Cloud Merge + Workstation Layout. Safely merges non-overlapping records inside conflicting datasets so a carpet roll added on one device (for example Roll 2347) is not hidden by a whole-dataset conflict on another device. True same-record conflicts remain protected. Cloud status is clickable and opens a dataset inspector. Desktop layout expands fluidly with adaptive grids and larger work areas while preserving the phone layout."
 }
