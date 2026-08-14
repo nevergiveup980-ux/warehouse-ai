@@ -1,0 +1,30 @@
+RUNLU Warehouse AI V6.6.1 Build062
+Date: 2026-08-14
+
+CARPET CLOUD RECONCILIATION
+- Fixes the device-to-device Carpet Inventory deadlock caused by dataset-level conflicts.
+- Safely merges carpet rolls by stable roll identity instead of forcing a whole-device Upload or Download.
+- Preserves rolls that exist only on the phone and rolls that exist only on the computer.
+- When the same roll exists on both sides, the newer record wins while nonblank older fields are preserved.
+- Adds an explicit Reconcile Carpet Inventory action to Cloud Sync.
+- Sync Now automatically performs carpet reconciliation first when Carpet Inventory is pending or conflicted.
+- Adds a local audit record of the last carpet merge counts.
+
+CLOUD STATUS / CONFLICT INSPECTOR
+- The header Cloud pill is clickable and opens the Cloud Sync area.
+- Pending datasets and conflicting datasets are shown separately in an inspector.
+- Carpet Inventory conflicts explain that Build062 can use safe roll-level reconciliation.
+- The patch never uses whole-device Upload/Download for automatic carpet recovery.
+
+DESKTOP WORKBENCH RESPONSIVE LAYOUT
+- Wide desktop screens use the full available page width without merely stretching mobile cards.
+- Settings becomes a two-column workbench on normal desktop displays and three columns on very wide displays.
+- Cloud Sync and Data Protection remain wider priority panels.
+- Forms, map grids, report grids and Carpet Workbench actions adapt to available width.
+- Phone/tablet layouts remain compact and touch-friendly.
+
+SAFETY
+- No Supabase schema change.
+- Existing local database keys remain unchanged.
+- Existing QR engine is preserved exactly as qrcode-core.js for offline operation.
+- Build062 is loaded as an isolated hotfix layer so the V6.6.0 Build061 index.html remains intact.
