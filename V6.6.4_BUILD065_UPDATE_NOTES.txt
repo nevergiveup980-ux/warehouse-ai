@@ -1,0 +1,23 @@
+RUNLU Warehouse AI V6.6.4 Build065 — Verified Cut Piece Return
+Date: 2026-08-14
+
+FIELD CASE
+- Source roll: RC2323
+- Existing prior returned child: RC2323A = 9 ft (must remain unchanged)
+- New completed Cut Piece Return: 28 ft 9 in
+- Problem: Operations could display Completed and linked to inventory even though the new child roll was missing from Carpet Inventory.
+
+FIX
+1. Cut Piece Return and Installer Return are idempotent by sourceOperationId.
+2. The next child roll is created only if that operation does not already have a child.
+3. After save, Carpet Inventory is read back and verified for operation ID, exact child roll and exact returned length.
+4. A return operation cannot be treated as successfully linked if that verification fails.
+5. Completed historical return operations are inspected on startup. If an operation says impactApplied but its child inventory is missing, Build065 reconstructs and verifies the missing child.
+6. Existing returned children such as RC2323A are preserved; the missing 28 ft 9 in return should therefore use the next available child suffix (normally RC2323B).
+7. Matching cutting history is linked only after the returned child is verified.
+
+UNCHANGED
+- Source roll balance is never increased by Cut Piece Return.
+- Build064 Carpet Cloud No-Replace Guard remains active.
+- Build063 Word Carpet Tag Layout Lock remains active.
+- No database schema change.
