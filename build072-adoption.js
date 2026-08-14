@@ -7,7 +7,7 @@
   const SNAP='runlu_build072_precloud_device_snapshot_v680';
   const DONE='runlu_build072_device_adoption_done_v680';
   const AUDIT='runlu_build072_device_adoption_audit_v680';
-  const INV='runlu_inventory_records_v21',PM='runlu_product_master_v21';
+  const INV='runlu_inventory_records_v21',PM='runlu_product_master_v21',CARPET='runlu_carpet_inventory_v52';
   const KEYS=[
     'runlu_product_master_v21','runlu_inventory_records_v21','runlu_orders_v20','runlu_receiving_v50','runlu_tasks_v50',
     'runlu_special_orders_v51','runlu_operations_log_v52','runlu_carpet_inventory_v52','runlu_cutting_log_v52',
@@ -17,7 +17,7 @@
   const text=v=>String(v??'').trim(),norm=v=>text(v).toUpperCase().replace(/\s+/g,' ').trim();
   const parseMs=v=>{const n=new Date(v||0).getTime();return Number.isFinite(n)?n:0};
   const rowMs=r=>Math.max(parseMs(r?.lastUpdatedAt),parseMs(r?.updatedAt),parseMs(r?.updated),parseMs(r?.completedAt),parseMs(r?.receivedAt),parseMs(r?.createdAt),parseMs(r?.created),parseMs(r?.date));
-  const rid=(k,r)=>k===INV?text(r?.inventoryId||r?.id||r?.cloudRecordId):text(r?.id||r?.cloudRecordId||r?.roll||r?.operationId);
+  const rid=(k,r)=>k===CARPET?norm(r?.roll):k===INV?text(r?.inventoryId||r?.id||r?.cloudRecordId):text(r?.id||r?.cloudRecordId||r?.operationId||r?.roll);
   const incompatible=(a,b)=>kval(a,'name')&&kval(b,'name')&&kval(a,'name')!==kval(b,'name')||kval(a,'sku')&&kval(b,'sku')&&kval(a,'sku')!==kval(b,'sku')||kval(a,'color')&&kval(b,'color')&&kval(a,'color')!==kval(b,'color');
   function kval(x,k){return norm(x?.[k])}
   function protectedRepair(r){return !!(r?.identityRestoredAt||r?.identityRepairedAt||r?.lifecycleCorrectedAt||r?.identityRepair)}
@@ -35,7 +35,7 @@
     const audit=[];let changed=0;
     for(const k of KEYS){
       const old=snap.datasets[k],cur=read(k);if(old==null)continue;
-      if(k==='runlu_settings_v20')continue; // settings follow cloud; warehouse business records are the migration priority.
+      if(k==='runlu_settings_v20')continue;
       if(!Array.isArray(old)||!Array.isArray(cur))continue;
       const map=new Map();cur.forEach(r=>{const id=rid(k,r);if(id)map.set(id,r)});let touched=false;
       for(const r of old){
