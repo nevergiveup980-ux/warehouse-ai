@@ -1,7 +1,7 @@
 {
-  "version": "6.5.7",
-  "build": "058",
+  "version": "6.5.8",
+  "build": "059",
   "date": "2026-08-13",
   "channel": "stable",
-  "notes": "Product 2-Up Label System. General product labels now print two side-by-side on one US Letter landscape sheet, matching the carpet-roll workflow. Left and Right products are selected independently, so a sheet can contain two different products or the same product twice. Product/collection/colour hierarchy is enlarged and rebalanced, QR codes are lifted slightly for cleaner bottom spacing, and canonical warehouse.runlu.ca deep links are retained. Existing Cloud Sync, inventory data, carpet workflows, Private Administrator access and Multi-AI/GPT Gateway are unchanged."
+  "notes": "Cloud Dataset Conflict Guard + Carpet Receiving Verification. Prevents an older device from silently overwriting a dataset changed by another device, tracks per-dataset cloud versions, blocks stale background uploads safely, verifies each completed Carpet Receiving roll actually exists in Carpet Inventory before marking the operation Linked, and performs a one-time reconciliation of missing rolls from completed linked receiving history. Retains Build058 Product 2-Up labels, Build057 unified labels, Cloud Recovery, Warehouse Active Scope and all existing data/workflows."
 }
