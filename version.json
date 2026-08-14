@@ -1,7 +1,7 @@
 {
-  "version": "6.6.1",
-  "build": "062",
+  "version": "6.6.2",
+  "build": "063",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Carpet Cloud Reconciliation + Desktop Workbench. Adds safe roll-level merge for Carpet Inventory so a roll present on one device (for example 2347) is not blocked by whole-dataset conflicts on another device. Cloud status is now actionable with a conflict inspector and a dedicated Reconcile Carpet Inventory action. Desktop layouts use wide-screen workbench grids instead of stretching the mobile layout, while phone layouts remain compact. No database schema change."
+  "notes": "Word Carpet Tag Layout Lock. Fixes Double-Sided Carpet Tags exported to Microsoft Word so each carpet tag stays together as one fixed cell and fields such as SIZE cannot spill into the opposite label. Front labels remain left/right and back labels remain reversed right/left for short-edge duplex printing. Build062 Carpet Cloud Reconciliation and Desktop Workbench remain unchanged. No database schema change."
 }
