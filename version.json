@@ -1,7 +1,7 @@
 {
-  "version": "6.5.9",
-  "build": "060",
+  "version": "6.6.0",
+  "build": "061",
   "date": "2026-08-13",
   "channel": "stable",
-  "notes": "Dataset Smart Sync + Conflict-Only Resolver. Sync Now now evaluates each synchronized dataset independently: safe uploads and downloads continue while only datasets changed on both devices pause for review. Adds conflict-only Keep Cloud / Keep This Device actions, fixes full Cloud Download so resolved pending keys are actually cleared, keeps exact per-dataset cloud version markers, and preserves Build059 stale-overwrite protection, Carpet Receiving verification, Build058 Product 2-Up labels and all existing workflows."
+  "notes": "Cloud Status Recovery. Fixes the header getting stuck on Checking after a cloud sync or automatic refresh has already finished. The header now recalculates after cloudSyncBusy is cleared and correctly returns to Cloud ✓, pending, conflict, or Cloud issue. Retains Build060 Dataset Smart Sync, Build059 stale-overwrite protection and Carpet Receiving verification, Build058 Product 2-Up labels, and all existing data/workflows."
 }
