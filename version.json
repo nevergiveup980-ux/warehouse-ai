@@ -1,7 +1,7 @@
 {
-  "version": "6.6.6",
-  "build": "067",
+  "version": "6.6.7",
+  "build": "068",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Robust Cut Piece Return Recovery. Broadens historical completed carpet-return recovery so it can reconstruct a missing returned child roll even when older operation records omit inventoryMode or store returned length in legacy text/feet-inch fields. Completed Cut Piece Return / Installer Return records are matched to the source carpet roll, preserve existing prior children such as RC2323A, allocate the next child suffix, write and verify the child inventory, link matching cutting history when available, and keep the source roll balance unchanged. No database schema change."
+  "notes": "Hybrid Carpet Tag. Combines the proven visual hierarchy of the office Word carpet tags with RUNLU QR intelligence and the existing double-sided cutting-history back. Front labels now emphasize Roll # first, Product/Collection second, Colour third, then enlarged LOT, SIZE and MFG ROLL fields while preserving QR Scan to View & Edit. Browser preview/print and Word export use the same hierarchy. Back-side Original Size, DATE/PO/NAME/SALES/CUT/BAL cutting table, reversed duplex alignment and QR remain intact. No inventory, cloud-sync, Cut Piece Return or database schema changes."
 }
