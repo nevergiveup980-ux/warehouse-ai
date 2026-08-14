@@ -1,7 +1,7 @@
 {
-  "version": "6.6.0",
-  "build": "061",
-  "date": "2026-08-13",
+  "version": "6.6.1",
+  "build": "062",
+  "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Cloud Status Recovery. Fixes the header getting stuck on Checking after a cloud sync or automatic refresh has already finished. The header now recalculates after cloudSyncBusy is cleared and correctly returns to Cloud ✓, pending, conflict, or Cloud issue. Retains Build060 Dataset Smart Sync, Build059 stale-overwrite protection and Carpet Receiving verification, Build058 Product 2-Up labels, and all existing data/workflows."
+  "notes": "Carpet Cloud Reconciliation + Desktop Workbench. Adds safe roll-level merge for Carpet Inventory so a roll present on one device (for example 2347) is not blocked by whole-dataset conflicts on another device. Cloud status is now actionable with a conflict inspector and a dedicated Reconcile Carpet Inventory action. Desktop layouts use wide-screen workbench grids instead of stretching the mobile layout, while phone layouts remain compact. No database schema change."
 }
