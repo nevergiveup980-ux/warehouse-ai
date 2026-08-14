@@ -1,7 +1,7 @@
 {
-  "version": "6.6.3",
-  "build": "064",
+  "version": "6.6.4",
+  "build": "065",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Carpet Cloud No-Replace Guard. Fixes the regression where background cloud recovery could silently replace the entire local Carpet Inventory with an older/incomplete cloud copy, causing a roll such as 2347 to disappear after refresh or upgrade. Carpet Inventory cloud downloads now reconcile device and cloud roll-by-roll and preserve rolls present on either side. Exact operational roll identity is preserved, so 2347 and RC2347 are not treated as the same roll. Build062 desktop/cloud inspector and Build063 Word tag layout lock remain unchanged. No database schema change."
+  "notes": "Verified Cut Piece Return. Fixes completed carpet-return operations that could show 'Completed and linked to inventory' even when the returned child roll was not actually present in Carpet Inventory. Cut Piece Return and Installer Return now use idempotent source-operation matching, create the next child roll only once, read the saved Carpet Inventory back for verification, and refuse the green completed-linked state if verification fails. Build065 also repairs previously completed return operations whose child inventory is missing, including the RC2323 28'9\" field case, while preserving existing child returns such as RC2323A. Build064 cloud no-replace guard and earlier desktop/tag fixes remain unchanged. No database schema change."
 }
