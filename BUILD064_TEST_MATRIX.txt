@@ -1,0 +1,18 @@
+RUNLU Warehouse AI Build064 Regression Test Matrix
+
+1. Device-only carpet roll survives cloud refresh.
+   Example: local 2347 exists, cloud lacks 2347 -> merged result contains 2347.
+
+2. Cloud-only carpet roll downloads to device.
+   Example: cloud RC2348 exists, local lacks RC2348 -> merged result contains RC2348.
+
+3. Same roll on both sides reconciles by newer timestamp and preserves nonblank fields.
+
+4. Exact roll identity is not collapsed.
+   2347 and RC2347 remain separate records.
+
+5. Non-carpet datasets continue to use existing Build061/062 cloud behavior.
+
+6. Build063 Word tag export remains loaded after Build062 and before Build064.
+
+7. No database schema or local-storage key migration.
