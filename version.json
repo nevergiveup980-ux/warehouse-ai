@@ -1,7 +1,7 @@
 {
-  "version": "6.6.9",
-  "build": "070",
+  "version": "6.7.0",
+  "build": "071",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Lifecycle-Aware Safe Merge. Prevents one-sided Product Inventory records from being blindly resurrected during phone/cloud conflict resolution. A record that exists on only one side is paused for review because absence may mean either a new record that has not synced yet or inventory that was already Used Up, Archived, Transferred Out, Shipped, Sold or Deleted. Adds One-Sided Inventory Review with Restore as Active or Keep Ended / Do Not Restore decisions and persistent inventory tombstones. Sync Now is guarded so Product Inventory cannot be overwritten while unresolved one-sided records remain. Legacy Build069 union-merge controls are disabled once Build070 loads. No database schema change; prior Hybrid Carpet Tag and Cut Piece Return fixes remain intact."
+  "notes": "Product Identity Guard. Fixes the root cause of cross-device Product ID collisions: the legacy nextMasterId generator only examined the current device's local Product Master, so a device with an incomplete/stale product list could reissue a PRD number already used elsewhere. New products now receive collision-proof IDs such as PRD-0067-ABCDEF while preserving the familiar sequential prefix. Product Master cloud conflicts are identity-aware: if the same Product ID represents materially different names/SKUs/colours, sync pauses instead of overlaying the records. Adds a guarded repair for the confirmed PRD-0013 collision: restores Grand Cru · Barton 2 to PRD-0013, moves clearly Tolko Ulay Plywood Piece/sheet inventory to a new unique Product ID, normalizes linked operations, saves an audit backup first, and verifies the repaired datasets in cloud. Preserves Build070 lifecycle/tombstone protection, Build068 Hybrid Carpet Tags, and Build067 Cut Piece Return recovery."
 }
