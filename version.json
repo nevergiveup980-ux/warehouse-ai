@@ -1,7 +1,7 @@
 {
-  "version": "6.5.6",
-  "build": "057",
+  "version": "6.5.7",
+  "build": "058",
   "date": "2026-08-13",
   "channel": "stable",
-  "notes": "Unified Label System. Carpet and general product/inventory labels now share one balanced visual language. Colour/variant is enlarged for faster warehouse recognition, label branding text is removed, QR placement is standardized, general Letter 2-Up matches the carpet landscape print system, and all newly generated QR codes are permanently anchored to https://warehouse.runlu.ca/ instead of the current browser/preview origin. Existing data, Cloud Sync, Private Administrator access and Multi-AI/GPT Gateway are unchanged."
+  "notes": "Product 2-Up Label System. General product labels now print two side-by-side on one US Letter landscape sheet, matching the carpet-roll workflow. Left and Right products are selected independently, so a sheet can contain two different products or the same product twice. Product/collection/colour hierarchy is enlarged and rebalanced, QR codes are lifted slightly for cleaner bottom spacing, and canonical warehouse.runlu.ca deep links are retained. Existing Cloud Sync, inventory data, carpet workflows, Private Administrator access and Multi-AI/GPT Gateway are unchanged."
 }
