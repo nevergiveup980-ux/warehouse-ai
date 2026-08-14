@@ -1,0 +1,17 @@
+Build064 Root Cause Analysis
+
+Observed symptom:
+- Roll 2347 was visible on the computer after Carpet Cloud Reconciliation.
+- After a later refresh/upgrade it disappeared again while still existing on the phone.
+
+Root cause:
+- The older background Cloud Recovery path calls cloudDownloadAll(true).
+- Silent cloud download may select Carpet Inventory as safe for download when the remote dataset changed and the local dataset is not marked dirty.
+- applyCloudRows then replaces the entire local Carpet Inventory payload with the remote payload.
+- Build062 roll-level reconciliation runs later and only when Carpet Inventory is flagged pending/conflicted, so a previous silent replacement can remove a device-only roll before reconciliation has a chance to preserve it.
+
+Build064 correction:
+- Intercepts Carpet Inventory inside applyCloudRows before any silent/full cloud download can replace it.
+- Carpet Inventory is merged as a union of local and cloud rolls.
+- The merged union is retained locally and written back to cloud when it differs.
+- Other datasets retain the existing synchronization behavior.
