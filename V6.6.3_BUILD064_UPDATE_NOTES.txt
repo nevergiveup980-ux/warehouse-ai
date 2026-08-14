@@ -1,0 +1,22 @@
+RUNLU Warehouse AI V6.6.3 Build064
+Date: 2026-08-14
+
+CARPET CLOUD NO-REPLACE GUARD
+- Fixes the regression where background cloud recovery could silently replace the whole local Carpet Inventory with an older/incomplete cloud copy.
+- This was the reason a roll such as 2347 could reappear after reconciliation and then disappear again after refresh/upgrade.
+- Carpet Inventory cloud downloads now reconcile the local device and cloud copy roll-by-roll before writing local data.
+- Rolls present only on the device are preserved.
+- Rolls present only in the cloud are preserved.
+- Same-roll records reconcile by latest timestamp while preserving nonblank fields.
+- The merged Carpet Inventory is written back to the cloud when needed so the union becomes the current shared copy.
+
+ROLL IDENTITY SAFETY
+- Exact operational roll identity is preserved.
+- 2347 and RC2347 are treated as different roll numbers and are never collapsed merely because one begins with RC.
+
+PRESERVED FEATURES
+- Build062 Carpet Cloud Reconciliation + Desktop Workbench remain in place.
+- Build063 Microsoft Word Double-Sided Carpet Tag layout lock remains in place.
+- Browser label preview/print remains unchanged.
+- No Supabase schema change.
+- Existing warehouse database keys remain unchanged.
