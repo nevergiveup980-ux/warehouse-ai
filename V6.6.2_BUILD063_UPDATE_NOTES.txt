@@ -1,0 +1,22 @@
+RUNLU Warehouse AI V6.6.2 Build063
+Date: 2026-08-14
+
+WORD DOUBLE-SIDED CARPET TAG FIX
+- Fixes Microsoft Word export where fields from the left carpet tag could spill into the right label area.
+- Replaces CSS table-cell emulation with a real fixed two-column Word-compatible table.
+- Each tag is kept as one non-splitting cell with fixed width and height.
+- Roll number, collection, colour, LOT, SIZE, Manufacturer Roll and QR remain inside the same tag.
+- Front page remains Left / Right.
+- Back page remains reversed Right / Left for short-edge duplex alignment.
+- Browser Print and on-screen label preview are not changed.
+
+SAFETY
+- Build062 Carpet Cloud Reconciliation is preserved.
+- Build062 Desktop Workbench is preserved.
+- No warehouse database keys or Supabase schema are changed.
+- No inventory quantities, carpet roll records, orders or operation history are modified.
+
+REFERENCE TEST
+- 2347 — ELEGANT 40 — LIGHT GREY 1114
+- RC2348 — ELEGANT 40 — LIGHT GREY
+These two rolls are the first practical verification pair for the fixed Word export.
