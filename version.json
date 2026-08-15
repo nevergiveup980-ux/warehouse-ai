@@ -1,7 +1,7 @@
 {
-  "version": "6.8.3",
-  "build": "075",
-  "date": "2026-08-14",
+  "version": "6.9.0",
+  "build": "076",
+  "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Database Integrity Guard. Follows a full Cloud Master cleanup protected by an 811-record pre-cleanup snapshot. Adds a local integrity monitor for duplicate Product identities, exact duplicate inventory, orphan inventory links, and stock-program unit/placeholders. Warehouse Voice now counts only confirmed, identity-compatible inventory for strict Roll stock programs such as Platinum, Heather Choice and Spill Blocker, and excludes stale zero-quantity physical-count placeholders when confirmed stock exists. The cleanup also standardizes the Product Master title TAKTIK-3GAL, preserves historical operation snapshots, retires legacy duplicate/stale records with tombstones, and keeps Cloud Master as the source of truth."
+  "notes": "Warehouse In / Out Ledger. Adds a derived warehouse-flow report beginning Aug 1 of each inventory year, with current Month, inventory-aligned Half-Year (H1 Aug-Jan / H2 Feb-Jul), and full Inventory Year (Aug 1-Jul 31) summaries. Counts completed physical inbound/outbound records already captured by Operations, Receiving, and reviewed Scan add/subtract history; internal preparation such as Carpet Cutting and Order Picking is not treated as warehouse door movement. Inventory Transfers are classified by direction. Mixed units are never incorrectly added together: Roll, Carton, Pail, Foot, etc. remain separate. Includes inbound/outbound line counts, quantities by unit, net-by-unit figures, and a 12-month breakdown. No new transaction database is created; the ledger reads existing Cloud Master-synchronized history." 
 }
