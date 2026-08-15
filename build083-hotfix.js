@@ -98,7 +98,11 @@
     const outTxt=clean(first.querySelector('.flow078C .out')?.textContent)||'OUT —';
     const fy=clean(badge?.textContent)||'FY ledger';
     const mini=entry.querySelector('.ledger083Mini');
-    if(mini)mini.innerHTML=`<span class="in">${inTxt}</span><span class="out">${outTxt}</span><span class="fy">${fy}</span>`;
+    const sig=[inTxt,outTxt,fy].join('|');
+    if(mini&&mini.dataset.sig!==sig){
+      mini.dataset.sig=sig;
+      mini.innerHTML=`<span class="in">${inTxt}</span><span class="out">${outTxt}</span><span class="fy">${fy}</span>`;
+    }
   }
 
   function ensureAll(){ensureStyle();ensurePage();ensureEntry();moveLedger();syncMini()}
