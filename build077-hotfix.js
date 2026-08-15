@@ -9,6 +9,7 @@
   const COUNT='runlu_count_sessions_v30';
   const PM='runlu_product_master_v21';
   const PRIMARY_CATEGORIES=['CARPET','Heather Choice','Platinum','Spill Blocker','Vinyl Plank','Carpet Tile'];
+  let categoryPeriod='year';
 
   const parse=s=>{try{return JSON.parse(s)}catch{return null}};
   const arr=k=>{const v=parse(localStorage.getItem(k)||'null');return Array.isArray(v)?v:[]};
@@ -48,6 +49,15 @@
     return map[s]||text(v)||'Unit';
   }
   function qtyFor(x){
+    const t=norm(x?.type);
+    if(t==='carpet cutting'&&norm(x?.inventoryMode)==='stock'){
+      const actual=Number(x?.actualStockQuantity);if(Number.isFinite(actual)&&actual>0)return actual;
+      const requested=Number(x?.requestedQuantity??x?.quantity),allowance=Number(x?.allowanceInches);
+      if(Number.isFinite(requested)&&requested>0){
+        if(Number.isFinite(allowance)&&allowance>=0)return Number((requested+allowance/12).toFixed(4));
+        const cuts=Math.max(1,Math.floor(Number(x?.numberOfCuts||1)||1));return Number((requested+cuts*0.25).toFixed(4));
+      }
+    }
     try{if(typeof window.operationStockQuantity==='function'){const q=Number(window.operationStockQuantity(x));if(Number.isFinite(q)&&q>0)return q}}catch{}
     for(const v of [x?.stockQuantity,x?.actualStockQuantity,x?.quantity]){const q=Number(v);if(Number.isFinite(q)&&q>0)return q}
     return 0;
@@ -101,7 +111,7 @@
     const t=norm(item?.type||parent?.type),unit=canonicalUnit(item?.stockUnit||item?.unit||parent?.stockUnit||parent?.unit),hasRoll=text(item?.roll||parent?.roll),hasCarpetId=text(item?.carpetRecordId||parent?.carpetRecordId);
     if(t.includes('carpet')||t==='rem / remnant transfer'||(t==='inventory transfer'&&(hasRoll||hasCarpetId||unit==='Foot')))return 'CARPET';
     const m=masterFor(item,parent,maps),category=norm(m?.category),name=norm(m?.name),series=norm(m?.series),hay=norm([name,category,series,item?.product,item?.collection,parent?.product,parent?.collection].filter(Boolean).join(' '));
-    if(category==='heather choice'||hay.includes('heather choice'))return 'Heather Choice';
+    if(category==='heather choice'||hay.includes('heather choice')||hay.includes('heatherchoice'))return 'Heather Choice';
     if(category==='platinum'||name==='platinum'||hay.includes('platinum'))return 'Platinum';
     if(category==='spill blocker'||hay.includes('spill blocker')||hay.includes('spillblocker'))return 'Spill Blocker';
     if(category==='vinyl plank')return 'Vinyl Plank';
@@ -114,7 +124,8 @@
     for(const o of arr(OPS)){
       const d=dateOnly(o?.date||o?.completedAt||o?.appliedAt||o?.createdAt);if(!d)continue;
       const items=Array.isArray(o?.items)&&o.items.length?o.items:[o];
-      items.forEach((item,i)=>{
+      items.forEach((raw,i)=>{
+        const item=raw===o?o:{...raw,type:raw?.type||o?.type,inventoryMode:raw?.inventoryMode||o?.inventoryMode};
         if(!completedLine(item,o))return;
         const direction=directionFor(item,o);if(!direction)return;
         const qty=qtyFor(item),unit=unitFor(item);if(!(qty>0))return;
@@ -176,6 +187,7 @@
   function categoryRows(rows,p){
     return PRIMARY_CATEGORIES.map(cat=>{const s=categorySummary(rows,p,cat);return `<tr><td><b>${esc(cat)}</b></td><td>${s.inLines}<br><span>${esc(unitsLabel(s.incoming))}</span></td><td>${s.outLines}<br><span>${esc(unitsLabel(s.outgoing))}</span></td><td>${esc(netLabel(s))}</td></tr>`}).join('');
   }
+  function categoryButtons(){return ['month','half','year'].map(k=>`<button class="${categoryPeriod===k?'active':''}" onclick="setFlow077CategoryPeriod('${k}')">${k==='month'?'Month':k==='half'?'Half-Year':'Inventory Year'}</button>`).join('')}
   function sourceSummary(rows,p){
     const xs=rows.filter(x=>x.date>=p.start&&x.date<p.end),g={};
     for(const x of xs){const k=x.source||'Other';g[k]??={in:0,out:0};g[k][x.direction]++}
@@ -189,7 +201,7 @@
     if(document.getElementById('build077FlowStyle'))return;
     const st=document.createElement('style');st.id='build077FlowStyle';st.textContent=`
       #warehouseFlowLedger{border:1px solid #d9e4f2;background:linear-gradient(145deg,#f8fbff,#fff)}
-      .flow077Head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.flow077Head h2{margin:0;font-size:24px}.flow077Intro{font-size:13px;color:#667085;line-height:1.5;margin-top:5px}.flow077Badge{background:#e9f8ef;color:#176b40;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:850;white-space:nowrap}.flow077Grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.flow077Tile{border:1px solid #e1e7ef;border-radius:15px;padding:13px;background:#fff;min-width:0}.flow077Kicker{font-size:10px;letter-spacing:.08em;font-weight:900;color:#6f7785}.flow077Name{font-size:12px;color:#4d596a;min-height:34px;margin:5px 0 8px}.flow077Counts{display:flex;gap:8px;flex-wrap:wrap;margin:3px 0 8px}.flow077Counts span{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:850}.flow077Counts .in{background:#e9f8ef;color:#176b40}.flow077Counts .out{background:#fff0f1;color:#a52232}.flow077Metric{border-top:1px solid #eef1f5;padding-top:8px;margin-top:8px}.flow077Metric span,.flow077Net span{display:block;font-size:9px;color:#7b8491;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.flow077Metric b,.flow077Net b{display:block;font-size:13px;line-height:1.35;margin-top:3px}.flow077Metric.in b{color:#176b40}.flow077Metric.out b{color:#a52232}.flow077Net{border-top:1px solid #eef1f5;padding-top:8px;margin-top:8px}.flow077Range{font-size:9px;color:#9299a4;margin-top:8px;line-height:1.35}.flow077Section{margin-top:14px;border-top:1px solid #e5eaf1;padding-top:12px}.flow077Section h3{font-size:15px;margin:0 0 7px}.flow077Section p{font-size:11px;color:#687385;line-height:1.45;margin:0 0 8px}.flow077Details{margin-top:12px;border-top:1px solid #e5eaf1;padding-top:10px}.flow077Details summary{cursor:pointer;font-size:12px;font-weight:850;color:#2563eb}.flow077Table{width:100%;border-collapse:collapse;margin-top:9px;font-size:11px}.flow077Table th,.flow077Table td{padding:7px 5px;border-bottom:1px solid #edf0f4;text-align:left;vertical-align:top}.flow077Table td span{color:#6f7785;line-height:1.35}.flow077Source{margin-top:10px;padding:10px 11px;background:#f7f9fc;border-radius:12px;font-size:11px;color:#687385;line-height:1.45}
+      .flow077Head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.flow077Head h2{margin:0;font-size:24px}.flow077Intro{font-size:13px;color:#667085;line-height:1.5;margin-top:5px}.flow077Badge{background:#e9f8ef;color:#176b40;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:850;white-space:nowrap}.flow077Grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.flow077Tile{border:1px solid #e1e7ef;border-radius:15px;padding:13px;background:#fff;min-width:0}.flow077Kicker{font-size:10px;letter-spacing:.08em;font-weight:900;color:#6f7785}.flow077Name{font-size:12px;color:#4d596a;min-height:34px;margin:5px 0 8px}.flow077Counts{display:flex;gap:8px;flex-wrap:wrap;margin:3px 0 8px}.flow077Counts span{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:850}.flow077Counts .in{background:#e9f8ef;color:#176b40}.flow077Counts .out{background:#fff0f1;color:#a52232}.flow077Metric{border-top:1px solid #eef1f5;padding-top:8px;margin-top:8px}.flow077Metric span,.flow077Net span{display:block;font-size:9px;color:#7b8491;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.flow077Metric b,.flow077Net b{display:block;font-size:13px;line-height:1.35;margin-top:3px}.flow077Metric.in b{color:#176b40}.flow077Metric.out b{color:#a52232}.flow077Net{border-top:1px solid #eef1f5;padding-top:8px;margin-top:8px}.flow077Range{font-size:9px;color:#9299a4;margin-top:8px;line-height:1.35}.flow077Section{margin-top:14px;border-top:1px solid #e5eaf1;padding-top:12px}.flow077Section h3{font-size:15px;margin:0 0 7px}.flow077Section p{font-size:11px;color:#687385;line-height:1.45;margin:0 0 8px}.flow077PeriodButtons{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.flow077PeriodButtons button{padding:7px 10px;font-size:11px;font-weight:800}.flow077PeriodButtons button.active{background:#2563eb;color:#fff}.flow077Details{margin-top:12px;border-top:1px solid #e5eaf1;padding-top:10px}.flow077Details summary{cursor:pointer;font-size:12px;font-weight:850;color:#2563eb}.flow077Table{width:100%;border-collapse:collapse;margin-top:9px;font-size:11px}.flow077Table th,.flow077Table td{padding:7px 5px;border-bottom:1px solid #edf0f4;text-align:left;vertical-align:top}.flow077Table td span{color:#6f7785;line-height:1.35}.flow077Source{margin-top:10px;padding:10px 11px;background:#f7f9fc;border-radius:12px;font-size:11px;color:#687385;line-height:1.45}
       @media(max-width:760px){.flow077Grid{grid-template-columns:1fr}.flow077Name{min-height:0}.flow077Head{display:block}.flow077Badge{display:inline-block;margin-top:8px}.flow077Table{font-size:10px}}
     `;document.head.appendChild(st);
   }
@@ -200,10 +212,11 @@
   }
   function renderLedger(){
     ensureStyle();const card=ensureCard();if(!card)return;
-    const rows=ledgerRows(),p=periodBounds(new Date()),iy=inventoryYear(new Date()),m=summarize(rows,p.month),h=summarize(rows,p.half),y=summarize(rows,p.year),other=otherSummary(rows,p.year);
-    card.innerHTML=`<div class="flow077Head"><div><h2>📦 Warehouse In / Out Ledger</h2><div class="flow077Intro">Inventory year starts Aug 1. Completed Stock Carpet Cutting and Stock Order Picking now count as outbound because they reduce warehouse stock. Carpet Cutting uses the actual stock deduction, including the 3″ allowance per physical cut.</div></div><div class="flow077Badge">FY ${esc(iy.label)}</div></div><div class="flow077Grid">${tile(p.month,m)}${tile(p.half,h)}${tile(p.year,y)}</div><div class="flow077Section"><h3>Major Category Summary · Inventory Year ${esc(iy.label)}</h3><p>CARPET / Heather Choice / Platinum / Spill Blocker / Vinyl Plank / Carpet Tile. Product Master category is used first; legacy records fall back to stable product names. Different units remain separate.</p><table class="flow077Table"><thead><tr><th>Category</th><th>Inbound</th><th>Outbound</th><th>Net</th></tr></thead><tbody>${categoryRows(rows,p.year)}</tbody></table>${other?`<div class="flow077Source">${esc(other)}</div>`:''}</div><div class="flow077Source">Current inventory-year sources · ${sourceSummary(rows,p.year)}</div><details class="flow077Details"><summary>Monthly breakdown · Inventory Year ${esc(iy.label)}</summary><table class="flow077Table"><thead><tr><th>Month</th><th>Inbound</th><th>Outbound</th><th>Net by unit</th></tr></thead><tbody>${monthlyRows(rows,iy)}</tbody></table></details>`;
+    const rows=ledgerRows(),p=periodBounds(new Date()),iy=inventoryYear(new Date()),m=summarize(rows,p.month),h=summarize(rows,p.half),y=summarize(rows,p.year),cp=p[categoryPeriod]||p.year,other=otherSummary(rows,cp);
+    card.innerHTML=`<div class="flow077Head"><div><h2>📦 Warehouse In / Out Ledger</h2><div class="flow077Intro">Inventory year starts Aug 1. Completed Stock Carpet Cutting and Stock Order Picking count as outbound because they reduce warehouse stock. Carpet Cutting uses the actual stock deduction, including the 3″ allowance per physical cut.</div></div><div class="flow077Badge">FY ${esc(iy.label)}</div></div><div class="flow077Grid">${tile(p.month,m)}${tile(p.half,h)}${tile(p.year,y)}</div><div class="flow077Section"><h3>Major Category Summary</h3><p>CARPET / Heather Choice / Platinum / Spill Blocker / Vinyl Plank / Carpet Tile. Product Master category is used first; legacy records fall back to stable product names. Different units remain separate.</p><div class="flow077PeriodButtons">${categoryButtons()}</div><div class="flow077Name">${esc(cp.name)} · ${esc(rangeLabel(cp.start,cp.end))}</div><table class="flow077Table"><thead><tr><th>Category</th><th>Inbound</th><th>Outbound</th><th>Net</th></tr></thead><tbody>${categoryRows(rows,cp)}</tbody></table>${other?`<div class="flow077Source">${esc(other)}</div>`:''}</div><div class="flow077Source">Current inventory-year sources · ${sourceSummary(rows,p.year)}</div><details class="flow077Details"><summary>Monthly breakdown · Inventory Year ${esc(iy.label)}</summary><table class="flow077Table"><thead><tr><th>Month</th><th>Inbound</th><th>Outbound</th><th>Net by unit</th></tr></thead><tbody>${monthlyRows(rows,iy)}</tbody></table></details>`;
   }
   window.renderWarehouseFlowLedger=renderLedger;
+  window.setFlow077CategoryPeriod=key=>{if(['month','half','year'].includes(key))categoryPeriod=key;renderLedger()};
 
   function setVersion(){document.querySelectorAll('.version,#headerVersion').forEach(el=>el.textContent='V'+VERSION);document.documentElement.setAttribute('data-runlu-build',BUILD)}
   function install(){
