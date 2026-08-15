@@ -1,7 +1,7 @@
 {
-  "version": "6.11.0",
-  "build": "083",
+  "version": "6.11.1",
+  "build": "084",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Dedicated Warehouse Ledger Page. Moves the existing Stock-only Warehouse In / Out Ledger out of the Operations work-record stream and into its own page, while keeping the same Build078 calculation source. Adds a compact Warehouse In / Out Ledger entry between the Operations command buttons and search field, with live month IN/OUT badges. The ledger page includes Back to Operations, 3-inch Cut Allowance and View Work Records shortcuts. No inventory quantity, Cloud Master, Receiving, Shipping, Return, Carpet Cutting, or ledger calculation rule is changed."
+  "notes": "Carpet Used Up Ledger. Adds a Used Up field to the Major Category Summary, focused on CARPET. It counts unique carpet rolls whose lifecycle ended in the selected Month, Half-Year or Inventory Year and keeps Used Up as a roll-count KPI separate from OUT footage and Net. Event dating prefers explicit Used Up timestamps when available, then completed Carpet Cutting audit evidence, with current Carpet Inventory lifecycle metadata as fallback. Current August validation is RC2305, RC2324 and RC2203 = 3 Roll Used Up. No inventory quantities, Cloud Master data, Receiving, Shipping, Return, Carpet Cutting or Build078 stock-flow calculations are changed."
 }
