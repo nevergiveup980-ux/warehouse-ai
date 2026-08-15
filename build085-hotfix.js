@@ -113,7 +113,7 @@
       const d=dateOnly(o?.date||o?.completedAt||o?.appliedAt||o?.createdAt);if(!d||d>today())continue;
       const items=Array.isArray(o?.items)&&o.items.length?o.items:[o];
       items.forEach((raw,i)=>{
-        const x=raw===o?o:{...o,...raw,type:raw?.type||o?.type,inventoryMode:raw?.inventoryMode||o?.inventoryMode};
+        const x=raw===o?o:{...raw,type:raw?.type||o?.type,inventoryMode:raw?.inventoryMode||o?.inventoryMode};
         if(!completed(x,o))return;const dir=direction(x,o);if(!dir)return;
         const q=qtyFor(x);if(!(q>0))return;
         out.push({date:d,direction:dir,qty:q,unit:unitFor(x),category:categoryFor(x,maps),source:'Operations',type:text(x?.type||o?.type),product:text(x?.collection||x?.product||o?.collection||o?.product),colour:text(x?.colour||x?.color||o?.colour||o?.color),roll:text(x?.roll||o?.roll),po:text(x?.po||x?.poNumber||o?.po||o?.poNumber),customer:text(x?.customer||o?.customer),supplier:text(x?.supplier||o?.supplier),location:text(x?.location||o?.location),opId:Number(o?.id)||null,itemIndex:i});
