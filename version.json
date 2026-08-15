@@ -1,7 +1,7 @@
 {
-  "version": "6.10.2",
-  "build": "082",
+  "version": "6.11.0",
+  "build": "083",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Single Version Authority. Retires all historical per-build version guards from the active loader after Build073's permanent MutationObserver was found to force the header badge back to V6.8.1. Business hotfix layers remain unchanged. Build082 claims a dedicated version badge that old hotfix selectors cannot rewrite, reads version.json as the authoritative release manifest with no-store refresh, and keeps the page title/build metadata aligned. No inventory, Cloud Master, return, receiving, shipping, carpet, or analytics business logic is changed."
+  "notes": "Dedicated Warehouse Ledger Page. Moves the existing Stock-only Warehouse In / Out Ledger out of the Operations work-record stream and into its own page, while keeping the same Build078 calculation source. Adds a compact Warehouse In / Out Ledger entry between the Operations command buttons and search field, with live month IN/OUT badges. The ledger page includes Back to Operations, 3-inch Cut Allowance and View Work Records shortcuts. No inventory quantity, Cloud Master, Receiving, Shipping, Return, Carpet Cutting, or ledger calculation rule is changed."
 }
