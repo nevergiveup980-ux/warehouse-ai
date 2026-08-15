@@ -1,7 +1,7 @@
 {
-  "version": "6.9.2",
-  "build": "078",
+  "version": "6.9.3",
+  "build": "079",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Stock-only Warehouse In / Out Ledger + unit normalization. Excludes Non-stock / Customer Order and Record Only business lines from inventory-flow totals; excludes physical-count corrections from receiving/shipping flow; keeps completed Carpet Cutting and Stock Order Picking as outbound and uses actual carpet stock deduction including 3-inch allowance/full-roll finish. Current Month/Half-Year/Inventory-Year summaries are cumulative only through today, so future-dated records are not counted early. Box and Carton are normalized to the single inventory/reporting unit Box. Inventory-posted Receiving rows must pass Product Identity and strict Roll-program unit guards. Piece remains valid for genuine sheet/plywood stock; Tube remains available for non-stock business records but is excluded from the Stock ledger."
+  "notes": "Installer Return Type Guard. General-material Installer Returns linked to Product Master / Product Inventory now add returned stock back to the selected inventory record instead of entering the carpet child-roll workflow. Carpet Installer Returns started from Carpet Detail remain Foot/source-roll operations and continue creating traceable child rolls. Legacy Carton values are normalized to Box when the active return is completed. Completion preview shows the expected Product Inventory balance before applying the return."
 }
