@@ -1,7 +1,7 @@
 {
-  "version": "6.10.1",
-  "build": "081",
+  "version": "6.10.2",
+  "build": "082",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Deferred Return Guard. Return hotfixes now install only after the Operations core functions are ready. For Installer / Customer returns, an exact Product Master or Inventory Record identity takes priority over stale legacy Unit=Foot fields, so general stock returns cannot be misrouted into the carpet child-roll workflow. Existing legacy return records are repaired in the editor at runtime without changing inventory until completion. Version display is persistently guarded at V6.10.1."
+  "notes": "Single Version Authority. Retires all historical per-build version guards from the active loader after Build073's permanent MutationObserver was found to force the header badge back to V6.8.1. Business hotfix layers remain unchanged. Build082 claims a dedicated version badge that old hotfix selectors cannot rewrite, reads version.json as the authoritative release manifest with no-store refresh, and keeps the page title/build metadata aligned. No inventory, Cloud Master, return, receiving, shipping, carpet, or analytics business logic is changed."
 }
