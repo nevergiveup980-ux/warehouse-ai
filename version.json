@@ -1,7 +1,7 @@
 {
-  "version": "6.9.0",
-  "build": "076",
+  "version": "6.9.1",
+  "build": "077",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Warehouse In / Out Ledger. Adds a derived warehouse-flow report beginning Aug 1 of each inventory year, with current Month, inventory-aligned Half-Year (H1 Aug-Jan / H2 Feb-Jul), and full Inventory Year (Aug 1-Jul 31) summaries. Counts completed physical inbound/outbound records already captured by Operations, Receiving, and reviewed Scan add/subtract history; internal preparation such as Carpet Cutting and Order Picking is not treated as warehouse door movement. Inventory Transfers are classified by direction. Mixed units are never incorrectly added together: Roll, Carton, Pail, Foot, etc. remain separate. Includes inbound/outbound line counts, quantities by unit, net-by-unit figures, and a 12-month breakdown. No new transaction database is created; the ledger reads existing Cloud Master-synchronized history." 
+  "notes": "Stock Outbound + Category Flow Summary. Completed Stock Carpet Cutting and completed Stock Order Picking now count as outbound because they reduce warehouse stock. Carpet Cutting uses the actual stock deduction including the 3-inch allowance per physical cut. Adds an inventory-year major-category summary for CARPET, Heather Choice, Platinum, Spill Blocker, Vinyl Plank, and Carpet Tile, using Product Master category/Product ID first and stable-name fallback for legacy records. Mixed units remain separate; other categories remain included in overall totals without being mixed into the six primary management groups."
 }
