@@ -1,7 +1,7 @@
 {
-  "version": "6.8.2",
-  "build": "074",
+  "version": "6.8.3",
+  "build": "075",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "Cut Allowance Workbench Shortcut. Promotes the existing Build073 3-inch Cut Allowance Ledger to a visible Material Efficiency section near the top of Carpet Workbench. The shortcut reads the already-rendered ledger instead of recalculating a second data set, so Month, Quarter, Half-Year and Inventory Year numbers always match the detailed analytics. Shows cuts, extra linear length and allowance area at a glance and opens the detailed ledger with one tap. No inventory, cutting, Cloud Master or Supabase business logic is changed."
+  "notes": "Database Integrity Guard. Follows a full Cloud Master cleanup protected by an 811-record pre-cleanup snapshot. Adds a local integrity monitor for duplicate Product identities, exact duplicate inventory, orphan inventory links, and stock-program unit/placeholders. Warehouse Voice now counts only confirmed, identity-compatible inventory for strict Roll stock programs such as Platinum, Heather Choice and Spill Blocker, and excludes stale zero-quantity physical-count placeholders when confirmed stock exists. The cleanup also standardizes the Product Master title TAKTIK-3GAL, preserves historical operation snapshots, retires legacy duplicate/stale records with tombstones, and keeps Cloud Master as the source of truth."
 }
