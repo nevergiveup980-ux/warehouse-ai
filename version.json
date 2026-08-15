@@ -1,7 +1,7 @@
 {
-  "version": "6.11.2",
-  "build": "085",
+  "version": "6.12.0",
+  "build": "086",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Warehouse Ledger Drill-down. Makes Major Category Summary metrics tappable: IN opens matching inbound records, OUT opens outbound stock movements, Net opens combined signed movement detail, and CARPET Used Up opens the unique roll lifecycle records for the selected Month, Half-Year or Inventory Year. Drill-down is read-only and does not change inventory, Cloud Master data, Receiving, Shipping, Return, Carpet Cutting, Used Up counting, or Build078 IN/OUT/Net calculations."
+  "notes": "RUNLU Live Links Pilot. Makes the Home Inventory Summary cards interactive: Products opens Products, Total Inventory opens Inventory, Locations opens Warehouse Map, and Low Stock opens a dedicated live detail page using the same Home thresholds (general inventory <=30, active carpet <=50 ft). Low Stock rows drill into the exact Product Inventory or Carpet Roll detail. Existing Command Center Waiting / In Progress / Completed links are preserved. Read-only navigation layer only: no inventory quantity, Cloud Master, Receiving, Shipping, Return, Carpet Cutting, Ledger or database schema changes."
 }
