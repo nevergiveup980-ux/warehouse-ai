@@ -1,7 +1,7 @@
 {
-  "version": "6.11.1",
-  "build": "084",
+  "version": "6.11.2",
+  "build": "085",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Carpet Used Up Ledger. Adds a Used Up field to the Major Category Summary, focused on CARPET. It counts unique carpet rolls whose lifecycle ended in the selected Month, Half-Year or Inventory Year and keeps Used Up as a roll-count KPI separate from OUT footage and Net. Event dating prefers explicit Used Up timestamps when available, then completed Carpet Cutting audit evidence, with current Carpet Inventory lifecycle metadata as fallback. Current August validation is RC2305, RC2324 and RC2203 = 3 Roll Used Up. No inventory quantities, Cloud Master data, Receiving, Shipping, Return, Carpet Cutting or Build078 stock-flow calculations are changed."
+  "notes": "Warehouse Ledger Drill-down. Makes Major Category Summary metrics tappable: IN opens matching inbound records, OUT opens outbound stock movements, Net opens combined signed movement detail, and CARPET Used Up opens the unique roll lifecycle records for the selected Month, Half-Year or Inventory Year. Drill-down is read-only and does not change inventory, Cloud Master data, Receiving, Shipping, Return, Carpet Cutting, Used Up counting, or Build078 IN/OUT/Net calculations."
 }
