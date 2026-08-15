@@ -123,13 +123,14 @@
         let td=tr.querySelector('.usedUp084Cell');
         if(!td){td=document.createElement('td');td.className='usedUp084Cell';tr.appendChild(td)}
         const category=norm(tr.cells?.[0]?.textContent);
-        const wanted=category==='carpet'?`${count} Roll${count===1?'':'s'}`:'—';
+        const wanted=category==='carpet'?`${count} Roll`:'—';
         if(td.textContent!==wanted)td.innerHTML=category==='carpet'?`<b>${wanted}</b>`:'—';
         if(category==='carpet')td.title=events.map(x=>x.roll).join(' · ');else td.removeAttribute('title');
       });
+      const noteText='Used Up counts unique carpet rolls whose lifecycle ended in the selected period. It is a roll-count KPI and does not add extra footage to OUT or Net.';
       let note=details.querySelector('.usedUp084Note');
       if(!note){note=document.createElement('div');note.className='usedUp084Note';details.appendChild(note)}
-      note.textContent='Used Up counts unique carpet rolls whose lifecycle ended in the selected period. It is a roll-count KPI and does not add extra footage to OUT or Net.';
+      if(note.textContent!==noteText)note.textContent=noteText;
     }finally{busy=false}
   }
 
