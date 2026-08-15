@@ -99,9 +99,10 @@
   const oldUpdateForm=window.updateOperationForm;
   if(typeof oldUpdateForm==='function'){
     window.updateOperationForm=function(){
-      const type=text(document.getElementById('operationLineType')?.value||document.getElementById('operationType')?.value),product=document.getElementById('operationProduct'),invSel=document.getElementById('operationInventoryRecord'),unitEl=document.getElementById('operationUnit'),rollEl=document.getElementById('operationRoll');
+      const parentType=text(document.getElementById('operationType')?.value),lineType=text(document.getElementById('operationLineType')?.value),type=lineType||parentType,product=document.getElementById('operationProduct'),invSel=document.getElementById('operationInventoryRecord'),unitEl=document.getElementById('operationUnit'),rollEl=document.getElementById('operationRoll');
       const snapshot={productId:text(product?.dataset?.productId),product:text(product?.value),inventoryRecordId:text(invSel?.value),unit:text(unitEl?.value),roll:text(rollEl?.value),collection:text(document.getElementById('operationCollection')?.value),colour:text(document.getElementById('operationColour')?.value),location:text(document.getElementById('operationLocation')?.value),lot:text(document.getElementById('operationLot')?.value)};
-      const general=norm(type)==='installer return'&&(!carpetSourceExists({type,unit:snapshot.unit,roll:snapshot.roll})&&(!!snapshot.productId||!!snapshot.inventoryRecordId||norm(snapshot.unit)!=='foot'));
+      const installer=norm(type)==='installer return'||norm(parentType)==='installer return';
+      const general=installer&&(!carpetSourceExists({type:'Installer Return',unit:snapshot.unit,roll:snapshot.roll})&&(!!snapshot.productId||!!snapshot.inventoryRecordId||norm(snapshot.unit)!=='foot'));
       const out=oldUpdateForm();
       if(!general)return out;
       const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.value=v};
@@ -110,6 +111,7 @@
       const show=id=>{const el=document.getElementById(id);if(el)el.style.display='block'};
       const hide=id=>{const el=document.getElementById(id);if(el)el.style.display='none'};
       show('operationInventoryRecordWrap');show('operationProductSearchWrap');show('operationQtyWrap');hide('operationRollWrap');hide('operationLotWrap');hide('operationWidthWrap');hide('operationInchesWrap');hide('operationWorkflowNotice');
+      const parentMode=document.getElementById('operationInventoryMode');if(parentMode)parentMode.value='Stock';
       const lineMode=document.getElementById('operationLineInventoryMode');if(lineMode){lineMode.value='Stock';lineMode.disabled=false}
       const ql=document.getElementById('operationQtyLabel');if(ql)ql.textContent='Returned Quantity';
       const ll=document.getElementById('operationLocationLabel');if(ll)ll.textContent='Return Location';
@@ -117,6 +119,22 @@
       const match=document.getElementById('operationProductMatch'),x=linkedInventory({productId:snapshot.productId,inventoryRecordId:snapshot.inventoryRecordId,location:snapshot.location});
       if(match&&x)match.innerHTML=`Linked to Product Inventory at <b>${String(x.location||snapshot.location||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</b> · current balance <b>${Number(x.quantity||0)} ${boxUnit(x.unit)||x.unit||''}</b>`;
       return out;
+    };
+  }
+
+  const oldStartInstallerReturn=window.startInstallerReturn;
+  if(typeof oldStartInstallerReturn==='function'){
+    window.startInstallerReturn=function(roll){
+      startCommandOperation('Installer Return');
+      const unit=document.getElementById('operationUnit');if(unit)unit.value='Foot';
+      if(roll){
+        const rollEl=document.getElementById('operationRoll');if(rollEl)rollEl.value=roll;
+        try{const x=carpetRecords().find(r=>norm(r.roll)===norm(roll));if(x){
+          const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||''};
+          set('operationCollection',x.collection);set('operationColour',x.colour);set('operationLot',x.lot);set('operationWidth',x.width||'12');set('operationLocation',x.location);
+        }}catch{}
+      }
+      updateOperationForm();
     };
   }
 
