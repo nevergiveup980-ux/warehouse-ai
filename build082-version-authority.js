@@ -25,9 +25,9 @@
 
     // Retire the selectors used by all historical version guards. Older business
     // hotfixes stay loaded, but they can no longer compete for this badge.
-    badge.id='runluVersionBadge';
-    badge.classList.remove('version');
-    badge.classList.add('runluVersionBadge');
+    if(badge.id!=='runluVersionBadge') badge.id='runluVersionBadge';
+    if(badge.classList.contains('version')) badge.classList.remove('version');
+    if(!badge.classList.contains('runluVersionBadge')) badge.classList.add('runluVersionBadge');
     return badge;
   }
 
@@ -36,9 +36,9 @@
     const badge=claimBadge();
     const wanted=`V${current.version}`;
     if(badge && badge.textContent!==wanted) badge.textContent=wanted;
-    document.documentElement.setAttribute('data-runlu-version',current.version);
-    document.documentElement.setAttribute('data-runlu-build',current.build);
-    document.documentElement.setAttribute('data-runlu-version-authority','Build082');
+    if(document.documentElement.getAttribute('data-runlu-version')!==current.version) document.documentElement.setAttribute('data-runlu-version',current.version);
+    if(document.documentElement.getAttribute('data-runlu-build')!==current.build) document.documentElement.setAttribute('data-runlu-build',current.build);
+    if(document.documentElement.getAttribute('data-runlu-version-authority')!=='Build082') document.documentElement.setAttribute('data-runlu-version-authority','Build082');
     const title=document.querySelector('title');
     const titleWanted=`RUNLU Warehouse AI V${current.version} Build${current.build}`;
     if(title && title.textContent!==titleWanted) title.textContent=titleWanted;
@@ -48,7 +48,7 @@
     const badge=claimBadge();
     if(badge && !badgeObserver){
       badgeObserver=new MutationObserver(()=>paint());
-      badgeObserver.observe(badge,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['id','class']});
+      badgeObserver.observe(badge,{childList:true,characterData:true,subtree:true});
     }
     const title=document.querySelector('title');
     if(title && !titleObserver){
