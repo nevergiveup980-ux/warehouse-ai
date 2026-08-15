@@ -1,7 +1,7 @@
 {
-  "version": "6.10.0",
-  "build": "080",
+  "version": "6.10.1",
+  "build": "081",
   "date": "2026-08-15",
   "channel": "stable",
-  "notes": "Universal Return Engine. Installer Return and Customer Return now share a Return to Warehouse workflow with Return Source (Installer / Customer) separated from Returned Material (General Stock / Carpet). General stock returns route to the exact Product Inventory record and add back the product's own unit; carpet returns stay in Carpet Inventory, with Installer carpet leftovers using source-roll child-roll traceability and Customer carpet returns using returned-roll intake. Multi-item returns keep one Return Source while each item routes independently by material. Existing specific return shortcuts remain compatible."
+  "notes": "Deferred Return Guard. Return hotfixes now install only after the Operations core functions are ready. For Installer / Customer returns, an exact Product Master or Inventory Record identity takes priority over stale legacy Unit=Foot fields, so general stock returns cannot be misrouted into the carpet child-roll workflow. Existing legacy return records are repaired in the editor at runtime without changing inventory until completion. Version display is persistently guarded at V6.10.1."
 }
