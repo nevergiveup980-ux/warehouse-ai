@@ -1,7 +1,7 @@
 {
-  "version": "6.8.1",
-  "build": "073",
+  "version": "6.8.2",
+  "build": "074",
   "date": "2026-08-14",
   "channel": "stable",
-  "notes": "3-inch Cut Allowance Ledger / Material Waste Analytics. Adds a derived gross allowance ledger for Stock Carpet Cutting without duplicating business data. The ledger reads Cutting History and uses the existing 3-inch-per-physical-cut allowance already stored by the carpet cutting workflow. It reports current Month, inventory-aligned Quarter, Half-Year and Inventory Year (Aug 1-Jul 31), showing physical cuts, extra linear length and estimated SY of gross allowance. Includes a 12-month breakdown for the current inventory year. Width is taken from the source carpet roll when available; older records with missing width use a clearly marked 12-foot fallback. Historical records that lack allowance can only be inferred when linked unambiguously to a Stock Carpet Cutting operation. Non-stock carpet is excluded. Cloud Master / Offline Queue architecture from Build072 remains unchanged."
+  "notes": "Cut Allowance Workbench Shortcut. Promotes the existing Build073 3-inch Cut Allowance Ledger to a visible Material Efficiency section near the top of Carpet Workbench. The shortcut reads the already-rendered ledger instead of recalculating a second data set, so Month, Quarter, Half-Year and Inventory Year numbers always match the detailed analytics. Shows cuts, extra linear length and allowance area at a glance and opens the detailed ledger with one tap. No inventory, cutting, Cloud Master or Supabase business logic is changed."
 }
