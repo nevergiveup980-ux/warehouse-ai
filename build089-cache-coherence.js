@@ -3,13 +3,14 @@
   if(window.__RUNLU_CACHE_COHERENCE_089__) return;
   window.__RUNLU_CACHE_COHERENCE_089__=true;
 
-  const LOADED_BUILD='089';
-  const HYGIENE_KEY='runlu_cache_hygiene_089';
+  const normalizeBuild=v=>String(v??'').replace(/\D/g,'').padStart(3,'0');
+  // release-loader.js sets this before loading the guard. Keeping the loaded release
+  // dynamic means future releases only need a new release-loader token + version.json.
+  const LOADED_BUILD=normalizeBuild(window.__RUNLU_LOADED_RELEASE__ || document.documentElement.getAttribute('data-runlu-loaded-build') || '089');
+  const HYGIENE_KEY=`runlu_cache_hygiene_${LOADED_BUILD}`;
   const RELOAD_KEY='runlu_auto_refresh_target_build';
   let checking=false;
   let reloadInFlight=false;
-
-  const normalizeBuild=v=>String(v??'').replace(/\D/g,'').padStart(3,'0');
 
   async function retireLegacyBrowserCaches(){
     try{
@@ -38,10 +39,7 @@
   }
 
   async function readManifest(){
-    const res=await fetch(`version.json?cachecheck=089&t=${Date.now()}`,{
-      cache:'no-store',
-      headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}
-    });
+    const res=await fetch(`version.json?cachecheck=${LOADED_BUILD}&t=${Date.now()}`,{cache:'no-store'});
     if(!res.ok) throw new Error(`version manifest ${res.status}`);
     return res.json();
   }
