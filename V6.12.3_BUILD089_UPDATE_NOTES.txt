@@ -1,0 +1,26 @@
+RUNLU Warehouse AI V6.12.3 Build089
+Cache Coherence / Stale Client Recovery
+2026-08-20
+
+Problem
+- Normal browser sessions could keep older cached hotfix files even after the site was updated.
+- Several older build files were intentionally revised while their script URLs still used historical fixed query strings.
+- InPrivate worked because it fetched clean copies, confirming the cloud/database path was healthy.
+
+Fix
+- qrcode.js is now a stable bootstrap.
+- release-loader.js is fetched with a unique cache-busting query every page load.
+- Every hotfix layer uses the current release token (?r=089), so revised files cannot remain pinned to an older browser cache.
+- Build089 checks version.json with no-store on boot/focus/pageshow and refreshes when a newer published build is detected.
+- Legacy Service Worker registrations and Cache Storage are retired once for this build.
+
+Data safety
+- No database schema change.
+- No warehouse localStorage or IndexedDB data is cleared.
+- No Supabase records are changed by cache cleanup.
+- Existing operation/inventory IDs are unchanged.
+
+Maintenance rule
+- Do not modify a released hotfix file without also advancing the release token.
+- Prefer new build files for new behavior.
+- Future releases should update release-loader.js and version.json while leaving qrcode.js stable.
