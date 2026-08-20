@@ -1,7 +1,7 @@
 {
-  "version": "6.12.1",
-  "build": "087",
-  "date": "2026-08-15",
+  "version": "6.12.2",
+  "build": "088",
+  "date": "2026-08-20",
   "channel": "stable",
-  "notes": "Live Links Runtime Fix. Replaces the non-running Build086 pilot, whose Low Stock empty-state string contained a JavaScript quote syntax error that prevented the entire Live Links script from executing. Build087 restores tappable Home Inventory Summary cards using delegated click handling: Products opens Products, Total Inventory opens Inventory, Locations opens Warehouse Map, and Low Stock opens a read-only drill-down using the same Home thresholds. No inventory quantities, Cloud Master data, Receiving, Shipping, Return, Carpet Cutting, Ledger calculations, or database schema are changed."
+  "notes": "Confirmed Operation Completion. Done/Complete now remains pending until the operation and linked inventory impact are synchronized and read back from Supabase. Cloud Master sync requests are serialized so a save cannot be dropped while another sync is running. Pending work can be retried without applying inventory twice, and the Cloud badge reports pending/conflict state instead of showing a false success."
 }
