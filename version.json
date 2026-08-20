@@ -1,7 +1,7 @@
 {
-  "version": "6.12.2",
-  "build": "088",
+  "version": "6.12.3",
+  "build": "089",
   "date": "2026-08-20",
   "channel": "stable",
-  "notes": "Confirmed Operation Completion. Done/Complete now remains pending until the operation and linked inventory impact are synchronized and read back from Supabase. Cloud Master sync requests are serialized so a save cannot be dropped while another sync is running. Pending work can be retried without applying inventory twice, and the Cloud badge reports pending/conflict state instead of showing a false success."
+  "notes": "Cache Coherence / Stale Client Recovery. Warehouse OS now loads release hotfixes through a cache-busted release loader, checks the published build with no-store, automatically refreshes stale clients, and retires legacy browser Service Worker/Cache Storage entries without touching local warehouse data or Supabase records."
 }
