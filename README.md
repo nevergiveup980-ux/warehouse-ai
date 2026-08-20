@@ -2,7 +2,7 @@
 
 Production repository for RUNLU Warehouse OS.
 
-- Current release candidate: **6.12.3 Build089** (see `version.json`)
+- Current release candidate: **6.12.4 Build090** (see `version.json`)
 - Production site: `warehouse.runlu.ca`
 - GitHub Pages entry point: `index.html`
 - Cloud/AI gateway worker: `worker.js`
