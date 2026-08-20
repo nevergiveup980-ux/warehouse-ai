@@ -1,0 +1,25 @@
+RUNLU Warehouse AI V6.12.4 Build090
+Conflict-Isolated Cloud Refresh
+2026-08-20
+
+Observed symptom
+- A normal browser window loaded V6.12.3 correctly but still showed an older daily work list.
+- The header showed 1 conflict while an InPrivate session displayed newer cloud records.
+
+Root cause
+- Build072 intentionally stopped the entire Cloud Master pull whenever any record-level conflict existed.
+- That protected the conflicting record, but it also prevented unrelated newer Supabase records from reaching that browser.
+
+Fix
+- Build090 adds a conflict-isolated cloud refresh path.
+- When a conflict exists, current Supabase records are still downloaded.
+- Queued/conflicted local records are preserved locally and remain available for explicit conflict review.
+- Unrelated cloud records are refreshed immediately instead of being blocked by one conflict.
+- The existing conflict indicator remains visible until the user chooses how to resolve that specific record.
+
+Data safety
+- No database schema change.
+- No Supabase rows are modified by the isolated refresh.
+- No queued or conflicted local payload is discarded.
+- Local-only queued records are preserved until their mutation succeeds or the conflict is explicitly resolved.
+- Existing record IDs and inventory IDs remain unchanged.
