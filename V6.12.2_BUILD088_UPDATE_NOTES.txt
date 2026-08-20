@@ -1,0 +1,19 @@
+RUNLU Warehouse AI V6.12.2 Build088
+Confirmed Operation Completion
+2026-08-20
+
+Problem
+- A phone could show "Completed and linked to inventory" immediately after a local save while the shared Supabase record still remained Waiting.
+- If a Cloud Master sync was already running, the delayed save sync returned early and was not guaranteed another pass.
+
+Fix
+- Cloud Master sync requests are serialized; every later save receives its own pass.
+- A newly completed operation is marked Cloud confirmation pending.
+- Completed/Locked is final only after Supabase synchronization and cloud read-back verification.
+- Failed confirmation remains retryable without calling the inventory impact routine again.
+- The header Cloud badge exposes pending operations, queued mutations, conflicts and stale errors.
+
+Data safety
+- No database schema change.
+- No automatic inventory correction or duplicate completion.
+- Existing operation and inventory IDs remain unchanged.

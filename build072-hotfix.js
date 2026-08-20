@@ -25,6 +25,7 @@
   const PM='runlu_product_master_v21', INV='runlu_inventory_records_v21';
 
   let applying=false, syncBusy=false, flushTimer=null, stateCache=null;
+  let syncChain=Promise.resolve(true);
   const parse=s=>{try{return JSON.parse(s)}catch{return null}};
   const read=k=>parse(localStorage.getItem(k)||'null');
   const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -203,8 +204,8 @@
   }
 
   async function pullCloud(s){const rows=await fetchRecords(s);applyRemoteLocally(rows);localStorage.setItem(LAST_SYNC,nowIso());localStorage.removeItem(LAST_ERROR);clearLegacyConflictState();renderPanel();return rows}
-  async function sync({silent=false}={}){
-    if(syncBusy)return false;syncBusy=true;renderPanel();
+  async function syncPass({silent=false}={}){
+    syncBusy=true;renderPanel();
     try{
       const s=await ensureSession();if(!s)throw new Error('Cloud sign-in required.');
       if(navigator.onLine===false)throw new Error('Offline — changes are safely queued on this device.');
@@ -212,6 +213,15 @@
       await pullCloud(s);if(!silent)alert('Cloud Master synchronized. Supabase is the authoritative warehouse record; this device is now refreshed from cloud.');return true;
     }catch(e){localStorage.setItem(LAST_ERROR,e.message||String(e));if(!silent&&navigator.onLine!==false)alert('Cloud Master sync stopped: '+(e.message||e));renderPanel();return false}
     finally{syncBusy=false;renderPanel()}
+  }
+  function sync(options={}){
+    // Every request is serialized. Previously, a save that landed while another
+    // sync was running returned false and its scheduled flush was lost until a
+    // later focus/online event. The chain guarantees a second pass for it.
+    const run=()=>syncPass(options);
+    const pending=syncChain.then(run,run);
+    syncChain=pending.catch(()=>false);
+    return pending;
   }
   sync.__build069=true;sync.__build071=true;sync.__build072=true;
   window.runluCloudMasterSync=sync;
