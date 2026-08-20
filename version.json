@@ -1,7 +1,7 @@
 {
-  "version": "6.12.3",
-  "build": "089",
+  "version": "6.12.4",
+  "build": "090",
   "date": "2026-08-20",
   "channel": "stable",
-  "notes": "Cache Coherence / Stale Client Recovery. Warehouse OS now loads release hotfixes through a cache-busted release loader, checks the published build with no-store, automatically refreshes stale clients, and retires legacy browser Service Worker/Cache Storage entries without touching local warehouse data or Supabase records."
+  "notes": "Conflict-Isolated Cloud Refresh. A single record-level conflict no longer prevents unrelated cloud records from appearing on that device. Build090 refreshes authoritative Supabase records while preserving queued/conflicted local records for explicit review, so normal browser sessions keep receiving current warehouse data without silently discarding unsynced work."
 }
