@@ -56,18 +56,17 @@
     return true;
   }
 
+  function normalizeAndInstall(){normalizeReturnChildSourceIds();installRuntimeGuard();}
+
   function boot(){
-    // Run before Build065's delayed recovery passes (500ms / 2200ms) so an existing
-    // child using the newer op:<id>:item:<n> notation is recognized as the same child.
-    normalizeReturnChildSourceIds();
-    installRuntimeGuard();
-    setTimeout(()=>{normalizeReturnChildSourceIds();installRuntimeGuard()},80);
-    setTimeout(()=>{normalizeReturnChildSourceIds();installRuntimeGuard()},300);
-    setTimeout(()=>{normalizeReturnChildSourceIds();installRuntimeGuard()},1200);
+    // Run before and around Build065's delayed recovery passes (500ms / 2200ms).
+    // Extra passes also cover a cloud refresh that lands between those two repairs.
+    normalizeAndInstall();
+    [80,300,1200,1900,2600].forEach(ms=>setTimeout(normalizeAndInstall,ms));
     document.documentElement.setAttribute('data-runlu-return-child-guard','092');
   }
 
   window.runluNormalizeReturnChildSourceIds092=normalizeReturnChildSourceIds;
   boot();
-  window.addEventListener('pageshow',()=>setTimeout(()=>{normalizeReturnChildSourceIds();installRuntimeGuard()},40));
+  window.addEventListener('pageshow',()=>setTimeout(normalizeAndInstall,40));
 })();
