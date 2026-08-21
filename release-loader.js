@@ -3,7 +3,7 @@
 // Keep historical business hotfix files immutable when possible; the release token below
 // guarantees that any intentionally revised layer is fetched again for this release.
 (() => {
-  const RELEASE='092';
+  const RELEASE='093';
   const files=[
     'build062-hotfix.js',
     'build063-hotfix.js',
@@ -35,6 +35,7 @@
     'build090-conflict-isolated-refresh.js',
     'build091-carpet-edit-duplicate-guard.js',
     'build092-return-child-idempotency.js',
+    'build093-exact-carpet-target.js',
     'build082-version-authority.js'
   ];
 
