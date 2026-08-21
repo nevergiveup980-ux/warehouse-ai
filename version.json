@@ -1,7 +1,7 @@
 {
-  "version": "6.12.6",
-  "build": "092",
+  "version": "6.12.7",
+  "build": "093",
   "date": "2026-08-21",
   "channel": "stable",
-  "notes": "Return Child Idempotency Guard. Legacy Build065 recovery now sees modern op:<id>:item:<n> return-child source identities as the same original operation before its delayed repair pass runs. Existing returned carpet children are normalized locally for compatibility, preventing the same Cut Piece Return or Installer Return from spawning another B/C/D child after refresh or recovery."
+  "notes": "Exact Carpet Target Lock. Carpet Cutting now resolves only the exact operational Roll # and exact inventory record identity. Source Roll, Parent Roll and Manufacturer Roll aliases are never used as a fallback for destructive cut work. If the selected Roll # and record identity disagree, preview and completion are blocked before any inventory deduction."
 }
