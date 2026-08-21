@@ -1,7 +1,7 @@
 {
-  "version": "6.12.5",
-  "build": "091",
+  "version": "6.12.6",
+  "build": "092",
   "date": "2026-08-21",
   "channel": "stable",
-  "notes": "Carpet Edit Duplicate Guard. Editing an existing carpet roll no longer re-blocks unrelated changes just because its current operational or manufacturer roll number already exists in historical/synced data. Unchanged identifiers are accepted; uniqueness checks still run when a user actually changes a Roll # or Manufacturer Roll #, preserving duplicate protection for new values."
+  "notes": "Return Child Idempotency Guard. Legacy Build065 recovery now sees modern op:<id>:item:<n> return-child source identities as the same original operation before its delayed repair pass runs. Existing returned carpet children are normalized locally for compatibility, preventing the same Cut Piece Return or Installer Return from spawning another B/C/D child after refresh or recovery."
 }
