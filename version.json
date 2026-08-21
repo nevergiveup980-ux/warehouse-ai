@@ -1,7 +1,7 @@
 {
-  "version": "6.12.4",
-  "build": "090",
-  "date": "2026-08-20",
+  "version": "6.12.5",
+  "build": "091",
+  "date": "2026-08-21",
   "channel": "stable",
-  "notes": "Conflict-Isolated Cloud Refresh. A single record-level conflict no longer prevents unrelated cloud records from appearing on that device. Build090 refreshes authoritative Supabase records while preserving queued/conflicted local records for explicit review, so normal browser sessions keep receiving current warehouse data without silently discarding unsynced work."
+  "notes": "Carpet Edit Duplicate Guard. Editing an existing carpet roll no longer re-blocks unrelated changes just because its current operational or manufacturer roll number already exists in historical/synced data. Unchanged identifiers are accepted; uniqueness checks still run when a user actually changes a Roll # or Manufacturer Roll #, preserving duplicate protection for new values."
 }
