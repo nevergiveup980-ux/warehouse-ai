@@ -1,7 +1,7 @@
 {
-  "version": "6.12.9",
-  "build": "095",
+  "version": "6.12.10",
+  "build": "096",
   "date": "2026-08-22",
   "channel": "stable",
-  "notes": "Stock Receiving + Accounting Guard. Received Stock Inventory can now be posted only to an explicitly selected exact Warehouse inventory record. Central claim/finalize prevents duplicate posting, Warehouse quantity changes keep an audit event, overdue supplier tasks are flagged for Warehouse follow-up and Sales notification, and Accounting cannot move a Stock receipt to Ready to Pay or Paid until receiving matches and inventory posting is complete. Production mutations remain disabled during validation."
+  "notes": "Flooring full-screen return control. Warehouse pages opened from RUNLU Deerfoot Flooring OS now show a Back to Flooring OS control that returns to the originating Flooring window when possible, with a safe fallback to the Flooring OS home page."
 }
