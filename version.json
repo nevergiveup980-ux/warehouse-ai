@@ -1,7 +1,7 @@
 {
-  "version": "6.12.8",
-  "build": "094",
+  "version": "6.12.9",
+  "build": "095",
   "date": "2026-08-22",
   "channel": "stable",
-  "notes": "Supplier Pickup / Receiving bridge. Deerfoot Flooring OS PO-driven supplier tasks are visible in Warehouse, where staff can start, pick up, receive, delay with a reason, record actual quantities, and complete the task. Warehouse updates flow back through the shared Supabase record for Sales notifications and Accounting receiving review. Existing Warehouse inventory datasets are not automatically changed by this bridge."
+  "notes": "Stock Receiving + Accounting Guard. Received Stock Inventory can now be posted only to an explicitly selected exact Warehouse inventory record. Central claim/finalize prevents duplicate posting, Warehouse quantity changes keep an audit event, overdue supplier tasks are flagged for Warehouse follow-up and Sales notification, and Accounting cannot move a Stock receipt to Ready to Pay or Paid until receiving matches and inventory posting is complete. Production mutations remain disabled during validation."
 }
