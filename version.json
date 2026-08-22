@@ -1,7 +1,7 @@
 {
-  "version": "6.12.7",
-  "build": "093",
-  "date": "2026-08-21",
+  "version": "6.12.8",
+  "build": "094",
+  "date": "2026-08-22",
   "channel": "stable",
-  "notes": "Exact Carpet Target Lock. Carpet Cutting now resolves only the exact operational Roll # and exact inventory record identity. Source Roll, Parent Roll and Manufacturer Roll aliases are never used as a fallback for destructive cut work. If the selected Roll # and record identity disagree, preview and completion are blocked before any inventory deduction."
+  "notes": "Supplier Pickup / Receiving bridge. Deerfoot Flooring OS PO-driven supplier tasks are visible in Warehouse, where staff can start, pick up, receive, delay with a reason, record actual quantities, and complete the task. Warehouse updates flow back through the shared Supabase record for Sales notifications and Accounting receiving review. Existing Warehouse inventory datasets are not automatically changed by this bridge."
 }
