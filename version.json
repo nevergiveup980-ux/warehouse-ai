@@ -1,7 +1,7 @@
 {
-  "version": "6.12.10",
-  "build": "096",
-  "date": "2026-08-22",
+  "version": "6.12.11",
+  "build": "104",
+  "date": "2026-08-23",
   "channel": "stable",
-  "notes": "Flooring full-screen return control. Warehouse pages opened from RUNLU Deerfoot Flooring OS now show a Back to Flooring OS control that returns to the originating Flooring window when possible, with a safe fallback to the Flooring OS home page."
+  "notes": "Flooring central supplier-task authority. Authenticated Flooring-to-Warehouse PO handoffs now guarantee one shared Supplier Pickup / Receiving task in Supabase without resetting Warehouse progress or posting inventory automatically."
 }
