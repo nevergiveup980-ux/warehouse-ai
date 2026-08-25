@@ -68,7 +68,7 @@
         if(m.value===TRANSFER_VALUE){
           if(t.value!=='Inventory Transfer')lastNonTransferType=t.value||lastNonTransferType;
           t.value='Inventory Transfer';
-        }else if(m.value==='Stock' && t.value==='Inventory Transfer'){
+        }else if(t.value==='Inventory Transfer'){
           t.value=lastNonTransferType||'Shipping';
         }
       }
