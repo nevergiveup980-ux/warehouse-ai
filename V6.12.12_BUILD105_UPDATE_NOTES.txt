@@ -1,0 +1,21 @@
+RUNLU Warehouse OS V6.12.12 Build105
+Item Inventory Handling — Transfer Clarity
+Date: 2026-08-25
+
+Scope
+- Preserve the existing V6.12.11 Build104 Warehouse OS and all existing inventory workflows.
+- Change only the Item Inventory Handling presentation/selection path for stock versus transfer work.
+
+Changes
+1. Add a visible "Transfer — From Location → To Location" option under Item Inventory Handling.
+2. Ordinary Stock continues to use a single Location field.
+3. Transfer explicitly shows From Location and To Location.
+4. Choosing Transfer routes the item through the existing Inventory Transfer workflow.
+5. Existing Inventory Transfer records/drafts remain compatible: the UI-only Transfer choice maps back to the existing Stock-backed transfer engine for storage, validation and inventory impact.
+6. Switching back from Transfer to Stock restores the prior non-transfer item type where possible.
+7. No unrelated Warehouse OS module is changed.
+
+Validation expectation
+- Stock: one Location; no To Location requirement.
+- Transfer: From Location + To Location are both required by the existing Inventory Transfer validation.
+- Existing receiving, shipping, carpet, return, underlayment and Flooring PO logic remains unchanged.
