@@ -1,7 +1,7 @@
 {
-  "version": "6.12.11",
-  "build": "104",
-  "date": "2026-08-23",
+  "version": "6.12.12",
+  "build": "105",
+  "date": "2026-08-25",
   "channel": "stable",
-  "notes": "Flooring central supplier-task authority. Authenticated Flooring-to-Warehouse PO handoffs now guarantee one shared Supplier Pickup / Receiving task in Supabase without resetting Warehouse progress or posting inventory automatically."
+  "notes": "Item Inventory Handling clarity: ordinary Stock uses one Location, while Transfer explicitly shows From Location and To Location and continues through the existing stock-backed Inventory Transfer engine."
 }
