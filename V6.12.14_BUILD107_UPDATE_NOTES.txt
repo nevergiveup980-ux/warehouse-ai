@@ -1,0 +1,19 @@
+RUNLU Warehouse OS V6.12.14 · Build107
+Date: 2026-08-27
+
+SCAN AI GATEWAY
+- Restores the existing secure RUNLU Cloudflare gateway automatically when a device has no saved gateway URL.
+- Scan and Voice continue to share the same gateway setting.
+- Save & Test now validates HTTPS, uses a 10-second health-check timeout, reads provider readiness from the Worker, and reports whether the selected OpenAI/Gemini path is configured.
+- Cloud Vision performs an automatic no-cost GET health check the first time the Scan page is opened with Cloud Vision enabled.
+
+STOP & SNAP CAMERA
+- Quality scoring now measures the central target frame instead of surrounding warehouse shelves/walls.
+- Reduced the live sharpness threshold from 220 to 145 while retaining lighting, stability and detail guards.
+- Stability tolerance is slightly more practical for handheld mobile use.
+- Auto Capture requires Ready quality plus a brief 700 ms steady pause; manual CAPTURE NOW remains available at all times.
+- Still-photo Ready / Needs Review thresholds were also tuned for normal warehouse lighting.
+
+SAFETY
+- Cloud AI remains read-only extraction until the operator reviews and saves.
+- API keys remain in Cloudflare Worker Secrets and are never written into the Warehouse site or browser storage.

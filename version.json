@@ -1,7 +1,7 @@
 {
-  "version": "6.12.13",
-  "build": "106",
+  "version": "6.12.14",
+  "build": "107",
   "date": "2026-08-27",
   "channel": "stable",
-  "notes": "Zero-quantity ACTIVE GENERAL inventory records are hidden from current inventory views and totals while remaining stored for history; physical-count-pending records remain visible."
+  "notes": "Cloud Vision restores the known secure RUNLU gateway on devices with no saved URL, Save & Test verifies Worker/provider readiness, and Stop & Snap scores the target area with more practical mobile capture thresholds."
 }
