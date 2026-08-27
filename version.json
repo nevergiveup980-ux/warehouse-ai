@@ -1,7 +1,7 @@
 {
-  "version": "6.12.14",
-  "build": "107",
+  "version": "6.12.15",
+  "build": "108",
   "date": "2026-08-27",
   "channel": "stable",
-  "notes": "Cloud Vision restores the known secure RUNLU gateway on devices with no saved URL, Save & Test verifies Worker/provider readiness, and Stop & Snap scores the target area with more practical mobile capture thresholds."
+  "notes": "Carpet Sample Checkout now treats the selected carpet roll as the authoritative stock record, bypasses Product Master requirements, previews the 3-inch cutting allowance, and applies the checkout through Carpet Inventory."
 }
