@@ -9,7 +9,6 @@
   const q = id => document.getElementById(id);
   const n = v => Number(v || 0);
   const norm = v => String(v || '').trim().toLowerCase();
-  let installed = false;
 
   function isSampleCheckout(r) {
     return !!r && r.type === 'Sample Checkout' && !!String(r.roll || '').trim();
@@ -118,9 +117,10 @@
 
   function applyPresentation() {
     ensureCarpetNotice();
-    const type = q('operationLineType')?.value || q('operationType')?.value || '';
+    const lineType = q('operationLineType')?.value || '';
+    const parentType = q('operationType')?.value || '';
     const roll = String(q('operationRoll')?.value || '').trim();
-    const active = type === 'Sample Checkout' && !!roll;
+    const active = (lineType === 'Sample Checkout' || parentType === 'Sample Checkout') && !!roll;
     const productWrap = q('operationProductSearchWrap');
     const inventoryWrap = q('operationInventoryRecordWrap');
     const note = q('build108CarpetSampleNotice');
@@ -165,7 +165,6 @@
     installImpact();
     installPresentation();
     document.documentElement.setAttribute('data-runlu-build108', 'carpet-sample-checkout');
-    installed = true;
     return true;
   }
 
