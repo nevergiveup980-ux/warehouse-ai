@@ -1,0 +1,20 @@
+RUNLU Warehouse OS V6.12.13 Build106
+Current Inventory — Hide Zero Balances
+Date: 2026-08-27
+
+Scope
+- Preserve the existing V6.12.12 Build105 Warehouse OS and all inventory workflows.
+- Change only the shared definition of visible/current general inventory.
+
+Changes
+1. ACTIVE GENERAL inventory records with a quantity of zero or less are no longer shown in current inventory views.
+2. Zero-quantity records remain stored and available for audit/history; no inventory data is deleted.
+3. Records marked Quantity Pending remain visible as COUNT/PENDING even when their temporary numeric quantity is zero.
+4. The shared rule applies consistently to product cards, Manage Product Inventory, the Inventory list, current totals, dashboard counts, the warehouse map and low-stock views.
+5. Reserved, transferred, shipped and archived lifecycle behavior remains unchanged.
+
+Validation expectation
+- Positive ACTIVE GENERAL record: visible and counted.
+- Zero ACTIVE GENERAL record: hidden and not counted.
+- Zero Quantity Pending record: visible for physical verification.
+- Archived/history record: preserved and excluded from current inventory as before.
