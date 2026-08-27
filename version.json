@@ -1,7 +1,7 @@
 {
-  "version": "6.12.12",
-  "build": "105",
-  "date": "2026-08-25",
+  "version": "6.12.13",
+  "build": "106",
+  "date": "2026-08-27",
   "channel": "stable",
-  "notes": "Item Inventory Handling clarity: ordinary Stock uses one Location, while Transfer explicitly shows From Location and To Location and continues through the existing stock-backed Inventory Transfer engine."
+  "notes": "Zero-quantity ACTIVE GENERAL inventory records are hidden from current inventory views and totals while remaining stored for history; physical-count-pending records remain visible."
 }
