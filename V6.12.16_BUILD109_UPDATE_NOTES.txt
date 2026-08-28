@@ -1,0 +1,20 @@
+RUNLU Warehouse OS V6.12.16 · Build109
+Date: 2026-08-28
+
+CARPET LABEL FRONT
+- Refined the front label to follow the familiar original warehouse label more closely.
+- Removed the rounded inner frame and the horizontal divider lines around the colour.
+- Increased the visual emphasis of the RC roll number.
+- Kept product and colour large, centred and easy to read from a distance.
+- Simplified the information block to LOT / SIZE / ROLL.
+- SIZE is formatted in the familiar style, including two-digit inches when present (example: 12X143’06”).
+- Manufacturer roll is displayed simply as ROLL, matching the physical reference.
+
+RUNLU FUNCTIONALITY PRESERVED
+- QR access remains available but is smaller and moved to the lower-right so it does not dominate the printed label.
+- SCAN TO VIEW & EDIT remains as a small supporting caption.
+- Reverse-side cut history and its QR workflow are unchanged.
+- Direct browser print and Word export use the same front-label visual direction.
+
+PRINT TARGET
+- Letter landscape, two carpet labels per sheet, preserving the existing RUNLU label workflow.
