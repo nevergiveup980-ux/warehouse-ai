@@ -1,7 +1,7 @@
 {
-  "version": "6.12.15",
-  "build": "108",
-  "date": "2026-08-27",
+  "version": "6.12.16",
+  "build": "109",
+  "date": "2026-08-28",
   "channel": "stable",
-  "notes": "Carpet Sample Checkout now treats the selected carpet roll as the authoritative stock record, bypasses Product Master requirements, previews the 3-inch cutting allowance, and applies the checkout through Carpet Inventory."
+  "notes": "Carpet label printing now follows the familiar original warehouse layout more closely with a cleaner front label, larger roll/product/colour typography, original-style LOT/SIZE/ROLL facts, and a smaller QR footer while preserving reverse-side cut history."
 }
