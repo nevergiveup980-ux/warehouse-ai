@@ -1,0 +1,55 @@
+name: Universal V1 Safety Guard
+
+on:
+  push:
+    branches:
+      - product/universal-v1
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Guard mature production files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1 || true
+          BASE=$(git merge-base HEAD origin/main)
+          echo "Universal base: $BASE"
+          CHANGED=$(git diff --name-only "$BASE"...HEAD)
+          echo "$CHANGED"
+          BAD=$(printf '%s\n' "$CHANGED" | grep -Ev '^(universal/|universal-app\.html$|\.github/workflows/universal-v1-ci\.yml$)' || true)
+          if [ -n "$BAD" ]; then
+            echo "ERROR: Universal V1 changed mature production files:"
+            echo "$BAD"
+            exit 1
+          fi
+
+      - name: JavaScript syntax checks
+        run: |
+          node --check universal/runtime-config.js
+          node --check universal/workspace.js
+          node --check universal/storage-adapter.js
+          node --check universal/core-adapter.js
+
+      - name: Verify production baseline remains documented
+        run: |
+          grep -q '5d588592391553399ee2e5c80af297432d0de47c' universal/README.md
+          grep -q 'V6.12.16 Build109' universal/README.md
+
+      - name: Verify tenant SQL remains development-only
+        run: |
+          grep -q 'DEVELOPMENT ONLY' universal/supabase_multitenant_v1.sql
+          grep -q 'runlu_create_organization' universal/supabase_multitenant_v1.sql
+          grep -q 'scope_id uuid generated always as' universal/supabase_multitenant_v1.sql
