@@ -1,0 +1,33 @@
+RUNLU Warehouse OS V6.12.17 · Build110
+Date: 2026-08-31
+
+SUPPLIER PICKUP · PHYSICAL-FOLDER WORKFLOW
+- Added four live work queues that mirror the warehouse's real paper folders:
+  1. Awaiting Confirmation
+  2. Pick-ups Next Month
+  3. Pick-ups This Month
+  4. People to Call
+- The queues sit inside the existing Supplier Pickup / Receiving module instead of creating a separate parallel workflow.
+
+SUPPLIER CONFIRMATION
+- Added a Supplier Confirmed action to each open PO task.
+- Confirmation can store or update the confirmed pickup date plus an optional supplier note.
+- Existing tasks that had already moved into warehouse execution were backfilled as confirmed when appropriate.
+
+AUTOMATIC MONTH ROLLOVER
+- Pick-ups This Month and Pick-ups Next Month are calculated from the current calendar month and the confirmed pickup date.
+- No manual month-to-month filing step is required.
+- When the calendar changes, confirmed tasks move between the month queues automatically.
+
+PEOPLE TO CALL
+- Added manual Add to People to Call and Call Resolved actions.
+- The queue also surfaces automatic follow-up triggers for:
+  · supplier confirmation waiting 2+ days;
+  · delayed tasks;
+  · overdue pickup dates;
+  · pickup due today or tomorrow while still Scheduled.
+
+DATA / SAFETY
+- Added Supplier confirmation and call-follow-up fields to flooring_supplier_tasks in the existing training environment.
+- Added dedicated training-only RPCs for confirmation and call-follow-up updates.
+- Existing receiving, stock posting, accounting, PO handoff, inventory, and Build109 carpet-label behavior remain unchanged.

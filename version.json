@@ -1,7 +1,7 @@
 {
-  "version": "6.12.16",
-  "build": "109",
-  "date": "2026-08-28",
+  "version": "6.12.17",
+  "build": "110",
+  "date": "2026-08-31",
   "channel": "stable",
-  "notes": "Carpet label printing now follows the familiar original warehouse layout more closely with a cleaner front label, larger roll/product/colour typography, original-style LOT/SIZE/ROLL facts, and a smaller QR footer while preserving reverse-side cut history."
+  "notes": "Supplier Pickup now mirrors the warehouse's four real work folders: Awaiting Confirmation, Pick-ups Next Month, Pick-ups This Month, and People to Call. Supplier confirmations are recorded, month queues roll automatically by pickup date, and follow-up calls can be flagged manually or surfaced automatically for delays, overdue pickups, stale confirmations, and near-term pickup dates."
 }
