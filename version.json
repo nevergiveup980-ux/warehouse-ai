@@ -1,7 +1,7 @@
 {
-  "version": "6.12.17",
-  "build": "110",
+  "version": "6.12.18",
+  "build": "111",
   "date": "2026-08-31",
   "channel": "stable",
-  "notes": "Supplier Pickup now mirrors the warehouse's four real work folders: Awaiting Confirmation, Pick-ups Next Month, Pick-ups This Month, and People to Call. Supplier confirmations are recorded, month queues roll automatically by pickup date, and follow-up calls can be flagged manually or surfaced automatically for delays, overdue pickups, stale confirmations, and near-term pickup dates."
+  "notes": "Corrected the physical-folder semantics for Supplier Pickup. People to Call now begins only after pickup / receiving is complete and represents Sales follow-up. Delayed, overdue and supplier-confirmation issues remain operational alerts but no longer enter People to Call."
 }

@@ -1,0 +1,26 @@
+RUNLU Warehouse OS V6.12.18 · Build111
+Date: 2026-08-31
+
+PEOPLE TO CALL · CORRECTED BUSINESS MEANING
+- People to Call is a Sales follow-up folder, not a supplier-chasing / warehouse exception folder.
+- An order enters People to Call only after pickup / receiving is complete (Ready or Completed).
+- Ready / Completed automatically creates the Sales follow-up flag unless that follow-up was already completed.
+- Sales can mark the follow-up done; the order then leaves People to Call.
+- Sales can reopen follow-up on a Ready / Completed order if another call is needed.
+
+WHAT NO LONGER ENTERS PEOPLE TO CALL
+- Supplier confirmation waiting.
+- Delayed pickup.
+- Overdue pickup date.
+- Pickup due today / tomorrow.
+These remain operational status / alert conditions and are handled by the existing Warehouse receiving workflow.
+
+FOUR PHYSICAL FOLDERS
+1. Awaiting Confirmation — PO sent, supplier confirmation pending.
+2. Pick-ups Next Month — confirmed pickup in next calendar month.
+3. Pick-ups This Month — confirmed pickup in current calendar month.
+4. People to Call — pickup / receiving finished; Sales follow-up pending.
+
+DATA SAFETY
+- Existing receiving quantities, Stock Inventory posting, Accounting flow, Flooring PO handoff and Build109 carpet labels are unchanged.
+- Training-only Supabase functions were corrected to match the real business workflow.
