@@ -39,14 +39,23 @@ jobs:
       - name: JavaScript syntax checks
         run: |
           node --check universal/runtime-config.js
+          node --check universal/templates.js
           node --check universal/workspace.js
           node --check universal/storage-adapter.js
           node --check universal/core-adapter.js
+          node --check universal/legacy-storage-shim.js
+          node --check universal/cloud-adapter.js
 
       - name: Verify production baseline remains documented
         run: |
           grep -q '5d588592391553399ee2e5c80af297432d0de47c' universal/README.md
           grep -q 'V6.12.16 Build109' universal/README.md
+
+      - name: Verify production cloud is blocked in Universal V1
+        run: |
+          grep -q 'Production Warehouse Supabase is blocked' universal/cloud-adapter.js
+          grep -q 'blocked production cloud request' universal/legacy-storage-shim.js
+          grep -q 'production cloud blocked' universal/preview.html
 
       - name: Verify tenant SQL remains development-only
         run: |
