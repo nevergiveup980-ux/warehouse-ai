@@ -1,0 +1,19 @@
+RUNLU Warehouse OS V6.12.19 · Build112
+Date: 2026-09-02
+
+PRODUCT LINK RECOVERY
+- Detects inventory records whose Product Master ID is missing on the current device.
+- Fetches the authoritative record-level Product Master and Inventory sets from Cloud Master.
+- Requires the cloud sets to pass referential-integrity checks before any local repair.
+- Restores only exact missing Product IDs; no fuzzy product-name guessing is used.
+
+INVENTORY SAFETY
+- Saves a local recovery point before repairing Product Master links.
+- Does not change inventory quantities, locations, units, POs, lifecycle fields or history.
+- Verifies the complete Inventory dataset is byte-for-byte unchanged after repair.
+- Rolls Product Master back immediately if the inventory immutability check fails.
+
+ONGOING PROTECTION
+- Rechecks product/inventory links on boot, focus, page restore and while the app is open.
+- Shows a clear recovery status above Inventory.
+- Keeps unresolved records visible and unchanged instead of guessing or deleting them.
