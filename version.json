@@ -1,7 +1,7 @@
 {
-  "version": "6.12.18",
-  "build": "111",
-  "date": "2026-08-31",
+  "version": "6.12.19",
+  "build": "112",
+  "date": "2026-09-02",
   "channel": "stable",
-  "notes": "Corrected the physical-folder semantics for Supplier Pickup. People to Call now begins only after pickup / receiving is complete and represents Sales follow-up. Delayed, overdue and supplier-confirmation issues remain operational alerts but no longer enter People to Call."
+  "notes": "Restores missing Product Master links from the authoritative Cloud Master after a verified integrity check. Inventory quantities, locations, POs and history remain unchanged, and future orphan links are detected automatically."
 }
