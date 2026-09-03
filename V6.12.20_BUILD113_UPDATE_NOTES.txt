@@ -1,0 +1,10 @@
+RUNLU Warehouse OS V6.12.20 Build113
+Date: 2026-09-03
+
+Fix: General-product Sample Checkout no longer asks for both From Location and To Location.
+
+- A boxed/material sample checkout now uses the selected exact inventory record and its single warehouse location.
+- The completion preview and final impact both deduct the entered quantity from that record.
+- Carpet-roll Sample Checkout keeps its existing From/To workflow and 3-inch cutting allowance.
+- Failed completion attempts do not change inventory.
+- Build112 Product Master link recovery remains active.
