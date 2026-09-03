@@ -1,0 +1,10 @@
+RUNLU Warehouse OS V6.12.21 Build114
+Date: 2026-09-03
+
+Fix: Older single-item Inventory Transfer records now reopen with the correct transfer editor.
+
+- Edit restores Item Type = Inventory Transfer.
+- From Location and To Location are both visible before completion.
+- Completing an incomplete transfer now routes the operator into Edit instead of showing a misleading completion sequence.
+- Failed attempts remain non-destructive: no inventory is changed.
+- Build113 general-product Sample Checkout and Build112 Product Master recovery remain active.
