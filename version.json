@@ -1,7 +1,7 @@
 {
-  "version": "6.12.19",
-  "build": "112",
-  "date": "2026-09-02",
+  "version": "6.12.20",
+  "build": "113",
+  "date": "2026-09-03",
   "channel": "stable",
-  "notes": "Restores missing Product Master links from the authoritative Cloud Master after a verified integrity check. Inventory quantities, locations, POs and history remain unchanged, and future orphan links are detected automatically."
+  "notes": "Fixes general-product Sample Checkout so it deducts from the selected exact inventory record without incorrectly requiring a transfer destination. Carpet sample transfers and Build112 product-link recovery remain unchanged."
 }
