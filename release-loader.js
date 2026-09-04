@@ -3,7 +3,7 @@
 // Keep historical business hotfix files immutable when possible; the release token below
 // guarantees that any intentionally revised layer is fetched again for this release.
 (() => {
-  const RELEASE='115';
+  const RELEASE='114';
   const files=[
     'build062-hotfix.js',
     'build063-hotfix.js',
@@ -56,7 +56,6 @@
     'build112-product-link-recovery.js',
     'build113-general-sample-checkout.js',
     'build114-transfer-edit-routing.js',
-    'build115-product-pricing.js',
     'build082-version-authority.js'
   ];
 

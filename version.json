@@ -1,7 +1,7 @@
 {
-  "version": "6.12.22",
-  "build": "115",
-  "date": "2026-09-04",
+  "version": "6.12.21",
+  "build": "114",
+  "date": "2026-09-03",
   "channel": "stable",
-  "notes": "Adds product-level pricing fields to Product Master: supplier, purchase/sell units, conversion factor, standard cost, current/last supplier cost, standard sell price, source and pricing update time. Existing inventory quantities, locations, carpet rolls, operations and history remain unchanged."
+  "notes": "Restores the correct Inventory Transfer editor for older single-item records so From Location and To Location are visible before completion. Failed attempts remain non-destructive; Build113 Sample Checkout and Build112 product-link recovery remain active."
 }
