@@ -1,0 +1,23 @@
+RUNLU Warehouse OS V6.12.22 Build115
+Product Pricing Foundation
+Date: 2026-09-04
+
+WHAT CHANGED
+- Adds a new Pricing & Cost section to Product Master.
+- Stores supplier, purchase unit, sell unit and conversion factor with the product.
+- Stores Standard Cost, Current / Last Supplier Cost and Standard Sell Price in CAD.
+- Stores Price Source and an automatic pricing-updated timestamp.
+- Uses the existing runlu_product_master_v21 product record, so the change is backward compatible with existing products.
+- Existing products can be edited and priced without recreating inventory records.
+
+DATA SAFETY
+- No inventory quantity or location is changed by Build115.
+- No carpet roll, PO, operation, transfer, receiving or history record is rewritten by Build115.
+- Pricing data follows the existing Product Master local/cloud save path.
+- If cloud pricing verification fails, the app keeps the local product data and warns the user.
+
+FIELD ALIGNMENT
+Build115 intentionally uses the same pricing vocabulary already established in Flooring OS pricing work: supplier, purchaseUnit, sellUnit, conversionFactor, standardCost, currentCost, retailPrice and priceSource. This avoids creating a second incompatible pricing model.
+
+NEXT SAFE EXTENSIONS
+Inventory value, gross-margin calculations, PO cost capture, price history and role-based cost visibility can now be built on top of this foundation without changing the inventory identity model.
