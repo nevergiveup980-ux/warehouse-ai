@@ -10,6 +10,17 @@ Status: **internal draft only — not yet submitted to App Store Connect**
 - Primary positioning: Flooring / Building Materials warehouse operations
 - App Icon: same RUNLU software-family icon treatment used by Universal Invoice — blue gradient background with white water-drop outline
 
+## Commercial model — owner approved
+
+- Auto-renewable subscription
+- Target Canada price: **CAD $14.99 / month**
+- Introductory offer: **14-day free trial**
+- No free tier in V1
+- No ads
+- No annual plan in V1
+
+The live app must show StoreKit-localized pricing and trial eligibility rather than hard-coding Canadian pricing for every storefront.
+
 ## Subtitle
 
 Candidate: `Warehouse OS for Flooring`
@@ -40,6 +51,8 @@ Local role-based access supports Owner, Administrator, Manager, Staff, and Viewe
 
 Owners can create encrypted backups for customer-controlled storage and recovery. Backups are encrypted on the device before they are saved or shared.
 
+RUNLU Warehouse OS is offered as a monthly professional subscription with an introductory free-trial period where available. Subscription access supports the maintained Warehouse OS application, continuing compatibility work, and substantive workflow improvements. Pricing and trial eligibility are displayed by the App Store for the customer’s storefront.
+
 Key capabilities:
 
 - Flooring and building-material inventory
@@ -49,7 +62,7 @@ Key capabilities:
 - Shipping and returns
 - Samples and warehouse locations
 - Barcode and local OCR scanning
-- Local warehouse voice input
+- Strict on-device warehouse voice input where supported
 - Role-based local users
 - Encrypted customer-owned backup and restore
 - Offline-capable local-first operation
@@ -68,24 +81,30 @@ Draft targets — not live until the separate Runlu.ca legal-pages branch is app
 
 RUNLU Warehouse OS is a local-first operational warehouse application designed primarily for flooring and building-material businesses.
 
+The app uses an auto-renewable monthly subscription. The Canadian target price is CAD $14.99/month with a 14-day introductory free trial for eligible customers; the app itself displays StoreKit-localized price and eligibility. Restore Purchases / entitlement synchronization is provided through StoreKit.
+
 No remote review account is required. On first launch, the reviewer can create a temporary Company, local Owner username/PIN, and Warehouse directly in the app.
 
 Suggested review flow:
 
-1. Create a Company and local Owner account.
-2. Keep the default Flooring / Building Materials template.
-3. Enter the warehouse workspace.
-4. Review inventory, receiving, transfers, carpet roll/cut, orders, returns, samples, and warehouse-location features.
-5. In Settings, confirm cut allowance defaults to Off / 0 and can be configured by the organization.
-6. In Users, create a role-limited local user.
-7. As Owner, create an encrypted backup.
-8. Sign out and verify local sign-in.
+1. Start the eligible introductory trial or use the App Review subscription environment.
+2. Create a Company and local Owner account.
+3. Keep the default Flooring / Building Materials template.
+4. Enter the warehouse workspace.
+5. Review inventory, receiving, transfers, carpet roll/cut, orders, returns, samples, and warehouse-location features.
+6. In Settings, confirm cut allowance defaults to Off / 0 and can be configured by the organization.
+7. In Users, create a role-limited local user.
+8. As Owner, create an encrypted backup.
+9. Sign out and verify local sign-in.
+10. Verify Restore Purchases / subscription status handling.
 
-V1 does not connect to RUNLU-hosted warehouse storage. Cloud AI / Cloud Vision gateways are disabled in this App Store build. Built-in barcode/OCR and warehouse voice functions are configured for local processing.
+V1 does not connect to RUNLU-hosted warehouse storage. Cloud AI / Cloud Vision gateways are disabled in this App Store build. Built-in barcode/OCR is local, and voice recognition is allowed only where strict on-device processing is supported.
+
+If subscription entitlement lapses, Warehouse OS is designed to preserve the customer’s local warehouse data and safe read-only/backup access rather than deleting business records.
 
 ## Suggested categories
 
 - Primary: Business
 - Secondary candidate: Productivity
 
-Do not finalize category, pricing, subtitle, promotional text, description, or keywords in App Store Connect until owner approval.
+Pricing has been owner-approved. Subtitle, promotional text, description, keywords, categories, and final storefront copy remain drafts until the final App Store Connect pass.
