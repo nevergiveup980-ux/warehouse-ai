@@ -15,11 +15,15 @@ case "$FAMILY" in
     DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; d=json.load(sys.stdin).get("devicetypes",[]); prefs=["iPhone 17 Pro Max","iPhone 16 Pro Max","iPhone 15 Pro Max"]; by={x.get("name"):x.get("identifier") for x in d}; found=next((by[n] for n in prefs if n in by),None); found=found or next((x.get("identifier") for x in d if "iPhone" in x.get("name","") and "Pro Max" in x.get("name","")),None); print(found or "")')"
     [[ -n "$DEVICE_TYPE" ]] || { echo 'No Pro Max iPhone Simulator device type found'; exit 1; }
     DEVICE_LABEL='iPhone Pro Max'
+    FIRST_WAIT=30
+    STEP_WAIT=15
     ;;
   ipad)
     DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; d=json.load(sys.stdin).get("devicetypes",[]); prefs=["iPad Pro 13-inch (M5)","iPad Pro 13-inch (M4)","iPad Pro (13-inch) (M5)","iPad Pro (13-inch) (M4)"]; by={x.get("name"):x.get("identifier") for x in d}; found=next((by[n] for n in prefs if n in by),None); found=found or next((x.get("identifier") for x in d if "iPad" in x.get("name","") and "13-inch" in x.get("name","")),None); found=found or next((x.get("identifier") for x in d if "iPad Pro" in x.get("name","") and ("12.9-inch" in x.get("name","") or "12.9 inch" in x.get("name",""))),None); print(found or "")')"
     [[ -n "$DEVICE_TYPE" ]] || { echo 'No 13-inch/12.9-inch iPad Pro Simulator device type found'; exit 1; }
     DEVICE_LABEL='iPad Pro 13-inch'
+    FIRST_WAIT=15
+    STEP_WAIT=10
     ;;
   *)
     echo "Unsupported RUNLU_SCREENSHOT_FAMILY: $FAMILY (expected iphone or ipad)"
@@ -72,19 +76,21 @@ capture_scene(){
   rm -f "$raw"
   test -s "$shot"
 
-  local width height alpha
+  local width height alpha bytes
   width="$(sips -g pixelWidth "$shot" | awk '/pixelWidth/{print $2}')"
   height="$(sips -g pixelHeight "$shot" | awk '/pixelHeight/{print $2}')"
   alpha="$(sips -g hasAlpha "$shot" | awk '/hasAlpha/{print $2}')"
+  bytes="$(stat -f%z "$shot")"
   [[ "$alpha" == 'no' ]] || { echo "Normalized screenshot unexpectedly has alpha: $shot"; exit 1; }
-  echo "Captured RUNLU $FAMILY scene $scene: ${width}x${height}, JPEG/no-alpha -> $shot"
-  printf '%s\n' "scene_${order}=${scene}|${width}x${height}|format=jpeg|alpha=${alpha}" >> "$INFO"
+  (( bytes >= 250000 )) || { echo "Screenshot looks unexpectedly blank or incomplete (${bytes} bytes): $shot"; exit 1; }
+  echo "Captured RUNLU $FAMILY scene $scene: ${width}x${height}, JPEG/no-alpha, ${bytes} bytes -> $shot"
+  printf '%s\n' "scene_${order}=${scene}|${width}x${height}|format=jpeg|alpha=${alpha}|bytes=${bytes}" >> "$INFO"
 }
 
-# The screenshot-only controller holds the dashboard for 20 seconds, then moves
-# through the six mature-core operational scenes in ten-second windows before
-# opening Users and Backup. Capture in the middle of each stable window.
-sleep 15
+# iPhone WebView startup on fresh simulators is slower than iPad. The screenshot-only
+# controller therefore gives iPhone scenes wider stable windows; these matching waits
+# keep captures near the middle of those windows instead of at transition boundaries.
+sleep "$FIRST_WAIT"
 capture_scene '01' 'dashboard'
 for item in \
   '02 inventory' \
@@ -95,7 +101,7 @@ for item in \
   '07 users' \
   '08 backup'
 do
-  sleep 10
+  sleep "$STEP_WAIT"
   set -- $item
   capture_scene "$1" "$2"
 done
