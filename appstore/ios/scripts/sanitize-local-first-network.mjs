@@ -28,6 +28,13 @@ await rewrite('universal-app.html',text=>{
   return text;
 });
 
+// Build089 only used the old production hostname in a source comment. Remove the
+// identifier as well so the compiled App Store bundle has no ambiguous RUNLU
+// warehouse-cloud hostname at all, even in non-executable text.
+await rewrite('build089-cache-coherence.js',text=>text
+  .replaceAll('warehouse.runlu.ca is a dedicated application origin.','This App Store build uses a dedicated local application origin.')
+);
+
 await rewrite('universal/preview.html',text=>text
   .replace("const tagNeedle=\"const WAREHOUSE_TAG_BASE_URL='https://warehouse.runlu.ca/';\";if(!html.includes(tagNeedle))throw new Error('Warehouse tag constant changed; preview transformation was stopped safely.');html=html.replace(tagNeedle,\"const WAREHOUSE_TAG_BASE_URL=RUNLUCoreAdapter.tagBaseUrl()||'https://universal-v1.invalid/';\");",
            "const tagNeedle=\"const WAREHOUSE_TAG_BASE_URL='';\";if(!html.includes(tagNeedle))throw new Error('Warehouse tag constant changed; preview transformation was stopped safely.');html=html.replace(tagNeedle,\"const WAREHOUSE_TAG_BASE_URL=RUNLUCoreAdapter.tagBaseUrl()||'';\");")
@@ -38,7 +45,7 @@ await rewrite('universal/legacy-storage-shim.js',text=>text.replaceAll('https://
 
 const forbidden=[
   'https://runlu-gpt-gateway.nevergiveup980.workers.dev',
-  'https://warehouse.runlu.ca/',
+  'warehouse.runlu.ca',
   'https://local-only.invalid',
   'https://universal-v1.invalid/'
 ];
@@ -65,4 +72,4 @@ for(const p of checkFiles){
 }
 if(errors.length)throw new Error('Local-first network sanitizer failed:\n'+errors.join('\n'));
 
-console.log('RUNLU local-first network sanitizer passed: no RUNLU-hosted cloud/gateway endpoint in the public runtime.');
+console.log('RUNLU local-first network sanitizer passed: no RUNLU-hosted cloud/gateway endpoint or hostname in the public runtime.');
