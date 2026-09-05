@@ -17,6 +17,8 @@ on:
       - 'appstore/ios/scripts/brand-flooring-edition.mjs'
       - 'appstore/ios/scripts/disable-cloud-ai.mjs'
       - 'appstore/ios/scripts/sanitize-flooring-public-rules.mjs'
+      - 'appstore/ios/scripts/polish-appstore-public-runtime.mjs'
+      - 'appstore/ios/scripts/verify-public-polish.mjs'
       - 'universal/**'
       - 'universal-app.html'
   workflow_dispatch:
@@ -56,6 +58,8 @@ jobs:
           node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
           node --check scripts/sanitize-flooring-public-rules.mjs
+          node --check scripts/polish-appstore-public-runtime.mjs
+          node --check scripts/verify-public-polish.mjs
           bash -n scripts/capture-simulator-dashboard.sh
 
       - name: Build verified shipping bundle first
@@ -76,6 +80,7 @@ jobs:
           grep -q 'runluAppStorePageSafeArea' screenshot-www/universal/backup.html
           grep -q '<h1>Warehouse OS</h1>' screenshot-www/universal-app.html
           grep -q '<p>Flooring Operations</p>' screenshot-www/universal-app.html
+          grep -q '<strong>Scan / OCR</strong>' screenshot-www/universal-app.html
           grep -q 'screenshot-scenes.js' screenshot-www/universal/preview.html
           test ! -e www/screenshot-fixture.js
           test ! -e www/screenshot-scenes.js
