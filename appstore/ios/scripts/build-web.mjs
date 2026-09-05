@@ -19,7 +19,8 @@ const OMIT_ROOT = new Set([
   'worker.js',
   'worker.min.js'
 ]);
-const INTERNAL_BRIDGE_RE = /^build(?:094|095|096|097|098|099|100|101|102|103|104)-/i;
+const OMIT_BUILD_RE = /^build(?:072-|090-|094-|095-|096-|097-|098-|099-|100-|101-|102-|103-|104-)/i;
+const OMIT_BUILD_ANY_RE = /build(?:072-|090-|094-|095-|096-|097-|098-|099-|100-|101-|102-|103-|104-)/i;
 const COPY_EXTENSIONS = new Set(['.js', '.json', '.jpg', '.jpeg', '.png', '.svg', '.wasm', '.gz']);
 
 const replacements = new Map([
@@ -46,11 +47,11 @@ await rm(out, { recursive: true, force: true });
 await mkdir(universalOut, { recursive: true });
 
 // Copy root runtime assets, but never copy production HTML, historical carpet seed,
-// server worker source, or the private Flooring OS / Accounting bridge builds 094-104.
+// server worker source, production-cloud layers, or the private Flooring OS bridges.
 for (const entry of await readdir(repoRoot, { withFileTypes: true })) {
   if (!entry.isFile()) continue;
   if (OMIT_ROOT.has(entry.name)) continue;
-  if (INTERNAL_BRIDGE_RE.test(entry.name)) continue;
+  if (OMIT_BUILD_RE.test(entry.name)) continue;
   if (!COPY_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
   await cp(resolve(repoRoot, entry.name), resolve(out, entry.name));
 }
@@ -58,9 +59,9 @@ for (const entry of await readdir(repoRoot, { withFileTypes: true })) {
 // The release loader must agree with the files above.
 const loaderPath = resolve(out, 'release-loader.js');
 let loader = await readFile(loaderPath, 'utf8');
-loader = loader.split('\n').filter(line => !INTERNAL_BRIDGE_RE.test(line.replace(/[ '\",]/g, ''))).join('\n');
-if (/build(?:094|095|096|097|098|099|100|101|102|103|104)-/i.test(loader)) {
-  throw new Error('Distribution guard: an internal Build094-104 bridge remains in release-loader.js.');
+loader = loader.split('\n').filter(line => !OMIT_BUILD_RE.test(line.replace(/[ '\",]/g, ''))).join('\n');
+if (OMIT_BUILD_ANY_RE.test(loader)) {
+  throw new Error('Distribution guard: an omitted private/cloud build remains in release-loader.js.');
 }
 await writeFile(loaderPath, loader, 'utf8');
 
@@ -93,7 +94,7 @@ for (const name of ['runtime-config.js', 'templates.js']) {
 }
 
 function neutralizeFunctions(html) {
-  let found = new Set();
+  const found = new Set();
   const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   html = html.replace(scriptRe, (whole, attrs, code) => {
     if (/\bsrc\s*=/.test(attrs)) return whole;
