@@ -1,6 +1,6 @@
 # RUNLU Warehouse OS — App Store Connect Worksheet
 
-Status: **internal worksheet only — do not create irreversible App Store Connect records from this file without owner approval**
+Status: **internal worksheet only — owner has approved the V1 commercial model, but do not create irreversible App Store Connect records without a separate explicit release action**
 
 ## 1. New App record
 
@@ -18,7 +18,7 @@ User Access candidate: `Full Access` unless the owner specifically wants to limi
 
 ### Irreversible / high-impact gate
 
-Do not create the App Store Connect record until the owner explicitly approves the final Bundle ID and SKU.
+Do not create the App Store Connect record until the owner explicitly approves the final Bundle ID and SKU for creation.
 
 Apple associates uploaded builds with the app record using bundle ID and version. After a build has been uploaded, changing the bundle ID requires creating a new app record. SKU values also should be treated as permanent internal identifiers.
 
@@ -111,7 +111,7 @@ What to Test: prepared in `TESTFLIGHT_PREFLIGHT.md`
 
 Feedback Email candidate: `hello@runlu.ca`
 
-No remote test account is needed because reviewers/testers can create a local Company, Owner username/PIN, and Warehouse on first launch.
+No remote review account is needed because reviewers/testers can create a local Company, Owner username/PIN, and Warehouse on first launch.
 
 ## 9. Screenshots
 
@@ -130,30 +130,71 @@ Use only clean fictional demo data. See `SCREENSHOT_CAPTURE_PLAN.md`.
 
 Because the current native target supports both iPhone and iPad, prepare Apple-accepted screenshots for the supported iPhone display class and 13-inch iPad class as required by App Store Connect.
 
-## 10. Pricing
+## 10. Pricing — OWNER APPROVED
 
-**Not decided. Owner approval required.**
+Commercial model for V1:
 
-Do not create StoreKit subscriptions, paid pricing tiers, or pricing claims in screenshots/metadata until the owner chooses the commercial model.
+- Auto-renewable monthly subscription
+- Target Canadian price: **CAD $14.99 / month**
+- Introductory offer: **14-day free trial**
+- No free tier in V1
+- No ads
+- No annual plan in V1
+- No separate enterprise tier in V1
+
+Subscription group candidate: `RUNLU Warehouse OS`
+
+Product reference name candidate: `Warehouse OS Monthly`
+
+Product ID candidate: `ca.runlu.warehouseos.monthly`
+
+Customer-facing plan name candidate: `Warehouse OS Monthly`
+
+The actual storefront price must be selected from Apple’s current App Store Connect price points. The app UI must display StoreKit’s localized price/period rather than hard-coding `CAD $14.99` for every storefront.
+
+The subscription is intended to fund continuing product maintenance, compatibility work, substantive workflow improvements, and future warehouse capabilities. V1 remains local-first: subscription entitlement does **not** imply RUNLU-hosted warehouse storage or cloud sync.
+
+If a subscription lapses, customer warehouse data must never be deleted. The intended entitlement policy is to preserve safe read-only access plus backup/export and subscription-management access while paid operational editing is disabled until entitlement is restored.
+
+Before launch, implement and test:
+
+- StoreKit 2 product loading
+- purchase flow
+- current entitlement verification
+- transaction update handling
+- Restore Purchases / App Store sync
+- subscription-management entry point
+- trial and renewal disclosures
+- expired / billing-retry / grace-period behavior
+- cross-device entitlement restoration through the customer’s App Store account
+
+See `SUBSCRIPTION_RELEASE_PLAN.md`.
+
+Official references:
+
+- https://developer.apple.com/app-store/review/guidelines/#subscriptions
+- https://developer.apple.com/documentation/storekit
 
 ## 11. Submission sequence
 
 Recommended order:
 
 1. Finish technical RC and real-device smoke tests.
-2. Owner approves Bundle ID + SKU.
+2. Owner approves Bundle ID + SKU creation.
 3. Create App Store Connect record.
-4. Complete App Privacy, Age Rating, Content Rights, and export-compliance questions.
-5. Publish approved privacy/support pages.
-6. Sign/archive Build 1.
-7. Upload to App Store Connect.
-8. Internal TestFlight test first.
-9. Fix any real-device findings; increment build number for another upload if needed.
-10. Capture final screenshots from the approved clean build/demo workspace.
-11. Owner approves final pricing and public metadata.
-12. If useful, external TestFlight / TestFlight App Review.
-13. Select the final build for App Review.
-14. Submit only after all required fields are green/complete.
+4. Create the subscription group/product with the approved commercial model and configure the 14-day introductory free trial.
+5. Complete StoreKit 2 entitlement integration and local StoreKit testing, then sandbox/TestFlight subscription testing.
+6. Complete App Privacy, Age Rating, Content Rights, and export-compliance questions.
+7. Publish approved privacy/support pages.
+8. Sign/archive the first uploadable build.
+9. Upload to App Store Connect.
+10. Internal TestFlight test first.
+11. Fix any real-device or subscription findings; increment build number for another upload if needed.
+12. Capture final screenshots from the approved clean build/demo workspace.
+13. Owner approves final public metadata and storefront presentation.
+14. If useful, external TestFlight / TestFlight App Review.
+15. Select the final build for App Review.
+16. Submit only after all required fields are green/complete.
 
 ## 12. Lessons carried forward from Universal Invoice
 
