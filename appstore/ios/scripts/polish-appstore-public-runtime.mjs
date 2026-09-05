@@ -26,6 +26,19 @@ html=html.replaceAll('Supplier format remembered and included in synchronized da
 html=html.replaceAll('Shared AI Scan','Shared Scanner');
 html=html.replaceAll('Open AI Scan from the page you want to fill.','Open Scan / OCR from the page you want to fill.');
 
+// Web SpeechRecognition can otherwise choose a remote recognition service. The
+// App Store edition must never make that fallback. Only enable microphone speech
+// when the implementation exposes the strict on-device processLocally contract;
+// otherwise the text Warehouse Assistant remains available with no microphone.
+const voiceSetupNeedle='voiceRecognition=new SR();voiceRecognition.continuous=false;voiceRecognition.interimResults=true;voiceRecognition.maxAlternatives=10;';
+const voiceSetupReplacement="voiceRecognition=new SR();if(!('processLocally' in voiceRecognition)){voiceRecognition=null;return}voiceRecognition.processLocally=true;voiceRecognition.continuous=false;voiceRecognition.interimResults=true;voiceRecognition.maxAlternatives=10;";
+if(!html.includes(voiceSetupNeedle))throw new Error('Public polish: voice recognition setup changed upstream.');
+html=html.replace(voiceSetupNeedle,voiceSetupReplacement);
+const voiceStartNeedle="if(!voiceRecognition)voiceSetupRecognition();if(voiceContinuous)voiceMicWanted=true;";
+const voiceStartReplacement="if(!voiceRecognition)voiceSetupRecognition();if(!voiceRecognition){voiceMicWanted=false;voiceSetState('idle',(voiceLastReplyLang||'en-CA')==='zh-CN'?'此设备当前不提供严格的本地语音识别，请使用下面的文字输入框。':'Strict on-device speech recognition is unavailable here. Use the text box below.');return}if(voiceContinuous)voiceMicWanted=true;";
+if(!html.includes(voiceStartNeedle))throw new Error('Public polish: voice recognition start path changed upstream.');
+html=html.replace(voiceStartNeedle,voiceStartReplacement);
+
 const $=loadHtml(html,{decodeEntities:false});
 
 // The outer native shell owns Settings, Users and Backup. Remove duplicate or
@@ -51,7 +64,7 @@ $('button').each((_,el)=>{
 });
 
 const voiceMeta=$('#voiceAssistant .voiceHero .meta').first();
-if(voiceMeta.length)voiceMeta.text('Ask the live Warehouse OS using local voice or text. Cloud AI is not enabled in this release.');
+if(voiceMeta.length)voiceMeta.text('Ask the live Warehouse OS by text, or by speech only when strict on-device recognition is available. Cloud AI is not enabled in this release.');
 
 // Remove cloud-era claims from visible Flooring Edition copy. These are display
 // changes only; local workflow behavior remains unchanged.
@@ -78,6 +91,8 @@ const result=$.html();
 if(result.includes('<strong>AI Scan</strong>')||result.includes('>AI Scan</h2>')||result.includes('📷 AI Scan'))throw new Error('Public polish: user-facing AI Scan wording remains.');
 if(result.includes('GPT is used only when a local answer is not enough'))throw new Error('Public polish: cloud-AI voice promise remains.');
 if(result.includes('synchronize with signed-in devices'))throw new Error('Public polish: multi-device sync promise remains.');
+if(!result.includes("voiceRecognition.processLocally=true"))throw new Error('Public polish: strict on-device speech enforcement is missing.');
+if(!result.includes('Strict on-device speech recognition is unavailable here. Use the text box below.'))throw new Error('Public polish: safe speech fallback is missing.');
 if(!result.includes('const BUILTIN_SUPPLIER_TEMPLATES=[];'))throw new Error('Public polish: supplier presets were not neutralized.');
 for(const privateSupplier of ['Primco','Taiga','Fuzion','Treeco','Buckwold','Centura','Oakel City','Twelve Oaks']){
   if(new RegExp(privateSupplier.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(result))throw new Error(`Public polish: supplier-specific runtime remains: ${privateSupplier}`);
@@ -87,4 +102,4 @@ if($('#navSettings').length)throw new Error('Public polish: mature-core Settings
 if(!result.includes('<strong>Scan / OCR</strong>'))throw new Error('Public polish: local Scan / OCR home module is missing.');
 
 await writeFile(target,result,'utf8');
-console.log('RUNLU App Store public runtime polished: local Scan/OCR wording, customer-defined supplier templates, no duplicate internal Settings/Developer entries.');
+console.log('RUNLU App Store public runtime polished: local Scan/OCR, strict on-device-only speech, customer-defined supplier templates, no duplicate internal Settings/Developer entries.');
