@@ -29,6 +29,10 @@ window.RUNLU_NATIVE = Object.freeze({
   isNative,
   platform: Capacitor.getPlatform(),
   appInfo: () => safe(() => App.getInfo()),
+  onAppStateChange: callback => {
+    if (!isNative || typeof callback !== 'function') return Promise.resolve(null);
+    return safe(() => App.addListener('appStateChange', callback));
+  },
   hapticLight: () => safe(() => Haptics.impact({ style: ImpactStyle.Light })),
   hapticSuccess: () => safe(() => Haptics.notification({ type: NotificationType.Success })),
   hapticWarning: () => safe(() => Haptics.notification({ type: NotificationType.Warning })),
