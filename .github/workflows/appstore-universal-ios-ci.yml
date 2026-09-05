@@ -36,13 +36,13 @@ jobs:
         working-directory: appstore/ios
         run: npm run web:build
 
-      - name: Verify private bridge files are absent
+      - name: Verify private and production-cloud build files are absent
         working-directory: appstore/ios
         run: |
           test ! -e www/carpet_seed.js
-          for n in 094 095 096 097 098 099 100 101 102 103 104; do
+          for n in 072 090 094 095 096 097 098 099 100 101 102 103 104; do
             if find www -maxdepth 1 -type f -name "build${n}-*" | grep -q .; then
-              echo "Internal Build${n} bridge leaked into distribution"
+              echo "Private/cloud Build${n} leaked into distribution"
               exit 1
             fi
           done
