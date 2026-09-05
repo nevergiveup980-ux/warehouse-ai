@@ -9,10 +9,10 @@ const GENERAL=Object.freeze({
  features:{inventory:true,receiving:true,transfer:true,cutPick:true,shipping:true,returns:true,purchaseOrders:true,historyAudit:true,barcodeQr:true,commandCenter:true,lowStockAlerts:true,warehouseMap:true,multiDeviceSync:true,carpetIndustryTemplate:false}
 });
 const FLOORING=Object.freeze({
- id:'flooring',name:'Flooring / Building Materials',description:'Flooring-ready defaults built from proven warehouse workflows.',
+ id:'flooring',name:'Flooring / Building Materials',description:'Flooring-ready defaults built from proven warehouse workflows. Cut allowance is company-configurable and has no industry-wide default.',
  categories:['Carpet','Hardwood','Laminate','Vinyl / LVP','Tile','Underlayment','Adhesive','Transition / Trim','Accessories','Other'],
  units:['Roll','Box','Carton','Pail','Bucket','Tube','Gallon','Each','Foot','Yard','Square Foot','Square Yard'],
- warehouse:{lowStock:{enabled:true,defaultQuantity:30,carpetFeet:50},cutAllowance:{enabled:true,inches:3}},
+ warehouse:{lowStock:{enabled:true,defaultQuantity:30,carpetFeet:50},cutAllowance:{enabled:false,inches:0}},
  features:{inventory:true,receiving:true,transfer:true,cutPick:true,shipping:true,returns:true,purchaseOrders:true,historyAudit:true,barcodeQr:true,commandCenter:true,lowStockAlerts:true,warehouseMap:true,multiDeviceSync:true,carpetIndustryTemplate:true}
 });
 const EMPTY=Object.freeze({id:'empty',name:'Empty / Custom',description:'Start with core modules and define categories, units and thresholds yourself.',categories:[],units:[],warehouse:{lowStock:{enabled:false,defaultQuantity:0,carpetFeet:0},cutAllowance:{enabled:false,inches:0}},features:{inventory:true,receiving:true,transfer:true,cutPick:true,shipping:true,returns:true,purchaseOrders:true,historyAudit:true,barcodeQr:true,commandCenter:true,lowStockAlerts:false,warehouseMap:true,multiDeviceSync:true,carpetIndustryTemplate:false}});
