@@ -26,7 +26,7 @@ global.RUNLU_SUBSCRIPTION_ACCESS=Object.freeze({
   showPaywall:()=>{dismissedReadOnly=false;render(true);}
 });
 
-function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));}
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function plural(value,unit){const n=Number(value||0);return `${n} ${unit}${n===1?'':'s'}`;}
 function billingLabel(product){
   if(!product?.displayPrice)return 'Monthly subscription';
