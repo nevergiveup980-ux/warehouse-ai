@@ -25,7 +25,7 @@ for (const forbiddenFile of ['carpet_seed.js']) {
   if (names.some(n => n.endsWith('/' + forbiddenFile) || n === forbiddenFile)) errors.push(`Forbidden distribution file present: ${forbiddenFile}`);
 }
 for (const prefix of [
-  'build072-', 'build090-',
+  'build072-', 'build088-', 'build090-',
   'build094-', 'build095-', 'build096-', 'build097-', 'build098-', 'build099-',
   'build100-', 'build101-', 'build102-', 'build103-', 'build104-'
 ]) {
