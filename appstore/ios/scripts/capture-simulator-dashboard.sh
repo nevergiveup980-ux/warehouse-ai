@@ -58,7 +58,9 @@ INFO="$OUT_DIR/capture-info.txt"
 printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" > "$INFO"
 
 capture_scene(){
-  local order="$1" scene="$2" shot="$OUT_DIR/${order}-${scene}.png"
+  local order="$1"
+  local scene="$2"
+  local shot="$OUT_DIR/${order}-${scene}.png"
   xcrun simctl io "$UDID" screenshot "$shot"
   test -s "$shot"
   local width height alpha
