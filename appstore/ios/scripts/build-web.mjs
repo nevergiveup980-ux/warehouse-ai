@@ -48,6 +48,13 @@ for(const name of ['runtime-config.js','templates.js']){const p=resolve(universa
 
 function neutralizeFunctions(html){const found=new Set(),scriptRe=/<script\b([^>]*)>([\s\S]*?)<\/script>/gi;html=html.replace(scriptRe,(whole,attrs,code)=>{if(/\bsrc\s*=/.test(attrs))return whole;let ast;try{ast=parse(code,{ecmaVersion:'latest',sourceType:'script',allowReturnOutsideFunction:true})}catch(error){throw new Error(`Distribution guard: could not parse an inline script: ${error.message}`)}const edits=[];walk.simple(ast,{FunctionDeclaration(node){const name=node.id?.name;if(name&&replacements.has(name)){edits.push({start:node.start,end:node.end,text:replacements.get(name)});found.add(name)}}});edits.sort((a,b)=>b.start-a.start);for(const edit of edits)code=code.slice(0,edit.start)+edit.text+code.slice(edit.end);return `<script${attrs}>${code}</script>`});for(const required of ['initializeSeedDatabase','autoInitializeSeed','applyV516WarehouseDataset','applyV5515FieldProducts','restoreConversationOrders','migrateLegacyCarpetData','cloudSignUp','cloudSignIn','cloudAutoRefresh','startCloudPolling'])if(!found.has(required))throw new Error(`Distribution guard: expected function ${required} was not found. Upstream core changed; review before shipping.`);return html}
 
+function validateInlineScripts(html,label='mature core'){
+  const scriptRe=/<script\b([^>]*)>([\s\S]*?)<\/script>/gi;let match,count=0;
+  while((match=scriptRe.exec(html))){const attrs=match[1],code=match[2];if(/\bsrc\s*=/.test(attrs))continue;count++;try{parse(code,{ecmaVersion:'latest',sourceType:'script',allowReturnOutsideFunction:true})}catch(error){throw new Error(`Distribution guard: transformed ${label} contains invalid inline JavaScript: ${error.message}`)}}
+  if(!count)throw new Error(`Distribution guard: ${label} has no inline runtime script to validate.`);
+  return html;
+}
+
 function configureCutAllowance(html){
   const a="Number(RUNLUWorkspace.workspace()?.config?.warehouse?.cutAllowance?.enabled?RUNLUWorkspace.workspace()?.config?.warehouse?.cutAllowance?.inches||0:0)";
   html=html.replaceAll('requested+(cuts*0.25)',`requested+(cuts*(${a}/12))`);
@@ -79,13 +86,12 @@ function removePrivateDefaults(html){
   html=html.replaceAll('value="John"','value="" placeholder="Current signed-in user"');
   html=html.replaceAll('placeholder="John"','placeholder="Current signed-in user"');
   html=html.replaceAll("Tony's store orders use Warehouse → Store.","Choose the source and destination that match your organization's workflow.");
-  // Last-resort public bundle scrub for historical UI copy. Production is untouched.
   html=html.replaceAll('John','Current user');
   html=html.replaceAll('Tony','Customer');
   return html;
 }
 
-function cleanMatureCore(html){html=neutralizeFunctions(html);html=configureCutAllowance(html);html=removePrivateDefaults(html);html=html.replace("const CLOUD_URL='https://ekrnknlawekeoszzkamd.supabase.co';","const CLOUD_URL='https://local-only.invalid';");html=html.replace(/const CLOUD_KEY='[^']*';/,"const CLOUD_KEY='';");const $=loadHtml(html,{decodeEntities:false});$('script[src="carpet_seed.js"]').remove();$('#headerCloudPill').remove();$('.settingRow').each((_,el)=>{const title=$(el).find('.name').first().text().trim();if(title==='Cloud Sync'||title==='Carpet Management Link')$(el).remove()});$('body').append('<script src="runlu-native.js"></script>');return $.html()}
+function cleanMatureCore(html){html=neutralizeFunctions(html);html=configureCutAllowance(html);html=removePrivateDefaults(html);validateInlineScripts(html);html=html.replace("const CLOUD_URL='https://ekrnknlawekeoszzkamd.supabase.co';","const CLOUD_URL='https://local-only.invalid';");html=html.replace(/const CLOUD_KEY='[^']*';/,"const CLOUD_KEY='';");validateInlineScripts(html);const $=loadHtml(html,{decodeEntities:false});$('script[src="carpet_seed.js"]').remove();$('#headerCloudPill').remove();$('.settingRow').each((_,el)=>{const title=$(el).find('.name').first().text().trim();if(title==='Cloud Sync'||title==='Carpet Management Link')$(el).remove()});$('body').append('<script src="runlu-native.js"></script>');const result=$.html();validateInlineScripts(result,'serialized mature core');return result}
 
 let mature=await readFile(resolve(repoRoot,'universal-app.html'),'utf8');mature=cleanMatureCore(mature);await writeFile(resolve(out,'universal-app.html'),mature,'utf8');
 
