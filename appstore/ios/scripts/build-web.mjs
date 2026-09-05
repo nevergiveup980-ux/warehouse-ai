@@ -46,8 +46,6 @@ const replacements = new Map([
 await rm(out, { recursive: true, force: true });
 await mkdir(universalOut, { recursive: true });
 
-// Copy root runtime assets, but never copy production HTML, historical carpet seed,
-// server worker source, production-cloud layers, or the private Flooring OS bridges.
 for (const entry of await readdir(repoRoot, { withFileTypes: true })) {
   if (!entry.isFile()) continue;
   if (OMIT_ROOT.has(entry.name)) continue;
@@ -56,26 +54,18 @@ for (const entry of await readdir(repoRoot, { withFileTypes: true })) {
   await cp(resolve(repoRoot, entry.name), resolve(out, entry.name));
 }
 
-// The release loader must agree with the files above.
 const loaderPath = resolve(out, 'release-loader.js');
 let loader = await readFile(loaderPath, 'utf8');
 loader = loader.split('\n').filter(line => !OMIT_BUILD_RE.test(line.replace(/[ '\",]/g, ''))).join('\n');
-if (OMIT_BUILD_ANY_RE.test(loader)) {
-  throw new Error('Distribution guard: an omitted private/cloud build remains in release-loader.js.');
-}
+if (OMIT_BUILD_ANY_RE.test(loader)) throw new Error('Distribution guard: an omitted private/cloud build remains in release-loader.js.');
 await writeFile(loaderPath, loader, 'utf8');
 
-// Ship only the Universal runtime required by the user-facing build.
 for (const name of [
-  'onboarding.html', 'sign-in.html', 'users.html', 'preview.html', 'settings.html',
-  'runtime-config.js', 'templates.js', 'workspace.js', 'local-auth.js',
+  'onboarding.html', 'sign-in.html', 'users.html', 'backup.html', 'preview.html', 'settings.html',
+  'runtime-config.js', 'templates.js', 'workspace.js', 'local-auth.js', 'backup-manager.js', 'permission-guard.js',
   'storage-adapter.js', 'core-adapter.js', 'legacy-storage-shim.js'
-]) {
-  await cp(resolve(universalSrc, name), resolve(universalOut, name));
-}
+]) await cp(resolve(universalSrc, name), resolve(universalOut, name));
 
-// Public V1 is local-first. Multi-device sync and subscription pricing are deliberately
-// not enabled until a customer-owned cloud connector and StoreKit product are approved.
 for (const name of ['runtime-config.js', 'templates.js']) {
   const p = resolve(universalOut, name);
   let text = await readFile(p, 'utf8');
@@ -99,33 +89,14 @@ function neutralizeFunctions(html) {
   html = html.replace(scriptRe, (whole, attrs, code) => {
     if (/\bsrc\s*=/.test(attrs)) return whole;
     let ast;
-    try {
-      ast = parse(code, { ecmaVersion: 'latest', sourceType: 'script', allowReturnOutsideFunction: true });
-    } catch (error) {
-      throw new Error(`Distribution guard: could not parse an inline script: ${error.message}`);
-    }
+    try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'script', allowReturnOutsideFunction: true }); }
+    catch (error) { throw new Error(`Distribution guard: could not parse an inline script: ${error.message}`); }
     const edits = [];
-    walk.simple(ast, {
-      FunctionDeclaration(node) {
-        const name = node.id?.name;
-        if (name && replacements.has(name)) {
-          edits.push({ start: node.start, end: node.end, text: replacements.get(name) });
-          found.add(name);
-        }
-      }
-    });
-    edits.sort((a, b) => b.start - a.start);
-    for (const edit of edits) code = code.slice(0, edit.start) + edit.text + code.slice(edit.end);
+    walk.simple(ast, { FunctionDeclaration(node) { const name=node.id?.name;if(name&&replacements.has(name)){edits.push({start:node.start,end:node.end,text:replacements.get(name)});found.add(name)} } });
+    edits.sort((a,b)=>b.start-a.start);for(const edit of edits)code=code.slice(0,edit.start)+edit.text+code.slice(edit.end);
     return `<script${attrs}>${code}</script>`;
   });
-
-  for (const required of [
-    'initializeSeedDatabase', 'autoInitializeSeed', 'applyV516WarehouseDataset',
-    'applyV5515FieldProducts', 'restoreConversationOrders', 'migrateLegacyCarpetData',
-    'cloudSignUp', 'cloudSignIn', 'cloudAutoRefresh', 'startCloudPolling'
-  ]) {
-    if (!found.has(required)) throw new Error(`Distribution guard: expected function ${required} was not found. Upstream core changed; review before shipping.`);
-  }
+  for (const required of ['initializeSeedDatabase','autoInitializeSeed','applyV516WarehouseDataset','applyV5515FieldProducts','restoreConversationOrders','migrateLegacyCarpetData','cloudSignUp','cloudSignIn','cloudAutoRefresh','startCloudPolling']) if(!found.has(required))throw new Error(`Distribution guard: expected function ${required} was not found. Upstream core changed; review before shipping.`);
   return html;
 }
 
@@ -133,14 +104,10 @@ function cleanMatureCore(html) {
   html = neutralizeFunctions(html);
   html = html.replace("const CLOUD_URL='https://ekrnknlawekeoszzkamd.supabase.co';", "const CLOUD_URL='https://local-only.invalid';");
   html = html.replace(/const CLOUD_KEY='[^']*';/, "const CLOUD_KEY='';");
-
   const $ = loadHtml(html, { decodeEntities: false });
   $('script[src="carpet_seed.js"]').remove();
   $('#headerCloudPill').remove();
-  $('.settingRow').each((_, el) => {
-    const title = $(el).find('.name').first().text().trim();
-    if (title === 'Cloud Sync' || title === 'Carpet Management Link') $(el).remove();
-  });
+  $('.settingRow').each((_, el) => { const title=$(el).find('.name').first().text().trim();if(title==='Cloud Sync'||title==='Carpet Management Link')$(el).remove(); });
   $('body').append('<script src="runlu-native.js"></script>');
   return $.html();
 }
@@ -153,40 +120,20 @@ function publicOnboarding(html) {
   const $ = loadHtml(html, { decodeEntities: false });
   $('.eyebrow').text('Universal Edition');
   $('header p').text('Create your company, local Owner account and first warehouse. Flooring-ready by default, fully configurable by the customer.');
-  $('section.card').each((_, el) => {
-    if ($(el).find('h2').first().text().trim() === 'Commercial preview') $(el).remove();
-  });
+  $('section.card').each((_, el) => { if($(el).find('h2').first().text().trim()==='Commercial preview')$(el).remove(); });
+  const submit=$('button[type="submit"]');if(submit.length&&!$('a[href="backup.html"]').length)submit.after('<a class="btn" href="backup.html" style="margin-top:10px;background:#e9edf3;color:#182033">Restore an encrypted backup</a>');
   $('.footer').text('RUNLU Warehouse OS · Local-first · Customer-owned storage');
   return $.html();
 }
-
 function publicSettings(html) {
   const $ = loadHtml(html, { decodeEntities: false });
-  $('title').text('RUNLU Warehouse OS Settings');
-  $('.topsub').text('Universal Edition · local-first · customer-owned storage');
-  $('[data-feature="multiDeviceSync"]').closest('label').remove();
-  $('button[type="submit"]').text('Save Settings');
-  $('#saved').text('Settings saved to this workspace.');
-  return $.html().replace("multiDeviceSync:'Multi-device Sync',", '');
+  $('title').text('RUNLU Warehouse OS Settings');$('.topsub').text('Universal Edition · local-first · customer-owned storage');$('[data-feature="multiDeviceSync"]').closest('label').remove();$('button[type="submit"]').text('Save Settings');$('#saved').text('Settings saved to this workspace.');return $.html().replace("multiDeviceSync:'Multi-device Sync',", '');
 }
-
 function publicPreview(html) {
   const $ = loadHtml(html, { decodeEntities: false });
-  $('title').text('RUNLU Warehouse OS');
-  $('.bar b').first().text('RUNLU Warehouse OS · Universal Edition');
-  $('#settingsLink').attr('href', 'settings.html').text('Settings');
-  $('#usersLink').attr('href', 'users.html');
-  return $.html();
+  $('title').text('RUNLU Warehouse OS');$('.bar b').first().text('RUNLU Warehouse OS · Universal Edition');$('#settingsLink').attr('href','settings.html').text('Settings');$('#usersLink').attr('href','users.html');return $.html();
 }
-
-for (const [name, transform] of [
-  ['onboarding.html', publicOnboarding],
-  ['settings.html', publicSettings],
-  ['preview.html', publicPreview]
-]) {
-  const p = resolve(universalOut, name);
-  await writeFile(p, transform(await readFile(p, 'utf8')), 'utf8');
-}
+for (const [name, transform] of [['onboarding.html',publicOnboarding],['settings.html',publicSettings],['preview.html',publicPreview]]) { const p=resolve(universalOut,name);await writeFile(p,transform(await readFile(p,'utf8')),'utf8'); }
 
 await writeFile(resolve(out, 'index.html'), `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>RUNLU Warehouse OS</title></head><body><script src="universal/workspace.js"></script><script src="universal/local-auth.js"></script><script>(function(){if(!RUNLUWorkspace.isReady()){location.replace('universal/onboarding.html');return}if(!RUNLUWorkspace.ensureSession()||!RUNLULocalAuth.currentUser()){location.replace('universal/sign-in.html');return}location.replace('universal/preview.html')})()</script><a href="universal/sign-in.html">Open RUNLU Warehouse OS</a></body></html>`, 'utf8');
 
