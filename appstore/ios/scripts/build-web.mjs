@@ -19,8 +19,8 @@ const OMIT_ROOT = new Set([
   'worker.js',
   'worker.min.js'
 ]);
-const OMIT_BUILD_RE = /^build(?:072-|090-|094-|095-|096-|097-|098-|099-|100-|101-|102-|103-|104-)/i;
-const OMIT_BUILD_ANY_RE = /build(?:072-|090-|094-|095-|096-|097-|098-|099-|100-|101-|102-|103-|104-)/i;
+const OMIT_BUILD_RE = /^build(?:072-|088-|090-|094-|095-|096-|097-|098-|099-|100-|101-|102-|103-|104-)/i;
+const OMIT_BUILD_ANY_RE = /build(?:072-|088-|090-|094-|095-|096-|097-|098-|099-|100-|101-|102-|103-|104-)/i;
 const COPY_EXTENSIONS = new Set(['.js', '.json', '.jpg', '.jpeg', '.png', '.svg', '.wasm', '.gz']);
 
 const replacements = new Map([
