@@ -15,6 +15,18 @@ Status: **technical release candidate in preparation**. This file is not evidenc
 - Cloud AI / Cloud Vision: Off in V1
 - Built-in local OCR / barcode / warehouse voice: retained
 
+## App icon
+
+Warehouse OS uses the **same RUNLU software-family App Icon treatment as Universal Invoice**:
+
+- blue gradient background
+- white water-drop outline
+- no Warehouse-specific badge, box, initials, or text overlay
+- 1024×1024 App Store source
+- opaque / no alpha channel
+
+The native iOS CI generates and applies this shared RUNLU icon treatment to the Capacitor AppIcon asset before Xcode compilation, then verifies dimensions and alpha status.
+
 ## Customer setup and access
 
 First launch:
@@ -83,6 +95,7 @@ Required before release:
 
 - Xcode 26+ / iOS 26 SDK or later
 - Capacitor iOS project generation succeeds
+- shared RUNLU App Icon is 1024×1024 and has no alpha channel
 - camera and microphone usage descriptions present
 - unsigned iOS Simulator compilation succeeds
 - native camera bridge and haptics compile
@@ -144,7 +157,7 @@ Description themes:
 - App Store pricing / free-vs-paid model
 - final subtitle and public marketing copy
 - final privacy/support/data-removal wording before publishing to runlu.ca
-- final app icon and screenshots
+- final screenshots
 - irreversible App Store Connect bundle/app record choices if not already created
 - Apple signing / archive / TestFlight / submission
 
@@ -152,6 +165,7 @@ Description themes:
 
 Before submission on a real iPhone/iPad:
 
+- [ ] Shared Universal Invoice / RUNLU family App Icon visible correctly on device
 - [ ] Clean install → onboarding
 - [ ] Flooring template default selected
 - [ ] Cut allowance defaults Off / 0
