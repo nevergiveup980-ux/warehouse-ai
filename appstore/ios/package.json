@@ -5,7 +5,7 @@
   "description": "App Store build workspace for RUNLU Warehouse OS Flooring Edition",
   "scripts": {
     "test:local-core": "node scripts/test-local-core.mjs",
-    "web:build": "npm run test:local-core && node scripts/build-web.mjs && node scripts/sanitize-local-first-network.mjs && node scripts/brand-flooring-edition.mjs && node scripts/disable-cloud-ai.mjs && npm run web:bridge && node scripts/verify-distribution.mjs",
+    "web:build": "npm run test:local-core && node scripts/build-web.mjs && node scripts/sanitize-local-first-network.mjs && node scripts/brand-flooring-edition.mjs && node scripts/disable-cloud-ai.mjs && npm run web:bridge && node scripts/verify-distribution.mjs && node scripts/verify-no-screenshot-fixture.mjs",
     "screenshot:build": "npm run web:build && node scripts/build-screenshot-fixture.mjs",
     "web:bridge": "esbuild src/native-bridge.js --bundle --format=iife --platform=browser --outfile=www/runlu-native.js",
     "ios:add": "npx cap add ios",
