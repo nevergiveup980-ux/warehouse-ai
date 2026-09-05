@@ -31,6 +31,7 @@ jobs:
         run: |
           node --check scripts/build-web.mjs
           node --check scripts/sanitize-local-first-network.mjs
+          node --check scripts/adapt-local-first-shell.mjs
           node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
           node --check scripts/verify-distribution.mjs
@@ -58,6 +59,12 @@ jobs:
           fi
           if grep -R -n -E 'RUNLU_SCREENSHOT_FIXTURE_V1|Northstar Flooring Supply|PO-DEMO-001' www --include='*.html' --include='*.js' --include='*.json'; then
             echo 'Screenshot-only demo data leaked into shipping bundle'
+            exit 1
+          fi
+          grep -q 'runluAppStoreLocalFirstAccessGate' www/universal-app.html
+          grep -q 'runluAppStoreSafeArea' www/universal/preview.html
+          if grep -q 'Connecting to Warehouse Cloud' www/universal-app.html; then
+            echo 'Legacy warehouse-cloud boot copy remains in public runtime'
             exit 1
           fi
 
