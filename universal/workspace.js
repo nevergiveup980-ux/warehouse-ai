@@ -1,4 +1,4 @@
-/* RUNLU Warehouse OS — Universal V1 workspace runtime. Isolated development only. */
+/* RUNLU Warehouse OS — Universal workspace runtime. Customer-owned local data by default. */
 (function(global){
 'use strict';
 const WORKSPACE_KEY='runlu-universal-v1::workspace';
@@ -14,17 +14,16 @@ function writeJson(key,value){localStorage.setItem(key,JSON.stringify(value));re
 function workspace(){return readJson(WORKSPACE_KEY,null)}
 function session(){return readJson(SESSION_KEY,null)}
 function isReady(){const w=workspace();return !!(w&&w.organizationId&&w.warehouseId&&w.config&&w.config.company&&w.config.warehouse)}
-function trialState(now){const w=workspace();if(!w)return {status:'not-configured',daysRemaining:0,expiresAt:null};
-  const created=new Date(w.createdAt||0);if(!Number.isFinite(created.getTime()))return {status:'invalid',daysRemaining:0,expiresAt:null};
-  const days=Number(w.config?.product?.trialDays||14),expires=new Date(created.getTime()+days*86400000),t=now?new Date(now):new Date();
-  const remaining=Math.max(0,Math.ceil((expires-t)/86400000));return {status:t<expires?'trial':'expired',daysRemaining:remaining,expiresAt:expires.toISOString()};}
-function subscriptionState(){const w=workspace();const s=w?.subscription||{};if(s.status==='active'||s.status==='grace')return Object.assign({source:'development'},s);return trialState()}
-function role(){return String(session()?.role||'owner').toLowerCase()}
+function trialState(){return {status:isReady()?'local':'not-configured',daysRemaining:null,expiresAt:null}}
+function subscriptionState(){return trialState()}
+function role(){return String(session()?.role||'signed-out').toLowerCase()}
 function can(action){const needed=ACTION_ROLE[action]||'owner';return (ROLES[role()]||0)>=(ROLES[needed]||99)}
 function feature(name){const w=workspace();return !!w?.config?.features?.[name]}
-function setDevelopmentSession(input){const w=workspace();if(!w)throw new Error('Workspace is not configured.');const x=input||{};const r=String(x.role||'owner').toLowerCase();if(!ROLES[r])throw new Error('Unknown role.');return writeJson(SESSION_KEY,{organizationId:w.organizationId,warehouseId:w.warehouseId,userId:String(x.userId||'local-owner'),displayName:String(x.displayName||'Workspace Owner'),role:r,updatedAt:new Date().toISOString()});}
-function ensureSession(){let s=session(),w=workspace();if(!w)return null;if(!s||s.organizationId!==w.organizationId||s.warehouseId!==w.warehouseId)s=setDevelopmentSession({});return s}
+function setSession(input){const w=workspace();if(!w)throw new Error('Workspace is not configured.');const x=input||{},r=String(x.role||'viewer').toLowerCase();if(!ROLES[r])throw new Error('Unknown role.');return writeJson(SESSION_KEY,{organizationId:w.organizationId,warehouseId:w.warehouseId,userId:String(x.userId||''),username:String(x.username||''),displayName:String(x.displayName||'Local User'),role:r,updatedAt:new Date().toISOString()})}
+function setDevelopmentSession(input){return setSession(input)}
+function ensureSession(){const s=session(),w=workspace();if(!w||!s)return null;if(s.organizationId!==w.organizationId||s.warehouseId!==w.warehouseId){clearSession();return null}return s}
+function clearSession(){localStorage.removeItem(SESSION_KEY)}
 function updateWorkspace(patch){const w=workspace();if(!w)throw new Error('Workspace is not configured.');const next=Object.assign({},w,patch||{}, {updatedAt:new Date().toISOString()});writeJson(WORKSPACE_KEY,next);return next}
-function resetWorkspace(){if(!can('deleteWorkspace'))throw new Error('Owner role required.');localStorage.removeItem(SESSION_KEY);localStorage.removeItem(WORKSPACE_KEY);}
-global.RUNLUWorkspace=Object.freeze({WORKSPACE_KEY,SESSION_KEY,ROLES,ACTION_ROLE,workspace,session,isReady,trialState,subscriptionState,role,can,feature,setDevelopmentSession,ensureSession,updateWorkspace,resetWorkspace});
+function resetWorkspace(){if(!can('deleteWorkspace'))throw new Error('Owner role required.');clearSession();localStorage.removeItem(WORKSPACE_KEY)}
+global.RUNLUWorkspace=Object.freeze({WORKSPACE_KEY,SESSION_KEY,ROLES,ACTION_ROLE,workspace,session,isReady,trialState,subscriptionState,role,can,feature,setSession,setDevelopmentSession,ensureSession,clearSession,updateWorkspace,resetWorkspace});
 })(typeof window!=='undefined'?window:globalThis);
