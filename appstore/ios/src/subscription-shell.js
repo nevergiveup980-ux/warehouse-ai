@@ -26,7 +26,7 @@ global.RUNLU_SUBSCRIPTION_ACCESS=Object.freeze({
   showPaywall:()=>{dismissedReadOnly=false;render(true);}
 });
 
-function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));}
 function plural(value,unit){const n=Number(value||0);return `${n} ${unit}${n===1?'':'s'}`;}
 function billingLabel(product){
   if(!product?.displayPrice)return 'Monthly subscription';
@@ -39,7 +39,12 @@ function trialLabel(product){
   const value=Number(product.introPeriodValue||0),unit=String(product.introPeriodUnit||'day');
   return value>0?`${plural(value,unit)} free, then ${billingLabel(product)}`:`Free trial, then ${billingLabel(product)}`;
 }
-function ctaLabel(product){return trialLabel(product)?`Start ${plural(Number(product.introPeriodValue||14),String(product.introPeriodUnit||'day')).replace(/s$/,'')} Free Trial`:'Subscribe';}
+function trialCta(product){
+  if(!trialLabel(product))return 'Subscribe';
+  const value=Number(product.introPeriodValue||0),unit=String(product.introPeriodUnit||'day').toLowerCase();
+  if(value>0&&unit!=='unknown')return `Start ${value}-${unit.charAt(0).toUpperCase()+unit.slice(1)} Free Trial`;
+  return 'Start Free Trial';
+}
 
 function ensureOverlay(){
   if(overlay||!global.document?.body)return overlay;
@@ -98,7 +103,7 @@ function render(force=false){
     <ul class="benefits"><li>No ads</li><li>Local-first warehouse data</li><li>Encrypted customer-owned backups</li><li>Continuing maintenance and workflow improvements</li></ul>
     <div class="status">${escapeHtml(statusMessage())}</div>
     <div class="actions">
-      ${purchasable?`<button class="primary" id="runluSubscribeNow">${escapeHtml(ctaLabel(product))}</button>`:''}
+      ${purchasable?`<button class="primary" id="runluSubscribeNow">${escapeHtml(trialCta(product))}</button>`:''}
       ${state.mode!=='checking'?'<button class="secondary" id="runluRestorePurchase">Restore Purchases</button>':''}
       ${state.mode!=='checking'?'<button class="secondary" id="runluContinueReadOnly">Continue Read-Only</button>':''}
       ${state.mode==='unavailable'?'<button class="secondary" id="runluRetrySubscription">Retry</button>':''}
