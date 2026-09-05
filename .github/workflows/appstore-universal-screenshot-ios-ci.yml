@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/workflows/appstore-universal-screenshot-ios-ci.yml'
       - 'appstore/ios/package.json'
+      - 'appstore/ios/src/**'
+      - 'appstore/ios/plugins/runlu-subscription/**'
       - 'appstore/ios/scripts/generate-runlu-app-icon.swift'
       - 'appstore/ios/scripts/capture-simulator-dashboard.sh'
       - 'appstore/ios/scripts/build-screenshot-fixture.mjs'
@@ -19,6 +21,8 @@ on:
       - 'appstore/ios/scripts/sanitize-flooring-public-rules.mjs'
       - 'appstore/ios/scripts/polish-appstore-public-runtime.mjs'
       - 'appstore/ios/scripts/verify-public-polish.mjs'
+      - 'appstore/ios/scripts/wire-subscription-shell.mjs'
+      - 'appstore/ios/scripts/verify-subscription-shell.mjs'
       - 'universal/**'
       - 'universal-app.html'
   workflow_dispatch:
@@ -50,6 +54,8 @@ jobs:
       - name: Syntax-check screenshot capture scripts
         working-directory: appstore/ios
         run: |
+          node --check src/native-bridge.js
+          node --check src/subscription-shell.js
           node --check scripts/build-screenshot-fixture.mjs
           node --check scripts/prepare-screenshot-scenes.mjs
           node --check scripts/verify-no-screenshot-fixture.mjs
@@ -60,6 +66,8 @@ jobs:
           node --check scripts/sanitize-flooring-public-rules.mjs
           node --check scripts/polish-appstore-public-runtime.mjs
           node --check scripts/verify-public-polish.mjs
+          node --check scripts/wire-subscription-shell.mjs
+          node --check scripts/verify-subscription-shell.mjs
           bash -n scripts/capture-simulator-dashboard.sh
 
       - name: Build verified shipping bundle first
@@ -82,6 +90,7 @@ jobs:
           grep -q '<p>Flooring Operations</p>' screenshot-www/universal-app.html
           grep -q '<strong>Scan / OCR</strong>' screenshot-www/universal-app.html
           grep -q 'screenshot-scenes.js' screenshot-www/universal/preview.html
+          grep -q 'runlu-subscription-shell.js' screenshot-www/universal/preview.html
           test ! -e www/screenshot-fixture.js
           test ! -e www/screenshot-scenes.js
           ! grep -q 'screenshot-scenes.js' www/universal/preview.html
