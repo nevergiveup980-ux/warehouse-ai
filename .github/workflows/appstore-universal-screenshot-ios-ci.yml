@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/appstore-universal-screenshot-ios-ci.yml'
       - 'appstore/ios/package.json'
+      - 'appstore/ios/assets/runlu-universal-invoice-appicon-1024.png'
       - 'appstore/ios/scripts/capture-simulator-dashboard.sh'
       - 'appstore/ios/scripts/build-screenshot-fixture.mjs'
       - 'appstore/ios/scripts/verify-no-screenshot-fixture.mjs'
@@ -78,15 +79,19 @@ jobs:
           npx cap add ios
           npx cap sync ios
 
-      - name: Apply shared RUNLU family App Icon
+      - name: Apply exact Universal Invoice RUNLU App Icon
         working-directory: appstore/ios
         run: |
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           ICON="$ICONSET/AppIcon-512@2x.png"
-          swift scripts/generate-runlu-app-icon.swift "$ICON"
+          SOURCE="assets/runlu-universal-invoice-appicon-1024.png"
+          test -f "$SOURCE"
+          test "$(shasum -a 256 "$SOURCE" | awk '{print $1}')" = "983e171db7308eac45143dc0dbfec2ef7154e4c5894b2916ca184625bb4071e9"
+          cp "$SOURCE" "$ICON"
           test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
           test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
           test "$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/{print $2}')" = "no"
+          test "$(shasum -a 256 "$ICON" | awk '{print $1}')" = "983e171db7308eac45143dc0dbfec2ef7154e4c5894b2916ca184625bb4071e9"
 
       - name: Configure native permissions and release identity
         working-directory: appstore/ios
