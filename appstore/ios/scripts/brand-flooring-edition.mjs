@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const here=dirname(fileURLToPath(import.meta.url));
 const www=resolve(here,'../www/universal');
-const publicPages=['onboarding.html','settings.html','preview.html'];
+const publicPages=['onboarding.html','sign-in.html','users.html','backup.html','settings.html','preview.html'];
 
 for(const name of publicPages){
   const path=resolve(www,name);
