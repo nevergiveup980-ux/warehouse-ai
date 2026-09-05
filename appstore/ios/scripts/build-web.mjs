@@ -66,6 +66,13 @@ function configureCutAllowance(html){
   html=html.replaceAll('× 3″ allowance','× configured allowance');
   html=html.replaceAll('including 3″ cutting allowance','including configured cutting allowance');
   html=html.replaceAll('Each cut deducts an additional 3 inches.','Each cut uses the warehouse configured cut allowance.');
+  // Final public-language scrub: the production core historically mentioned our own
+  // three-inch practice in several labels and audit messages. Universal V1 must never
+  // present that company practice as an industry rule.
+  html=html.replaceAll('3″ allowance','configured allowance');
+  html=html.replaceAll('3″','configured allowance');
+  html=html.replaceAll('3 inches','configured allowance');
+  html=html.replaceAll('3-inch','configured-allowance');
   return html;
 }
 
