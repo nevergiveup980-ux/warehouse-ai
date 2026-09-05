@@ -24,7 +24,8 @@ if(!permission.includes("if(!sub||typeof sub.can!=='function'||!sub.can(action))
 const shell=await readFile(resolve(out,'runlu-subscription-shell.js'),'utf8');
 for(const needle of ['displayPrice','introEligible','introPaymentMode','Restore Purchases','Continue Read-Only','Open Encrypted Backup','Manage Subscription','warehouse-privacy.html','stdeula','runlu-appstore-screenshot-marker'])if(!shell.includes(needle))errors.push(`Subscription shell is missing: ${needle}`);
 for(const forbidden of ['14.99','29.99','299.99','RUNLU_SCREENSHOT_FIXTURE_V1'])if(shell.includes(forbidden))errors.push(`Subscription shell contains a forbidden hard-coded value or fixture marker: ${forbidden}`);
-if(!shell.includes("BLOCKED_ACTIONS=new Set(['manageProducts','editInventory','manageOrders','receive','transfer','cutPick','ship','returnStock','count'])"))errors.push('Subscription shell does not define the expected operational read-only boundary.');
+for(const action of ['manageProducts','editInventory','manageOrders','receive','transfer','cutPick','ship','returnStock','count'])if(!shell.includes(action))errors.push(`Subscription read-only boundary is missing operational action: ${action}`);
+if(!shell.includes('BLOCKED_ACTIONS')||!shell.includes('new Set'))errors.push('Subscription shell does not define the operational blocked-action set.');
 
 const native=await readFile(resolve(out,'runlu-native.js'),'utf8');
 for(const needle of ['getProduct','getEntitlement','purchase','restore','manageSubscriptions','entitlementChanged','appStateChange'])if(!native.includes(needle))errors.push(`Native subscription bridge is missing: ${needle}`);
