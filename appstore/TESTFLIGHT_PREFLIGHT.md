@@ -15,27 +15,42 @@ Status: **internal release checklist — not evidence of upload or submission**
 
 The native CI must verify the display name, bundle ID, version, build number, iPhone+iPad device family, App Icon dimensions/alpha, privacy usage strings, and a clean unsigned simulator compile before a build is treated as upload-ready.
 
+## Approved V1 subscription model
+
+- Auto-renewable monthly subscription
+- Target Canada price: **CAD $14.99 / month**
+- Introductory offer: **14-day free trial**
+- No free tier, ads, or annual plan in V1
+- Candidate product ID: `ca.runlu.warehouseos.monthly`
+
+The final app must use StoreKit-localized price and eligibility information. Internal TestFlight is also the required proving ground for purchase, restore, renewal/expiry, and data-preservation behavior before App Review.
+
+See `SUBSCRIPTION_RELEASE_PLAN.md`.
+
 ## TestFlight information draft
 
 ### Beta App Description
 
-RUNLU Warehouse OS is a local-first warehouse operating system designed primarily for flooring and building-material businesses. This beta focuses on inventory, carpet rolls and cuts, receiving, purchase orders, transfers, shipping, returns, samples, barcode/OCR scanning, local role-based users, and encrypted customer-owned backup and restore.
+RUNLU Warehouse OS is a local-first warehouse operating system designed primarily for flooring and building-material businesses. This beta focuses on inventory, carpet rolls and cuts, receiving, purchase orders, transfers, shipping, returns, samples, barcode/OCR scanning, local role-based users, encrypted customer-owned backup and restore, and StoreKit subscription entitlement handling.
 
 V1 does not require a RUNLU-hosted warehouse account. Operational data remains on the device unless the tester explicitly exports an encrypted backup through the system save/share flow.
 
 ### What to Test
 
-Please test the complete local warehouse workflow:
+Please test the complete local warehouse workflow and subscription boundary:
 
-1. Create a Company, local Owner username/PIN, and Warehouse.
-2. Keep the default Flooring / Building Materials template.
-3. Add fictional products and inventory.
-4. Test receiving / PO, transfer, shipping, return, sample, and carpet roll/cut workflows.
-5. Confirm cut allowance defaults to Off / 0 and can be configured by the customer.
-6. Test barcode/OCR scanning and local warehouse voice input.
-7. Create Manager / Staff / Viewer users and confirm role restrictions.
-8. Create an encrypted backup, sign out, restore the backup, and sign in again.
-9. Confirm the app remains usable after closing/reopening while offline.
+1. Start the test subscription / introductory offer in the Apple test environment.
+2. Create a Company, local Owner username/PIN, and Warehouse.
+3. Keep the default Flooring / Building Materials template.
+4. Add fictional products and inventory.
+5. Test receiving / PO, transfer, shipping, return, sample, and carpet roll/cut workflows.
+6. Confirm cut allowance defaults to Off / 0 and can be configured by the customer.
+7. Test barcode/OCR scanning and strict on-device warehouse voice input where supported.
+8. Create Manager / Staff / Viewer users and confirm role restrictions.
+9. Create an encrypted backup, sign out, restore the backup, and sign in again.
+10. Confirm the app remains usable after closing/reopening while offline with a previously verified active entitlement.
+11. Test Restore Purchases / subscription synchronization.
+12. Test an expired entitlement: existing warehouse data must remain intact and readable, backup/export must remain available, and paid operational editing must be disabled until entitlement is restored.
 
 Do not use real customer, supplier, employee, PO, or production data in beta testing.
 
@@ -97,11 +112,15 @@ Before any real upload:
 - [ ] Local roles verified
 - [ ] Encrypted backup/restore verified
 - [ ] Offline persistence verified
+- [ ] StoreKit subscription product loads correctly
+- [ ] Purchase flow verified
+- [ ] Restore Purchases verified
+- [ ] Trial eligibility / localized price display verified
+- [ ] Subscription expiry preserves data and backup access
 - [ ] iPhone real-device smoke test
 - [ ] iPad real-device or simulator smoke test
 - [ ] English App Store screenshot set captured from clean fictional data
-- [ ] Pricing decision made before App Store distribution, but not required for internal TestFlight validation
 
 ## Upload boundary
 
-Actual Apple signing, certificate/profile use, Archive, TestFlight upload, external beta review, pricing, and App Store submission are separate owner-controlled release actions. This checklist does not authorize or claim any of those actions have happened.
+Actual Apple signing, certificate/profile use, Archive, TestFlight upload, external beta review, App Store Connect subscription creation, storefront pricing activation, and App Store submission remain separate release actions. This checklist does not claim any of those actions have happened.
