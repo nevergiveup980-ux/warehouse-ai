@@ -75,7 +75,9 @@ if(!mature.includes("function inventorySearchKey(value){return normKey(value)}")
 if(!mature.includes("function voiceWarehouseAliasDictionary(text){return null}"))errors.push('Voice still carries a company-specific alias dictionary.');
 if(!mature.includes("function applyV5522UnderlaymentSpecs(showMessage=false)"))errors.push('Underlayment migration guard is missing.');
 if(/const\s+deerfoot\s*=|\b18\\d\{4\}/i.test(mature))errors.push('Company-specific 18xxxx PO fallback remains.');
-if(!mature.includes('<h1>RUNLU Warehouse OS</h1>'))errors.push('Mature core header is not branded RUNLU Warehouse OS.');
+if(!mature.includes('<h1>Warehouse OS</h1>'))errors.push('Mature-core header is not compacted to Warehouse OS.');
+if(!mature.includes('<p>Flooring Operations</p>'))errors.push('Mature-core header subtitle is not Flooring Operations.');
+if(mature.includes('<h1>RUNLU Warehouse OS</h1>'))errors.push('Nested mature-core header still duplicates full RUNLU product name.');
 
 const templates=await readFile(resolve(out,'universal/templates.js'),'utf8');
 if(!templates.includes("id:'flooring'"))errors.push('Flooring template is missing.');
@@ -116,6 +118,7 @@ if(!settings.includes('0 = Off'))errors.push('Settings do not explain how to dis
 const preview=await readFile(resolve(out,'universal/preview.html'),'utf8');
 if(!preview.includes('permission-guard.js'))errors.push('Mature core permission guard is not injected.');
 if(!preview.includes('backupLink'))errors.push('Owner backup entry is missing from shell.');
+if(!preview.includes("owner:'Owner'")||!preview.includes("admin:'Administrator'")||!preview.includes("member:'Staff'"))errors.push('Public shell does not normalize local role labels.');
 
 const entry=await readFile(resolve(out,'index.html'),'utf8');
 if(!entry.includes('sign-in.html')||!entry.includes('RUNLULocalAuth.currentUser'))errors.push('App entry point does not enforce local sign-in.');
