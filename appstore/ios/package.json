@@ -5,9 +5,9 @@
   "description": "App Store build workspace for RUNLU Warehouse OS Flooring Edition",
   "scripts": {
     "test:local-core": "node scripts/test-local-core.mjs",
-    "web:build": "npm run test:local-core && node scripts/build-web.mjs && node scripts/sanitize-local-first-network.mjs && node scripts/adapt-local-first-shell.mjs && node scripts/brand-flooring-edition.mjs && node scripts/disable-cloud-ai.mjs && node scripts/sanitize-flooring-public-rules.mjs && node scripts/polish-appstore-public-runtime.mjs && node scripts/verify-public-polish.mjs && npm run web:bridge && node scripts/verify-distribution.mjs && node scripts/verify-no-screenshot-fixture.mjs",
+    "web:build": "npm run test:local-core && node scripts/build-web.mjs && node scripts/sanitize-local-first-network.mjs && node scripts/adapt-local-first-shell.mjs && node scripts/brand-flooring-edition.mjs && node scripts/disable-cloud-ai.mjs && node scripts/sanitize-flooring-public-rules.mjs && node scripts/polish-appstore-public-runtime.mjs && node scripts/verify-public-polish.mjs && npm run web:bridge && node scripts/wire-subscription-shell.mjs && node scripts/verify-distribution.mjs && node scripts/verify-no-screenshot-fixture.mjs",
     "screenshot:build": "npm run web:build && node scripts/build-screenshot-fixture.mjs",
-    "web:bridge": "esbuild src/native-bridge.js --bundle --format=iife --platform=browser --outfile=www/runlu-native.js",
+    "web:bridge": "esbuild src/native-bridge.js --bundle --format=iife --platform=browser --outfile=www/runlu-native.js && esbuild src/subscription-shell.js --bundle --format=iife --platform=browser --outfile=www/runlu-subscription-shell.js",
     "ios:add": "npx cap add ios",
     "ios:sync": "npm run web:build && npx cap sync ios",
     "ios:open": "npx cap open ios",
