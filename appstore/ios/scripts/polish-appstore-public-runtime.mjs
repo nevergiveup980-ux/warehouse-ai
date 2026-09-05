@@ -66,6 +66,11 @@ $('button').each((_,el)=>{
 const voiceMeta=$('#voiceAssistant .voiceHero .meta').first();
 if(voiceMeta.length)voiceMeta.text('Ask the live Warehouse OS by text, or by speech only when strict on-device recognition is available. Cloud AI is not enabled in this release.');
 
+// App Store screenshots and public runtime should never expose internal component
+// build labels. Keep the product-facing carpet identity stable and customer-ready.
+const carpetEyebrow=$('#carpetInventory .carpetWorkbenchHero .eyebrow').first();
+if(carpetEyebrow.length)carpetEyebrow.text('RUNLU CARPET WORKBENCH · FLOORING EDITION');
+
 // Remove cloud-era claims from visible Flooring Edition copy. These are display
 // changes only; local workflow behavior remains unchanged.
 const visibleReplacements=new Map([
@@ -94,6 +99,8 @@ if(result.includes('synchronize with signed-in devices'))throw new Error('Public
 if(!result.includes("voiceRecognition.processLocally=true"))throw new Error('Public polish: strict on-device speech enforcement is missing.');
 if(!result.includes('Strict on-device speech recognition is unavailable here. Use the text box below.'))throw new Error('Public polish: safe speech fallback is missing.');
 if(!result.includes('const BUILTIN_SUPPLIER_TEMPLATES=[];'))throw new Error('Public polish: supplier presets were not neutralized.');
+if(result.includes('RUNLU CARPET WORKBENCH · INVENTORY 2.0 BUILD 003'))throw new Error('Public polish: internal carpet build label remains.');
+if(!result.includes('RUNLU CARPET WORKBENCH · FLOORING EDITION'))throw new Error('Public polish: public carpet edition label is missing.');
 for(const privateSupplier of ['Primco','Taiga','Fuzion','Treeco','Buckwold','Centura','Oakel City','Twelve Oaks']){
   if(new RegExp(privateSupplier.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(result))throw new Error(`Public polish: supplier-specific runtime remains: ${privateSupplier}`);
 }
@@ -102,4 +109,4 @@ if($('#navSettings').length)throw new Error('Public polish: mature-core Settings
 if(!result.includes('<strong>Scan / OCR</strong>'))throw new Error('Public polish: local Scan / OCR home module is missing.');
 
 await writeFile(target,result,'utf8');
-console.log('RUNLU App Store public runtime polished: local Scan/OCR, strict on-device-only speech, customer-defined supplier templates, no duplicate internal Settings/Developer entries.');
+console.log('RUNLU App Store public runtime polished: local Scan/OCR, strict on-device-only speech, customer-defined supplier templates, public carpet branding, no duplicate internal Settings/Developer entries.');
