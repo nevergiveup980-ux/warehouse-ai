@@ -67,15 +67,15 @@ await writeFile(loaderPath, loader, 'utf8');
 
 // Ship only the Universal runtime required by the user-facing build.
 for (const name of [
-  'onboarding.html', 'preview.html', 'settings.html',
-  'runtime-config.js', 'templates.js', 'workspace.js',
+  'onboarding.html', 'sign-in.html', 'users.html', 'preview.html', 'settings.html',
+  'runtime-config.js', 'templates.js', 'workspace.js', 'local-auth.js',
   'storage-adapter.js', 'core-adapter.js', 'legacy-storage-shim.js'
 ]) {
   await cp(resolve(universalSrc, name), resolve(universalOut, name));
 }
 
 // Public V1 is local-first. Multi-device sync and subscription pricing are deliberately
-// not enabled until the dedicated Universal cloud and StoreKit product are approved.
+// not enabled until a customer-owned cloud connector and StoreKit product are approved.
 for (const name of ['runtime-config.js', 'templates.js']) {
   const p = resolve(universalOut, name);
   let text = await readFile(p, 'utf8');
@@ -152,59 +152,42 @@ await writeFile(resolve(out, 'universal-app.html'), mature, 'utf8');
 function publicOnboarding(html) {
   const $ = loadHtml(html, { decodeEntities: false });
   $('.eyebrow').text('Universal Edition');
-  $('header p').text('Create your company and first warehouse. Your operational data stays in this workspace on this device.');
-  $('.notice').first().remove();
+  $('header p').text('Create your company, local Owner account and first warehouse. Flooring-ready by default, fully configurable by the customer.');
   $('section.card').each((_, el) => {
     if ($(el).find('h2').first().text().trim() === 'Commercial preview') $(el).remove();
   });
-  $('section.card').each((_, el) => {
-    if ($(el).find('h2').first().text().trim() === 'Workspace owner') {
-      $(el).find('.sub').text('This name identifies the local workspace owner. Sign-in and team cloud access are not enabled in this local-first release.');
-    }
-  });
-  $('button[type="submit"]').text('Create Workspace');
-  $('.footer').text('RUNLU Warehouse OS · Universal Edition');
-  const text = $.html().replaceAll('Universal development workspace created.', 'Workspace created.')
-    .replaceAll('href="index.html">Open workspace', 'href="preview.html">Open Warehouse OS');
-  return text;
+  $('.footer').text('RUNLU Warehouse OS · Local-first · Customer-owned storage');
+  return $.html();
 }
 
 function publicSettings(html) {
   const $ = loadHtml(html, { decodeEntities: false });
   $('title').text('RUNLU Warehouse OS Settings');
-  $('.topsub').text('Universal Edition · local-first workspace');
+  $('.topsub').text('Universal Edition · local-first · customer-owned storage');
   $('[data-feature="multiDeviceSync"]').closest('label').remove();
   $('button[type="submit"]').text('Save Settings');
-  $('a[href="index.html"]').attr('href', 'preview.html').text('Back to Warehouse OS');
   $('#saved').text('Settings saved to this workspace.');
-  let text = $.html();
-  text = text.replace("multiDeviceSync:'Multi-device Sync',", '');
-  text = text.replaceAll("location.replace('index.html')", "location.replace('preview.html')");
-  return text;
+  return $.html().replace("multiDeviceSync:'Multi-device Sync',", '');
 }
 
 function publicPreview(html) {
   const $ = loadHtml(html, { decodeEntities: false });
   $('title').text('RUNLU Warehouse OS');
-  $('.bar b').text('RUNLU Warehouse OS · Universal Edition');
-  $('.bar span').text('Local-first workspace · company and warehouse data isolated on this device');
-  $('.bar a').attr('href', 'settings.html').text('Settings');
+  $('.bar b').first().text('RUNLU Warehouse OS · Universal Edition');
+  $('#settingsLink').attr('href', 'settings.html').text('Settings');
+  $('#usersLink').attr('href', 'users.html');
   return $.html();
 }
 
-{
-  const p = resolve(universalOut, 'onboarding.html');
-  await writeFile(p, publicOnboarding(await readFile(p, 'utf8')), 'utf8');
-}
-{
-  const p = resolve(universalOut, 'settings.html');
-  await writeFile(p, publicSettings(await readFile(p, 'utf8')), 'utf8');
-}
-{
-  const p = resolve(universalOut, 'preview.html');
-  await writeFile(p, publicPreview(await readFile(p, 'utf8')), 'utf8');
+for (const [name, transform] of [
+  ['onboarding.html', publicOnboarding],
+  ['settings.html', publicSettings],
+  ['preview.html', publicPreview]
+]) {
+  const p = resolve(universalOut, name);
+  await writeFile(p, transform(await readFile(p, 'utf8')), 'utf8');
 }
 
-await writeFile(resolve(out, 'index.html'), `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>RUNLU Warehouse OS</title></head><body><script>location.replace('universal/preview.html')</script><a href="universal/preview.html">Open RUNLU Warehouse OS</a></body></html>`, 'utf8');
+await writeFile(resolve(out, 'index.html'), `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>RUNLU Warehouse OS</title></head><body><script src="universal/workspace.js"></script><script src="universal/local-auth.js"></script><script>(function(){if(!RUNLUWorkspace.isReady()){location.replace('universal/onboarding.html');return}if(!RUNLUWorkspace.ensureSession()||!RUNLULocalAuth.currentUser()){location.replace('universal/sign-in.html');return}location.replace('universal/preview.html')})()</script><a href="universal/sign-in.html">Open RUNLU Warehouse OS</a></body></html>`, 'utf8');
 
 console.log('RUNLU Warehouse OS App Store web bundle prepared:', out);
