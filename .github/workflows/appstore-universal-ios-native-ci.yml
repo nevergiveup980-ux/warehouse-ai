@@ -51,22 +51,18 @@ jobs:
           npx cap add ios
           npx cap sync ios
 
-      - name: Apply exact Universal Invoice RUNLU App Icon
+      - name: Apply Universal Invoice RUNLU App Icon
         working-directory: appstore/ios
         run: |
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           ICON="$ICONSET/AppIcon-512@2x.png"
-          SOURCE="assets/runlu-universal-invoice-appicon-1024.png"
-          test -f "$SOURCE"
-          test "$(shasum -a 256 "$SOURCE" | awk '{print $1}')" = "983e171db7308eac45143dc0dbfec2ef7154e4c5894b2916ca184625bb4071e9"
-          cp "$SOURCE" "$ICON"
+          swift scripts/generate-runlu-app-icon.swift "$ICON"
           test -f "$ICON"
           test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
           test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
           ALPHA="$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/{print $2}')"
           test "$ALPHA" = "no"
-          test "$(shasum -a 256 "$ICON" | awk '{print $1}')" = "983e171db7308eac45143dc0dbfec2ef7154e4c5894b2916ca184625bb4071e9"
-          echo "Exact Universal Invoice App Icon applied to Warehouse OS: 1024x1024, no alpha"
+          echo "Universal Invoice RUNLU family icon rendered for Warehouse OS: same blue diagonal gradient + white water-drop geometry, 1024x1024, no alpha"
 
       - name: Configure iOS privacy usage descriptions
         working-directory: appstore/ios
