@@ -34,6 +34,9 @@ jobs:
           node --check scripts/adapt-local-first-shell.mjs
           node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
+          node --check scripts/sanitize-flooring-public-rules.mjs
+          node --check scripts/polish-appstore-public-runtime.mjs
+          node --check scripts/verify-public-polish.mjs
           node --check scripts/verify-distribution.mjs
           node --check scripts/verify-no-screenshot-fixture.mjs
           node --check scripts/build-screenshot-fixture.mjs
@@ -67,6 +70,8 @@ jobs:
           fi
           grep -q 'runluAppStoreLocalFirstAccessGate' www/universal-app.html
           grep -q 'runluAppStoreSafeArea' www/universal/preview.html
+          grep -q '<strong>Scan / OCR</strong>' www/universal-app.html
+          grep -q 'const BUILTIN_SUPPLIER_TEMPLATES=\[\];' www/universal-app.html
           if grep -q 'Connecting to Warehouse Cloud' www/universal-app.html; then
             echo 'Legacy warehouse-cloud boot copy remains in public runtime'
             exit 1
