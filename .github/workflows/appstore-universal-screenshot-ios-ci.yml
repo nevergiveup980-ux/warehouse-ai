@@ -1,0 +1,95 @@
+name: App Store Flooring Screenshot Gate
+
+on:
+  push:
+    branches:
+      - appstore/universal-ios-v1
+    paths:
+      - '.github/workflows/appstore-universal-screenshot-ios-ci.yml'
+      - 'appstore/ios/scripts/capture-simulator-dashboard.sh'
+      - 'appstore/ios/scripts/build-screenshot-fixture.mjs'
+      - 'appstore/ios/scripts/verify-no-screenshot-fixture.mjs'
+      - 'universal/**'
+      - 'universal-app.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshot-ios:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - name: Checkout App Store branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install App Store build dependencies
+        working-directory: appstore/ios
+        run: npm install --no-audit --no-fund
+
+      - name: Syntax-check screenshot capture scripts
+        working-directory: appstore/ios
+        run: |
+          node --check scripts/build-screenshot-fixture.mjs
+          node --check scripts/verify-no-screenshot-fixture.mjs
+          bash -n scripts/capture-simulator-dashboard.sh
+
+      - name: Build verified shipping bundle first
+        working-directory: appstore/ios
+        run: npm run web:build
+
+      - name: Build isolated fictional screenshot bundle
+        working-directory: appstore/ios
+        run: |
+          node scripts/build-screenshot-fixture.mjs
+          test -f screenshot-www/screenshot-fixture.js
+          grep -q 'RUNLU_SCREENSHOT_FIXTURE_V1' screenshot-www/screenshot-fixture.js
+          test ! -e www/screenshot-fixture.js
+
+      - name: Generate Capacitor iOS project
+        working-directory: appstore/ios
+        run: |
+          rm -rf ios
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Apply shared RUNLU family App Icon
+        working-directory: appstore/ios
+        run: |
+          ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          ICON="$ICONSET/AppIcon-512@2x.png"
+          swift scripts/generate-runlu-app-icon.swift "$ICON"
+          test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
+          test "$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/{print $2}')" = "no"
+
+      - name: Configure native permissions and release identity
+        working-directory: appstore/ios
+        env:
+          RUNLU_MARKETING_VERSION: '1.0.0'
+          RUNLU_BUILD_NUMBER: '1'
+        run: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Warehouse OS uses the microphone only when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription Warehouse OS uses the microphone only when you choose local voice input." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST"
+          bash scripts/prepare-xcode-release.sh
+
+      - name: Capture real simulator dashboard screenshot
+        working-directory: appstore/ios
+        run: bash scripts/capture-simulator-dashboard.sh
+
+      - name: Upload raw App Store screenshot capture
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-warehouse-raw-iphone-screenshot
+          path: appstore/ios/screenshots/raw
+          if-no-files-found: error
+          retention-days: 7
