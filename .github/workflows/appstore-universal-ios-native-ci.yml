@@ -34,6 +34,10 @@ jobs:
         working-directory: appstore/ios
         run: npm install --no-audit --no-fund
 
+      - name: Syntax-check native release preflight
+        working-directory: appstore/ios
+        run: bash -n scripts/prepare-xcode-release.sh
+
       - name: Build verified local-first web bundle
         working-directory: appstore/ios
         run: npm run web:build
@@ -68,6 +72,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$PLIST"
+
+      - name: Lock and verify release identity
+        working-directory: appstore/ios
+        env:
+          RUNLU_MARKETING_VERSION: '1.0.0'
+          RUNLU_BUILD_NUMBER: '1'
+        run: bash scripts/prepare-xcode-release.sh
 
       - name: Compile unsigned iOS Simulator build
         working-directory: appstore/ios
