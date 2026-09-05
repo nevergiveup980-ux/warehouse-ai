@@ -66,9 +66,6 @@ function configureCutAllowance(html){
   html=html.replaceAll('× 3″ allowance','× configured allowance');
   html=html.replaceAll('including 3″ cutting allowance','including configured cutting allowance');
   html=html.replaceAll('Each cut deducts an additional 3 inches.','Each cut uses the warehouse configured cut allowance.');
-  // Final public-language scrub: the production core historically mentioned our own
-  // three-inch practice in several labels and audit messages. Universal V1 must never
-  // present that company practice as an industry rule.
   html=html.replaceAll('3″ allowance','configured allowance');
   html=html.replaceAll('3″','configured allowance');
   html=html.replaceAll('3 inches','configured allowance');
@@ -76,7 +73,19 @@ function configureCutAllowance(html){
   return html;
 }
 
-function cleanMatureCore(html){html=neutralizeFunctions(html);html=configureCutAllowance(html);html=html.replace("const CLOUD_URL='https://ekrnknlawekeoszzkamd.supabase.co';","const CLOUD_URL='https://local-only.invalid';");html=html.replace(/const CLOUD_KEY='[^']*';/,"const CLOUD_KEY='';");const $=loadHtml(html,{decodeEntities:false});$('script[src="carpet_seed.js"]').remove();$('#headerCloudPill').remove();$('.settingRow').each((_,el)=>{const title=$(el).find('.name').first().text().trim();if(title==='Cloud Sync'||title==='Carpet Management Link')$(el).remove()});$('body').append('<script src="runlu-native.js"></script>');return $.html()}
+function removePrivateDefaults(html){
+  const current="(RUNLUWorkspace.session()?.displayName||'Warehouse Staff')";
+  html=html.replaceAll("'John'",current);
+  html=html.replaceAll('value="John"','value="" placeholder="Current signed-in user"');
+  html=html.replaceAll('placeholder="John"','placeholder="Current signed-in user"');
+  html=html.replaceAll("Tony's store orders use Warehouse → Store.","Choose the source and destination that match your organization's workflow.");
+  // Last-resort public bundle scrub for historical UI copy. Production is untouched.
+  html=html.replaceAll('John','Current user');
+  html=html.replaceAll('Tony','Customer');
+  return html;
+}
+
+function cleanMatureCore(html){html=neutralizeFunctions(html);html=configureCutAllowance(html);html=removePrivateDefaults(html);html=html.replace("const CLOUD_URL='https://ekrnknlawekeoszzkamd.supabase.co';","const CLOUD_URL='https://local-only.invalid';");html=html.replace(/const CLOUD_KEY='[^']*';/,"const CLOUD_KEY='';");const $=loadHtml(html,{decodeEntities:false});$('script[src="carpet_seed.js"]').remove();$('#headerCloudPill').remove();$('.settingRow').each((_,el)=>{const title=$(el).find('.name').first().text().trim();if(title==='Cloud Sync'||title==='Carpet Management Link')$(el).remove()});$('body').append('<script src="runlu-native.js"></script>');return $.html()}
 
 let mature=await readFile(resolve(repoRoot,'universal-app.html'),'utf8');mature=cleanMatureCore(mature);await writeFile(resolve(out,'universal-app.html'),mature,'utf8');
 
