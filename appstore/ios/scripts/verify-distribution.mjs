@@ -24,14 +24,19 @@ const names = files.map(f => f.slice(out.length + 1).replaceAll('\\', '/'));
 for (const forbiddenFile of ['carpet_seed.js']) {
   if (names.some(n => n.endsWith('/' + forbiddenFile) || n === forbiddenFile)) errors.push(`Forbidden distribution file present: ${forbiddenFile}`);
 }
-for (let n = 94; n <= 104; n++) {
-  const prefix = `build${String(n).padStart(3, '0')}-`;
-  if (names.some(name => name.startsWith(prefix))) errors.push(`Internal bridge build present: ${prefix}`);
+for (const prefix of [
+  'build072-', 'build090-',
+  'build094-', 'build095-', 'build096-', 'build097-', 'build098-', 'build099-',
+  'build100-', 'build101-', 'build102-', 'build103-', 'build104-'
+]) {
+  if (names.some(name => name.startsWith(prefix))) errors.push(`Private/cloud build present: ${prefix}`);
 }
 
 const forbidden = [
   ['production Supabase origin', 'https://ekrnknlawekeoszzkamd.supabase.co'],
   ['production Supabase publishable key', 'sb_publishable_Jr12gnQ7UrU6Wv9xz4L1aA_bcTZiGqn'],
+  ['Cloud Master runtime', 'runluCloudMaster'],
+  ['Cloud Master storage namespace', 'runlu_cloud_master_'],
   ['private company bridge name', 'Deerfoot'],
   ['internal training bridge label', 'Central Training pilot'],
   ['historical PO 181276', '181276'],
