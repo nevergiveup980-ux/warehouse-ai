@@ -1,0 +1,59 @@
+name: App Store Universal iOS Gate
+
+on:
+  push:
+    branches:
+      - appstore/universal-ios-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  distribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout App Store branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: appstore/ios/package-lock.json
+
+      - name: Install build dependencies
+        working-directory: appstore/ios
+        run: npm install --no-audit --no-fund
+
+      - name: Syntax-check distribution scripts
+        working-directory: appstore/ios
+        run: |
+          node --check scripts/build-web.mjs
+          node --check scripts/verify-distribution.mjs
+
+      - name: Build and verify public App Store bundle
+        working-directory: appstore/ios
+        run: npm run web:build
+
+      - name: Verify private bridge files are absent
+        working-directory: appstore/ios
+        run: |
+          test ! -e www/carpet_seed.js
+          for n in $(seq -w 94 104); do
+            if find www -maxdepth 1 -type f -name "build0${n}-*" | grep -q .; then
+              echo "Internal Build0${n} bridge leaked into distribution"
+              exit 1
+            fi
+          done
+
+      - name: Upload verified web bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-warehouse-appstore-web
+          path: appstore/ios/www
+          if-no-files-found: error
+          retention-days: 7
