@@ -50,6 +50,9 @@ jobs:
           rm -rf ios
           npx cap add ios
           npx cap sync ios
+          test -f node_modules/@runlu/warehouse-subscription/Package.swift
+          grep -R -q 'RunluWarehouseSubscription' ios
+          echo 'RUNLU StoreKit 2 subscription plugin is present in the generated iOS dependency graph.'
 
       - name: Apply Universal Invoice RUNLU App Icon
         working-directory: appstore/ios
