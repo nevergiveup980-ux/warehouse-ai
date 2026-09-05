@@ -25,6 +25,9 @@ for(const phrase of [
 ])if(bodyText.includes(phrase))errors.push(`Public local-first copy still contains: ${phrase}`);
 
 if(!bodyText.includes('Cloud AI is not enabled in this release.'))errors.push('Local-only Cloud AI status is not visible.');
+if(!html.includes("if(!('processLocally' in voiceRecognition)){voiceRecognition=null;return}"))errors.push('Speech recognition does not fail closed when strict on-device mode is unavailable.');
+if(!html.includes('voiceRecognition.processLocally=true'))errors.push('Speech recognition is not forced to processLocally=true.');
+if(!html.includes('Strict on-device speech recognition is unavailable here. Use the text box below.'))errors.push('Safe text-only fallback for unsupported on-device speech is missing.');
 if(!html.includes('const BUILTIN_SUPPLIER_TEMPLATES=[];'))errors.push('Built-in supplier presets are not neutralized.');
 for(const supplier of ['Primco','Taiga','Fuzion','Treeco','Buckwold','Centura','Oakel City','Twelve Oaks']){
   if(new RegExp(supplier.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(html))errors.push(`Private supplier-specific runtime remains: ${supplier}`);
@@ -42,4 +45,4 @@ if(errors.length){
   for(const error of [...new Set(errors)])console.error(' - '+error);
   process.exit(1);
 }
-console.log('RUNLU App Store public polish verification passed: local-first Scan/OCR wording and customer-generic supplier runtime confirmed.');
+console.log('RUNLU App Store public polish verification passed: local Scan/OCR, strict on-device-only speech, and customer-generic supplier runtime confirmed.');
