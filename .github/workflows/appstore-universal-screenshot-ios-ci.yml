@@ -10,6 +10,7 @@ on:
       - 'appstore/ios/assets/runlu-universal-invoice-appicon-1024.png'
       - 'appstore/ios/scripts/capture-simulator-dashboard.sh'
       - 'appstore/ios/scripts/build-screenshot-fixture.mjs'
+      - 'appstore/ios/scripts/prepare-screenshot-scenes.mjs'
       - 'appstore/ios/scripts/verify-no-screenshot-fixture.mjs'
       - 'appstore/ios/scripts/sanitize-local-first-network.mjs'
       - 'appstore/ios/scripts/adapt-local-first-shell.mjs'
@@ -48,6 +49,7 @@ jobs:
         working-directory: appstore/ios
         run: |
           node --check scripts/build-screenshot-fixture.mjs
+          node --check scripts/prepare-screenshot-scenes.mjs
           node --check scripts/verify-no-screenshot-fixture.mjs
           node --check scripts/sanitize-local-first-network.mjs
           node --check scripts/adapt-local-first-shell.mjs
@@ -64,13 +66,20 @@ jobs:
         working-directory: appstore/ios
         run: |
           node scripts/build-screenshot-fixture.mjs
+          node scripts/prepare-screenshot-scenes.mjs
           test -f screenshot-www/screenshot-fixture.js
+          test -f screenshot-www/screenshot-scenes.js
           grep -q 'RUNLU_SCREENSHOT_FIXTURE_V1' screenshot-www/screenshot-fixture.js
           grep -q 'runluAppStoreLocalFirstAccessGate' screenshot-www/universal-app.html
           grep -q 'runluAppStoreSafeArea' screenshot-www/universal/preview.html
+          grep -q 'runluAppStorePageSafeArea' screenshot-www/universal/users.html
+          grep -q 'runluAppStorePageSafeArea' screenshot-www/universal/backup.html
           grep -q '<h1>Warehouse OS</h1>' screenshot-www/universal-app.html
           grep -q '<p>Flooring Operations</p>' screenshot-www/universal-app.html
+          grep -q 'screenshot-scenes.js' screenshot-www/universal/preview.html
           test ! -e www/screenshot-fixture.js
+          test ! -e www/screenshot-scenes.js
+          ! grep -q 'screenshot-scenes.js' www/universal/preview.html
 
       - name: Generate Capacitor iOS project
         working-directory: appstore/ios
@@ -105,7 +114,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST"
           bash scripts/prepare-xcode-release.sh
 
-      - name: Capture real simulator dashboard screenshot
+      - name: Capture full App Store simulator screenshot story
         working-directory: appstore/ios
         env:
           RUNLU_SCREENSHOT_FAMILY: ${{ matrix.family }}
@@ -113,11 +122,19 @@ jobs:
           RUNLU_SCREENSHOT_DERIVED: ScreenshotDerivedData-${{ matrix.family }}
         run: bash scripts/capture-simulator-dashboard.sh
 
+      - name: Verify eight screenshot masters
+        working-directory: appstore/ios
+        run: |
+          test "$(find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')" = "8"
+          for scene in dashboard inventory carpet receiving transfer scan users backup; do
+            find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name "*-${scene}.png" | grep -q .
+          done
+
       - name: Upload raw App Store screenshot capture
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: runlu-warehouse-raw-${{ matrix.family }}-screenshot
+          name: runlu-warehouse-raw-${{ matrix.family }}-screenshots
           path: appstore/ios/screenshots/raw/${{ matrix.family }}
           if-no-files-found: error
           retention-days: 7
