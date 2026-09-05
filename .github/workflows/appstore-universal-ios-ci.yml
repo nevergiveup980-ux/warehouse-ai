@@ -42,17 +42,21 @@ jobs:
         working-directory: appstore/ios
         run: npm run web:build
 
-      - name: Verify private and production-cloud build files are absent
+      - name: Verify private, company-specific and production-cloud build files are absent
         working-directory: appstore/ios
         run: |
           test ! -e www/carpet_seed.js
           test ! -e www/screenshot-fixture.js
-          for n in 072 088 090 094 095 096 097 098 099 100 101 102 103 104 107; do
+          for n in 072 073 074 088 090 094 095 096 097 098 099 100 101 102 103 104 107; do
             if find www -maxdepth 1 -type f -name "build${n}-*" | grep -q .; then
-              echo "Private/cloud Build${n} leaked into distribution"
+              echo "Private/company-specific/cloud Build${n} leaked into distribution"
               exit 1
             fi
           done
+          if grep -E -q 'build073-hotfix|build074-hotfix|build107-scan-gateway-stop-snap' www/release-loader.js; then
+            echo 'Excluded private/company-specific layer remains in release loader'
+            exit 1
+          fi
           if grep -R -n -E 'https://runlu-gpt-gateway\.nevergiveup980\.workers\.dev|https://warehouse\.runlu\.ca/|https://local-only\.invalid|https://universal-v1\.invalid/' www --include='*.html' --include='*.js' --exclude='tesseract.min.js'; then
             echo 'RUNLU-hosted cloud/gateway endpoint leaked into public runtime'
             exit 1
