@@ -4,10 +4,11 @@ const config: CapacitorConfig = {
   appId: 'ca.runlu.warehouseos',
   appName: 'RUNLU Warehouse OS',
   webDir: 'www',
-  bundledWebRuntime: false,
+  loggingBehavior: 'debug',
   ios: {
     contentInset: 'automatic',
-    preferredContentMode: 'mobile'
+    preferredContentMode: 'mobile',
+    webContentsDebuggingEnabled: false
   }
 };
 
