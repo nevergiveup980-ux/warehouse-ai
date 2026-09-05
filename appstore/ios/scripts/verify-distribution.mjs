@@ -62,6 +62,9 @@ for (const required of [
   'index.html',
   'universal-app.html',
   'universal/onboarding.html',
+  'universal/sign-in.html',
+  'universal/users.html',
+  'universal/local-auth.js',
   'universal/preview.html',
   'universal/settings.html',
   'release-loader.js'
@@ -75,6 +78,30 @@ if (mature.includes('Cloud login password') || mature.includes('Download Cloud D
 if (!mature.includes("function restoreConversationOrders(){return {addedOrders:0,addedSpecial:0,distribution:'clean'};}")) errors.push('Historical order recovery was not neutralized.');
 if (!mature.includes("function migrateLegacyCarpetData(){return {addedRolls:0,addedCuts:0,distribution:'clean'};}")) errors.push('Legacy carpet migration was not neutralized.');
 if (!mature.includes('runlu-native.js')) errors.push('Native bridge is not injected into mature core.');
+if (!mature.includes('function scanGptEnabled(){return false}')) errors.push('Cloud Vision capability is not hard-disabled.');
+if (!mature.includes('function voiceGptEnabled(){return false}')) errors.push('Cloud Voice AI capability is not hard-disabled.');
+if (mature.includes('id="scanAiMode"') || mature.includes("id='scanAiMode'")) errors.push('Cloud Vision mode control remains in the public UI.');
+if (mature.includes('id="voiceAiMode"') || mature.includes("id='voiceAiMode'")) errors.push('Cloud Voice AI mode control remains in the public UI.');
+
+const templates = await readFile(resolve(out, 'universal/templates.js'), 'utf8');
+if (!templates.includes("id:'flooring'")) errors.push('Flooring template is missing.');
+if (!templates.includes("cutAllowance:{enabled:false,inches:0}")) errors.push('Universal templates do not preserve a zero/off cut allowance default.');
+if (/id:'flooring'[\s\S]{0,1000}cutAllowance:\{enabled:true,inches:3\}/.test(templates)) errors.push('Company-specific 3-inch cut allowance remains in the Flooring template.');
+
+const auth = await readFile(resolve(out, 'universal/local-auth.js'), 'utf8');
+if (!auth.includes('PBKDF2') || !auth.includes('pinHash') || !auth.includes('salt')) errors.push('Local account PIN hashing is not present.');
+if (!auth.includes("['admin','manager','member','viewer']")) errors.push('Local role model is incomplete.');
+
+const onboarding = await readFile(resolve(out, 'universal/onboarding.html'), 'utf8');
+if (!onboarding.includes('value="flooring" selected')) errors.push('Flooring is not the default Universal onboarding template.');
+if (!onboarding.includes('Local Owner account')) errors.push('Local Owner account setup is missing.');
+
+const settings = await readFile(resolve(out, 'universal/settings.html'), 'utf8');
+if (!settings.includes('RUNLU-hosted cloud: Off')) errors.push('Customer-owned cloud posture is not shown in Settings.');
+if (settings.includes('data-feature="multiDeviceSync"')) errors.push('Multi-device sync toggle should not ship before a customer-owned connector exists.');
+
+const entry = await readFile(resolve(out, 'index.html'), 'utf8');
+if (!entry.includes('sign-in.html') || !entry.includes('RUNLULocalAuth.currentUser')) errors.push('App entry point does not enforce local sign-in.');
 
 if (errors.length) {
   console.error('\nRUNLU App Store distribution verification FAILED:\n');
