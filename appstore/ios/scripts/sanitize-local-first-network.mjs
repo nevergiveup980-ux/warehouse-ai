@@ -13,18 +13,16 @@ async function rewrite(rel, fn){
 }
 
 // Private/company-specific layers intentionally excluded from the local-first
-// App Store edition. Build073/074 hard-code the old 3-inch carpet allowance
-// analytics; Build107 restores a RUNLU-hosted Cloudflare AI gateway. The public
-// app keeps the mature generic carpet workflow with customer-configurable cut
-// allowance, local OCR/barcode/camera and local voice.
-for(const name of [
-  'build073-hotfix.js',
-  'build074-hotfix.js',
-  'build107-scan-gateway-stop-snap.js'
-])await rm(resolve(out,name),{force:true});
+// App Store edition. Build073/074 are tied to the old fixed 3-inch allowance
+// implementation, including their version guards; Build107 restores a RUNLU-
+// hosted Cloudflare AI gateway. Keep none of those layers in the public bundle.
+for(const name of await readdir(out)){
+  if(/^build(?:073|074)-/i.test(name)||name==='build107-scan-gateway-stop-snap.js'){
+    await rm(resolve(out,name),{force:true});
+  }
+}
 await rewrite('release-loader.js',text=>text.split('\n').filter(line=>
-  !line.includes('build073-hotfix.js')&&
-  !line.includes('build074-hotfix.js')&&
+  !/build(?:073|074)-/i.test(line)&&
   !line.includes('build107-scan-gateway-stop-snap.js')
 ).join('\n'));
 
@@ -78,10 +76,11 @@ for(const p of checkFiles){
   if(rel==='tesseract.min.js')continue;
   const text=await readFile(p,'utf8');
   for(const needle of forbidden)if(text.includes(needle))errors.push(`${needle} remains in ${rel}`);
+  if(/^build(?:073|074)-/i.test(rel))errors.push(`Excluded company-specific layer remains: ${rel}`);
 }
-for(const removed of ['build073-hotfix.js','build074-hotfix.js','build107-scan-gateway-stop-snap.js']){
-  if(checkFiles.some(p=>p.endsWith('/'+removed)))errors.push(`Excluded private/company-specific layer remains: ${removed}`);
-}
+if(checkFiles.some(p=>p.endsWith('/build107-scan-gateway-stop-snap.js')))errors.push('Excluded cloud AI layer remains: build107-scan-gateway-stop-snap.js');
+const loader=await readFile(resolve(out,'release-loader.js'),'utf8');
+if(/build(?:073|074)-/i.test(loader)||loader.includes('build107-scan-gateway-stop-snap.js'))errors.push('Excluded layer remains in release-loader.js');
 if(errors.length)throw new Error('Local-first network/business-rule sanitizer failed:\n'+errors.join('\n'));
 
-console.log('RUNLU local-first sanitizer passed: no RUNLU-hosted cloud/gateway endpoint and no company-specific 3-inch analytics layers in the public runtime.');
+console.log('RUNLU local-first sanitizer passed: no RUNLU-hosted cloud/gateway endpoint and no Build073/074 fixed-allowance layers in the public runtime.');
