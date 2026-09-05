@@ -45,6 +45,19 @@ jobs:
           npx cap add ios
           npx cap sync ios
 
+      - name: Apply shared RUNLU family App Icon
+        working-directory: appstore/ios
+        run: |
+          ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          ICON="$ICONSET/AppIcon-512@2x.png"
+          swift scripts/generate-runlu-app-icon.swift "$ICON"
+          test -f "$ICON"
+          test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
+          ALPHA="$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/{print $2}')"
+          test "$ALPHA" = "no"
+          echo "RUNLU App Icon applied: 1024x1024, no alpha"
+
       - name: Configure iOS privacy usage descriptions
         working-directory: appstore/ios
         run: |
