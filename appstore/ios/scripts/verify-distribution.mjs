@@ -27,6 +27,8 @@ if(mature.includes('3″')||mature.includes('3 inches')||mature.includes('3-inch
 if(/cuts\s*\*\s*0\.25|pieces\.length\s*\*\s*0\.25|numberOfCuts\s*\*\s*0\.25/.test(mature))errors.push('Company-specific quarter-foot cut allowance arithmetic remains in the public mature core.');
 if(/allowanceInches\s*[:=][^;\n]{0,80}\*\s*3\b/.test(mature))errors.push('Company-specific 3-inch allowance assignment remains in the public mature core.');
 if(!mature.includes('configured cut allowance')&&!mature.includes('configured cutting allowance'))errors.push('Public core does not expose configurable cut allowance language.');
+if(/\bJohn\b/.test(mature))errors.push('Personal operator default John remains in the public mature core.');
+if(/\bTony\b/.test(mature))errors.push('Private customer/store example Tony remains in the public mature core.');
 
 const templates=await readFile(resolve(out,'universal/templates.js'),'utf8');
 if(!templates.includes("id:'flooring'"))errors.push('Flooring template is missing.');
