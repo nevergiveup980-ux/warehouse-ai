@@ -127,9 +127,12 @@ jobs:
       - name: Verify eight screenshot masters
         working-directory: appstore/ios
         run: |
-          test "$(find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')" = "8"
+          test "$(find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name '*.jpg' | wc -l | tr -d ' ')" = "8"
           for scene in dashboard inventory carpet receiving transfer scan users backup; do
-            find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name "*-${scene}.png" | grep -q .
+            find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name "*-${scene}.jpg" | grep -q .
+          done
+          for shot in screenshots/raw/${{ matrix.family }}/*.jpg; do
+            test "$(sips -g hasAlpha "$shot" | awk '/hasAlpha/{print $2}')" = "no"
           done
 
       - name: Upload raw App Store screenshot capture
