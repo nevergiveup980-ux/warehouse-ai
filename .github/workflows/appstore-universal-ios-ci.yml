@@ -30,6 +30,7 @@ jobs:
         working-directory: appstore/ios
         run: |
           node --check scripts/build-web.mjs
+          node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
           node --check scripts/verify-distribution.mjs
 
