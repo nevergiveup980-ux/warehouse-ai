@@ -3,6 +3,7 @@ import { App } from '@capacitor/app';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Share } from '@capacitor/share';
+import { RunluSubscription } from '@runlu/warehouse-subscription';
 
 const isNative = Capacitor.isNativePlatform();
 document.documentElement.dataset.runluNative = isNative ? '1' : '0';
@@ -11,6 +12,18 @@ async function safe(action) {
   try { return await action(); }
   catch (error) { console.warn('RUNLU native bridge:', error); return null; }
 }
+
+const subscription = Object.freeze({
+  product: () => isNative ? safe(() => RunluSubscription.getProduct()) : Promise.resolve(null),
+  entitlement: () => isNative ? safe(() => RunluSubscription.getEntitlement()) : Promise.resolve(null),
+  purchase: () => isNative ? safe(() => RunluSubscription.purchase()) : Promise.resolve(null),
+  restore: () => isNative ? safe(() => RunluSubscription.restore()) : Promise.resolve(null),
+  manage: () => isNative ? safe(() => RunluSubscription.manageSubscriptions()) : Promise.resolve(null),
+  onEntitlementChanged: callback => {
+    if (!isNative || typeof callback !== 'function') return Promise.resolve(null);
+    return safe(() => RunluSubscription.addListener('entitlementChanged', callback));
+  }
+});
 
 window.RUNLU_NATIVE = Object.freeze({
   isNative,
@@ -26,7 +39,8 @@ window.RUNLU_NATIVE = Object.freeze({
     resultType: CameraResultType.DataUrl,
     source: CameraSource.Camera,
     saveToGallery: false
-  }))
+  })),
+  subscription
 });
 
 function publicDistributionCleanup() {
