@@ -60,16 +60,25 @@ printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "
 capture_scene(){
   local order="$1"
   local scene="$2"
-  local shot="$OUT_DIR/${order}-${scene}.png"
-  xcrun simctl io "$UDID" screenshot "$shot"
+  local raw="$OUT_DIR/.${order}-${scene}-raw.png"
+  local shot="$OUT_DIR/${order}-${scene}.jpg"
+  xcrun simctl io "$UDID" screenshot "$raw"
+  test -s "$raw"
+
+  # Simulator PNGs on current iOS runners may carry an alpha channel even when
+  # every pixel is visually opaque. App Store screenshots must not contain
+  # transparency, so normalize each master to high-quality JPEG before upload.
+  sips -s format jpeg -s formatOptions 100 "$raw" --out "$shot" >/dev/null
+  rm -f "$raw"
   test -s "$shot"
+
   local width height alpha
   width="$(sips -g pixelWidth "$shot" | awk '/pixelWidth/{print $2}')"
   height="$(sips -g pixelHeight "$shot" | awk '/pixelHeight/{print $2}')"
   alpha="$(sips -g hasAlpha "$shot" | awk '/hasAlpha/{print $2}')"
-  [[ "$alpha" == 'no' ]] || { echo "Screenshot unexpectedly has alpha: $shot"; exit 1; }
-  echo "Captured RUNLU $FAMILY scene $scene: ${width}x${height} -> $shot"
-  printf '%s\n' "scene_${order}=${scene}|${width}x${height}|alpha=${alpha}" >> "$INFO"
+  [[ "$alpha" == 'no' ]] || { echo "Normalized screenshot unexpectedly has alpha: $shot"; exit 1; }
+  echo "Captured RUNLU $FAMILY scene $scene: ${width}x${height}, JPEG/no-alpha -> $shot"
+  printf '%s\n' "scene_${order}=${scene}|${width}x${height}|format=jpeg|alpha=${alpha}" >> "$INFO"
 }
 
 # The screenshot-only controller holds the dashboard for 20 seconds, then moves
@@ -91,6 +100,6 @@ do
   capture_scene "$1" "$2"
 done
 
-COUNT="$(find "$OUT_DIR" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
-[[ "$COUNT" == '8' ]] || { echo "Expected 8 screenshot PNGs, found $COUNT"; exit 1; }
-echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 scenes."
+COUNT="$(find "$OUT_DIR" -maxdepth 1 -type f -name '*.jpg' | wc -l | tr -d ' ')"
+[[ "$COUNT" == '8' ]] || { echo "Expected 8 screenshot JPEGs, found $COUNT"; exit 1; }
+echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 JPEG/no-alpha scenes."
