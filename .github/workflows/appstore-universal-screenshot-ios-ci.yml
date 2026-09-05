@@ -14,6 +14,7 @@ on:
       - 'appstore/ios/scripts/adapt-local-first-shell.mjs'
       - 'appstore/ios/scripts/brand-flooring-edition.mjs'
       - 'appstore/ios/scripts/disable-cloud-ai.mjs'
+      - 'appstore/ios/scripts/sanitize-flooring-public-rules.mjs'
       - 'universal/**'
       - 'universal-app.html'
   workflow_dispatch:
@@ -23,8 +24,12 @@ permissions:
 
 jobs:
   screenshot-ios:
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [iphone, ipad]
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout App Store branch
         uses: actions/checkout@v4
@@ -47,6 +52,7 @@ jobs:
           node --check scripts/adapt-local-first-shell.mjs
           node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
+          node --check scripts/sanitize-flooring-public-rules.mjs
           bash -n scripts/capture-simulator-dashboard.sh
 
       - name: Build verified shipping bundle first
@@ -61,6 +67,8 @@ jobs:
           grep -q 'RUNLU_SCREENSHOT_FIXTURE_V1' screenshot-www/screenshot-fixture.js
           grep -q 'runluAppStoreLocalFirstAccessGate' screenshot-www/universal-app.html
           grep -q 'runluAppStoreSafeArea' screenshot-www/universal/preview.html
+          grep -q '<h1>Warehouse OS</h1>' screenshot-www/universal-app.html
+          grep -q '<p>Flooring Operations</p>' screenshot-www/universal-app.html
           test ! -e www/screenshot-fixture.js
 
       - name: Generate Capacitor iOS project
@@ -94,13 +102,17 @@ jobs:
 
       - name: Capture real simulator dashboard screenshot
         working-directory: appstore/ios
+        env:
+          RUNLU_SCREENSHOT_FAMILY: ${{ matrix.family }}
+          RUNLU_SCREENSHOT_DIR: screenshots/raw/${{ matrix.family }}
+          RUNLU_SCREENSHOT_DERIVED: ScreenshotDerivedData-${{ matrix.family }}
         run: bash scripts/capture-simulator-dashboard.sh
 
       - name: Upload raw App Store screenshot capture
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: runlu-warehouse-raw-iphone-screenshot
-          path: appstore/ios/screenshots/raw
+          name: runlu-warehouse-raw-${{ matrix.family }}-screenshot
+          path: appstore/ios/screenshots/raw/${{ matrix.family }}
           if-no-files-found: error
           retention-days: 7
