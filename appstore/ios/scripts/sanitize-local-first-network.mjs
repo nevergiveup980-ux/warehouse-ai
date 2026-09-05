@@ -12,12 +12,21 @@ async function rewrite(rel, fn){
   await writeFile(p,after,'utf8');
 }
 
-// Build107 is useful in the private production app because it restores a RUNLU
-// Cloudflare AI gateway. That behavior is intentionally excluded from the
-// local-first App Store edition. Local OCR/barcode/camera scanning remains in
-// the mature core and does not depend on Build107.
-await rm(resolve(out,'build107-scan-gateway-stop-snap.js'),{force:true});
-await rewrite('release-loader.js',text=>text.split('\n').filter(line=>!line.includes('build107-scan-gateway-stop-snap.js')).join('\n'));
+// Private/company-specific layers intentionally excluded from the local-first
+// App Store edition. Build073/074 hard-code the old 3-inch carpet allowance
+// analytics; Build107 restores a RUNLU-hosted Cloudflare AI gateway. The public
+// app keeps the mature generic carpet workflow with customer-configurable cut
+// allowance, local OCR/barcode/camera and local voice.
+for(const name of [
+  'build073-hotfix.js',
+  'build074-hotfix.js',
+  'build107-scan-gateway-stop-snap.js'
+])await rm(resolve(out,name),{force:true});
+await rewrite('release-loader.js',text=>text.split('\n').filter(line=>
+  !line.includes('build073-hotfix.js')&&
+  !line.includes('build074-hotfix.js')&&
+  !line.includes('build107-scan-gateway-stop-snap.js')
+).join('\n'));
 
 await rewrite('universal-app.html',text=>{
   text=text.replace("const WAREHOUSE_TAG_BASE_URL='https://warehouse.runlu.ca/';","const WAREHOUSE_TAG_BASE_URL='';");
@@ -70,6 +79,9 @@ for(const p of checkFiles){
   const text=await readFile(p,'utf8');
   for(const needle of forbidden)if(text.includes(needle))errors.push(`${needle} remains in ${rel}`);
 }
-if(errors.length)throw new Error('Local-first network sanitizer failed:\n'+errors.join('\n'));
+for(const removed of ['build073-hotfix.js','build074-hotfix.js','build107-scan-gateway-stop-snap.js']){
+  if(checkFiles.some(p=>p.endsWith('/'+removed)))errors.push(`Excluded private/company-specific layer remains: ${removed}`);
+}
+if(errors.length)throw new Error('Local-first network/business-rule sanitizer failed:\n'+errors.join('\n'));
 
-console.log('RUNLU local-first network sanitizer passed: no RUNLU-hosted cloud/gateway endpoint or hostname in the public runtime.');
+console.log('RUNLU local-first sanitizer passed: no RUNLU-hosted cloud/gateway endpoint and no company-specific 3-inch analytics layers in the public runtime.');
