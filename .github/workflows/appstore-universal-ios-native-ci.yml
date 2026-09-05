@@ -1,0 +1,77 @@
+name: App Store Universal Native iOS Gate
+
+on:
+  push:
+    branches:
+      - appstore/universal-ios-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-ios:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Checkout App Store branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify Xcode and iOS SDK
+        run: |
+          xcodebuild -version
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iPhoneOS SDK: $SDK_VERSION"
+          MAJOR="${SDK_VERSION%%.*}"
+          test "$MAJOR" -ge 26
+
+      - name: Install App Store build dependencies
+        working-directory: appstore/ios
+        run: npm install --no-audit --no-fund
+
+      - name: Build verified local-first web bundle
+        working-directory: appstore/ios
+        run: npm run web:build
+
+      - name: Generate Capacitor iOS project
+        working-directory: appstore/ios
+        run: |
+          rm -rf ios
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Configure iOS privacy usage descriptions
+        working-directory: appstore/ios
+        run: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Warehouse OS uses the microphone only when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription Warehouse OS uses the microphone only when you choose local voice input." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$PLIST"
+
+      - name: Compile unsigned iOS Simulator build
+        working-directory: appstore/ios
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Upload generated Xcode project
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-warehouse-xcode-project
+          path: appstore/ios/ios
+          if-no-files-found: error
+          retention-days: 7
