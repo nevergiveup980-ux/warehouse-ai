@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "App Store build workspace for RUNLU Warehouse OS Universal Edition",
   "scripts": {
-    "web:build": "node scripts/build-web.mjs && node scripts/disable-cloud-ai.mjs && npm run web:bridge && node scripts/verify-distribution.mjs",
+    "test:local-core": "node scripts/test-local-core.mjs",
+    "web:build": "npm run test:local-core && node scripts/build-web.mjs && node scripts/disable-cloud-ai.mjs && npm run web:bridge && node scripts/verify-distribution.mjs",
     "web:bridge": "esbuild src/native-bridge.js --bundle --format=iife --platform=browser --outfile=www/runlu-native.js",
     "ios:add": "npx cap add ios",
     "ios:sync": "npm run web:build && npx cap sync ios",
