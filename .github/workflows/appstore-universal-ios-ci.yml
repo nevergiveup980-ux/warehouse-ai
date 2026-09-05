@@ -21,8 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: appstore/ios/package-lock.json
 
       - name: Install build dependencies
         working-directory: appstore/ios
@@ -42,9 +40,9 @@ jobs:
         working-directory: appstore/ios
         run: |
           test ! -e www/carpet_seed.js
-          for n in $(seq -w 94 104); do
-            if find www -maxdepth 1 -type f -name "build0${n}-*" | grep -q .; then
-              echo "Internal Build0${n} bridge leaked into distribution"
+          for n in 094 095 096 097 098 099 100 101 102 103 104; do
+            if find www -maxdepth 1 -type f -name "build${n}-*" | grep -q .; then
+              echo "Internal Build${n} bridge leaked into distribution"
               exit 1
             fi
           done
