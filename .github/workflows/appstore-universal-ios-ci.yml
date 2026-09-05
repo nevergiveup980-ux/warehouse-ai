@@ -34,6 +34,8 @@ jobs:
           node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
           node --check scripts/verify-distribution.mjs
+          node --check scripts/verify-no-screenshot-fixture.mjs
+          node --check scripts/build-screenshot-fixture.mjs
 
       - name: Build and verify public App Store bundle
         working-directory: appstore/ios
@@ -43,6 +45,7 @@ jobs:
         working-directory: appstore/ios
         run: |
           test ! -e www/carpet_seed.js
+          test ! -e www/screenshot-fixture.js
           for n in 072 088 090 094 095 096 097 098 099 100 101 102 103 104 107; do
             if find www -maxdepth 1 -type f -name "build${n}-*" | grep -q .; then
               echo "Private/cloud Build${n} leaked into distribution"
@@ -53,6 +56,10 @@ jobs:
             echo 'RUNLU-hosted cloud/gateway endpoint leaked into public runtime'
             exit 1
           fi
+          if grep -R -n -E 'RUNLU_SCREENSHOT_FIXTURE_V1|Northstar Flooring Supply|PO-DEMO-001' www --include='*.html' --include='*.js' --include='*.json'; then
+            echo 'Screenshot-only demo data leaked into shipping bundle'
+            exit 1
+          fi
 
       - name: Upload verified web bundle
         if: success()
@@ -60,5 +67,24 @@ jobs:
         with:
           name: runlu-warehouse-appstore-web
           path: appstore/ios/www
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Build isolated screenshot demo bundle
+        if: success()
+        working-directory: appstore/ios
+        run: |
+          node scripts/build-screenshot-fixture.mjs
+          test -f screenshot-www/screenshot-fixture.js
+          grep -q 'RUNLU_SCREENSHOT_FIXTURE_V1' screenshot-www/screenshot-fixture.js
+          grep -q 'Northstar Flooring Supply' screenshot-www/screenshot-fixture.js
+          test ! -e www/screenshot-fixture.js
+
+      - name: Upload screenshot-only demo bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-warehouse-screenshot-demo
+          path: appstore/ios/screenshot-www
           if-no-files-found: error
           retention-days: 7
