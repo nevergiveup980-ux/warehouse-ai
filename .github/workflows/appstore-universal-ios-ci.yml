@@ -30,6 +30,7 @@ jobs:
         working-directory: appstore/ios
         run: |
           node --check scripts/build-web.mjs
+          node --check scripts/sanitize-local-first-network.mjs
           node --check scripts/brand-flooring-edition.mjs
           node --check scripts/disable-cloud-ai.mjs
           node --check scripts/verify-distribution.mjs
@@ -42,12 +43,16 @@ jobs:
         working-directory: appstore/ios
         run: |
           test ! -e www/carpet_seed.js
-          for n in 072 088 090 094 095 096 097 098 099 100 101 102 103 104; do
+          for n in 072 088 090 094 095 096 097 098 099 100 101 102 103 104 107; do
             if find www -maxdepth 1 -type f -name "build${n}-*" | grep -q .; then
               echo "Private/cloud Build${n} leaked into distribution"
               exit 1
             fi
           done
+          if grep -R -n -E 'https://runlu-gpt-gateway\.nevergiveup980\.workers\.dev|https://warehouse\.runlu\.ca/|https://local-only\.invalid|https://universal-v1\.invalid/' www --include='*.html' --include='*.js' --exclude='tesseract.min.js'; then
+            echo 'RUNLU-hosted cloud/gateway endpoint leaked into public runtime'
+            exit 1
+          fi
 
       - name: Upload verified web bundle
         if: success()
