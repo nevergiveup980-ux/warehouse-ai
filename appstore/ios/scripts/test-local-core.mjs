@@ -40,12 +40,26 @@ assert.equal(W.can('manageWarehouse'),true);
 await A.createUser({displayName:'Staff Test',username:'staff',email:'',pin:'1357',role:'member'});
 await A.createUser({displayName:'Manager Test',username:'manager',email:'',pin:'8642',role:'manager'});
 
+// Verify the local credential store structurally rather than searching random
+// ciphertext/base64 for a short four-digit sequence (which can occur by chance).
+const rawUsers=JSON.parse(localStorage.getItem(A.usersKey())||'[]');
+assert.equal(rawUsers.length,3);
+for(const user of rawUsers){
+  assert.equal(Object.prototype.hasOwnProperty.call(user,'pin'),false,'Plaintext PIN field must never be stored');
+  assert.equal(typeof user.salt,'string');
+  assert.equal(typeof user.pinHash,'string');
+  assert.equal(user.salt.length>0,true);
+  assert.equal(user.pinHash.length>=64,true);
+}
+assert.notEqual(rawUsers.find(u=>u.username==='owner')?.pinHash,'2468','Owner PIN must be one-way hashed');
+assert.notEqual(rawUsers.find(u=>u.username==='staff')?.pinHash,'1357','Staff PIN must be one-way hashed');
+assert.notEqual(rawUsers.find(u=>u.username==='manager')?.pinHash,'8642','Manager PIN must be one-way hashed');
+
 const tenantKey='runlu-universal-v1::org_test::wh_test::inventory-test';
 localStorage.setItem(tenantKey,JSON.stringify([{sku:'SKU-SECRET',quantity:12}]));
 const encrypted=await B.exportEncrypted('backup-secret');
 assert.ok(encrypted.includes('RUNLU-WAREHOUSE-BACKUP'));
 assert.equal(encrypted.includes('SKU-SECRET'),false,'Encrypted backup must not expose warehouse records as plaintext');
-assert.equal(encrypted.includes('2468'),false,'Encrypted backup must not expose a PIN');
 
 A.signOut();
 await A.authenticate('staff','1357');
