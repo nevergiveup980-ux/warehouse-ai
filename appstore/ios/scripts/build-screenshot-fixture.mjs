@@ -19,7 +19,8 @@ const W=window.RUNLUWorkspace,A=window.RUNLULocalAuth,U=window.RUNLUUniversal,T=
 if(!W||!A||!U||!T)throw new Error('Screenshot fixture runtime modules are missing.');
 const organizationId='org_appstore_demo_northstar';
 const warehouseId='wh_appstore_demo_main';
-const workspace={schemaVersion:2,mode:'local-first',organizationId,warehouseId,template:'flooring',createdAt:'2026-09-05T12:00:00.000Z',cloud:{provider:null,status:'not-configured',managedBy:'customer'},config:U.createRuntimeConfig({company:{name:'Northstar Flooring Supply',websiteUrl:'',supportEmail:'',currency:'CAD',locale:'en',timezone:'America/Edmonton'},warehouse:{name:'Main Warehouse',code:'MAIN',lowStock:{enabled:true,defaultQuantity:30,carpetFeet:50},cutAllowance:{enabled:false,inches:0}},catalog:{templateId:'flooring',categories:T.get('flooring').categories,units:T.get('flooring').units},features:{...T.get('flooring').features,multiDeviceSync:false}})};
+const now=new Date(),demoToday=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+const workspace={schemaVersion:2,mode:'local-first',organizationId,warehouseId,template:'flooring',createdAt:new Date().toISOString(),cloud:{provider:null,status:'not-configured',managedBy:'customer'},config:U.createRuntimeConfig({company:{name:'Northstar Flooring Supply',websiteUrl:'',supportEmail:'',currency:'CAD',locale:'en',timezone:'America/Edmonton'},warehouse:{name:'Main Warehouse',code:'MAIN',lowStock:{enabled:true,defaultQuantity:30,carpetFeet:50},cutAllowance:{enabled:false,inches:0}},catalog:{templateId:'flooring',categories:T.get('flooring').categories,units:T.get('flooring').units},features:{...T.get('flooring').features,multiDeviceSync:false}})};
 localStorage.setItem(W.WORKSPACE_KEY,JSON.stringify(workspace));
 if(!A.hasUsers()){
   await A.createOwner({displayName:'Demo Owner',username:'owner',email:'',pin:'2468'});
@@ -31,40 +32,52 @@ if(!A.hasUsers()){
 const scoped=(key)=>'runlu-universal-v1::'+organizationId+'::'+warehouseId+'::'+key;
 const put=(key,value)=>localStorage.setItem(scoped(key),JSON.stringify(value));
 const products=[
- {productId:'prd_carpet_aurora',type:'Carpet',name:'Aurora Texture 12 ft',gcNumber:'NS-CPT-101',unit:'Roll',rollWidthFeet:12},
- {productId:'prd_lvp_cascade',type:'Vinyl / LVP',name:'Cascade Oak LVP',gcNumber:'NS-LVP-220',unit:'Carton',coverageValue:23.8,coveragePerUnit:23.8},
- {productId:'prd_underlay_quiet',type:'Underlayment',name:'QuietStep Underlayment',gcNumber:'NS-UND-310',unit:'Roll',coverageValue:200},
- {productId:'prd_adhesive_pro',type:'Adhesive',name:'ProBond Flooring Adhesive',gcNumber:'NS-ADH-410',unit:'Pail'},
- {productId:'prd_trim_silver',type:'Transition / Trim',name:'Silver Reducer 94 in',gcNumber:'NS-TRM-510',unit:'Each'}
+ {id:'prd_carpet_aurora',productId:'prd_carpet_aurora',name:'Aurora Texture 12 ft',brand:'Northstar Demo',category:'Carpet Roll',coverageUnit:'Roll',sku:'NS-CPT-101',width:'12 ft'},
+ {id:'prd_lvp_cascade',productId:'prd_lvp_cascade',name:'Cascade Oak LVP',brand:'Northstar Demo',category:'Vinyl Plank',coverageUnit:'Carton',sku:'NS-LVP-220',sfPerBox:23.8},
+ {id:'prd_underlay_quiet',productId:'prd_underlay_quiet',name:'QuietStep Underlayment',brand:'Northstar Demo',category:'Underlay',coverageUnit:'Roll',sku:'NS-UND-310'},
+ {id:'prd_adhesive_pro',productId:'prd_adhesive_pro',name:'ProBond Flooring Adhesive',brand:'Northstar Demo',category:'Adhesive',coverageUnit:'Pail',sku:'NS-ADH-410'},
+ {id:'prd_trim_silver',productId:'prd_trim_silver',name:'Silver Reducer 94 in',brand:'Northstar Demo',category:'Trim',coverageUnit:'Piece',sku:'NS-TRM-510'}
 ];
 const inventory=[
- {invId:'inv_001',productId:'prd_lvp_cascade',quantity:68,location:'A01',po:'PO-DEMO-001',receiveDate:'2026-09-03',note:'Fictional App Store demo data'},
- {invId:'inv_002',productId:'prd_underlay_quiet',quantity:24,location:'A02',po:'PO-DEMO-001',receiveDate:'2026-09-03',note:''},
- {invId:'inv_003',productId:'prd_adhesive_pro',quantity:18,location:'B01',po:'PO-DEMO-002',receiveDate:'2026-09-04',note:''},
- {invId:'inv_004',productId:'prd_trim_silver',quantity:42,location:'B02',po:'PO-DEMO-002',receiveDate:'2026-09-04',note:''}
+ {id:'inv_001',inventoryId:'INV-DEMO-001',masterId:'prd_lvp_cascade',quantity:68,unit:'Carton',locationType:'Rack',location:'A01',lotNumber:'LVP-A',poNumber:'PO-DEMO-001',inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',warehouseScope:'warehouse',createdAt:new Date().toISOString(),updated:new Date().toLocaleString()},
+ {id:'inv_002',inventoryId:'INV-DEMO-002',masterId:'prd_underlay_quiet',quantity:24,unit:'Roll',locationType:'Rack',location:'A02',lotNumber:'UND-A',poNumber:'PO-DEMO-001',inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',warehouseScope:'warehouse',createdAt:new Date().toISOString(),updated:new Date().toLocaleString()},
+ {id:'inv_003',inventoryId:'INV-DEMO-003',masterId:'prd_adhesive_pro',quantity:18,unit:'Pail',locationType:'Rack',location:'B01',lotNumber:'ADH-A',poNumber:'PO-DEMO-002',inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',warehouseScope:'warehouse',createdAt:new Date().toISOString(),updated:new Date().toLocaleString()},
+ {id:'inv_004',inventoryId:'INV-DEMO-004',masterId:'prd_trim_silver',quantity:42,unit:'Piece',locationType:'Rack',location:'B02',lotNumber:'TRM-A',poNumber:'PO-DEMO-002',inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',warehouseScope:'warehouse',createdAt:new Date().toISOString(),updated:new Date().toLocaleString()}
 ];
 const carpets=[
- {id:'carpet_001',inventoryId:'carpet_001',productId:'prd_carpet_aurora',rollNo:'DEMO-R101',currentLength:126.5,receivedLength:126.5,po:'PO-DEMO-003',location:'C01',receivedDate:'2026-09-05',status:'ACTIVE',note:'Fictional demo roll'},
- {id:'carpet_002',inventoryId:'carpet_002',productId:'prd_carpet_aurora',rollNo:'DEMO-R102',currentLength:84.0,receivedLength:96.0,po:'PO-DEMO-003',location:'C02',receivedDate:'2026-09-05',status:'ACTIVE',note:'12 ft demo cut completed'}
+ {id:9001,roll:'DEMO-R101',manufacturerRoll:'MFG-101',collection:'Aurora Texture 12 ft',colour:'Sandstone',length:126.5,originalLength:126.5,width:'12',po:'PO-DEMO-003',location:'C01',receivedDate:demoToday,measure:'FULL',status:'Active',warehouseScope:'warehouse',note:'Fictional demo roll'},
+ {id:9002,roll:'DEMO-R102',manufacturerRoll:'MFG-102',collection:'Aurora Texture 12 ft',colour:'Sandstone',length:84,originalLength:96,width:'12',po:'PO-DEMO-003',location:'C02',receivedDate:demoToday,measure:'CAL',status:'Active',warehouseScope:'warehouse',note:'Fictional demo roll'},
+ {id:9003,roll:'DEMO-R103',manufacturerRoll:'MFG-103',collection:'Aurora Texture 12 ft',colour:'Pebble',length:36,originalLength:110,width:'12',po:'PO-DEMO-004',location:'C03',receivedDate:demoToday,measure:'CAL',status:'Active',warehouseScope:'warehouse',note:'Fictional low-stock demo roll'}
 ];
 const receiving=[
- {receiptId:'rcv_demo_001',date:'2026-09-03',productId:'prd_lvp_cascade',quantity:68,location:'A01',po:'PO-DEMO-001',supplier:'Demo Flooring Distribution',receiver:'Demo Staff'},
- {receiptId:'rcv_demo_002',date:'2026-09-04',productId:'prd_adhesive_pro',quantity:18,location:'B01',po:'PO-DEMO-002',supplier:'Demo Materials Supply',receiver:'Demo Staff'}
+ {id:7001,receiptId:'RCV-DEMO-001',date:demoToday,productId:'prd_lvp_cascade',quantity:68,unit:'Carton',location:'A01',po:'PO-DEMO-001',supplier:'Demo Flooring Distribution',receiver:'Demo Staff',status:'Put Away'},
+ {id:7002,receiptId:'RCV-DEMO-002',date:demoToday,productId:'prd_adhesive_pro',quantity:18,unit:'Pail',location:'B01',po:'PO-DEMO-002',supplier:'Demo Materials Supply',receiver:'Demo Staff',status:'Completed'}
 ];
 const orders=[
- {orderId:'ord_demo_001',customerName:'Sample Project A',customerPhone:'',salesRep:'Demo Sales',workOrder:'WO-DEMO-101',po:'PO-DEMO-C01',reference:'Showroom renovation',note:'Fictional screenshot order',lines:[{lineId:'line_1',productId:'prd_lvp_cascade',quantity:12,location:'A01'}],status:'OPEN',createdAt:'2026-09-05T14:00:00.000Z',updatedAt:'2026-09-05T14:00:00.000Z'}
+ {id:6001,orderId:'ORD-DEMO-001',customer:'Sample Project A',customerName:'Sample Project A',sales:'Demo Sales',poNumber:'PO-DEMO-C01',po:'PO-DEMO-C01',status:'Open',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}
 ];
 const operations=[
- {id:'op_demo_001',type:'TRANSFER',productId:'prd_lvp_cascade',quantity:6,fromLocation:'A01',toLocation:'A02',status:'COMPLETED',createdAt:'2026-09-05T15:00:00.000Z',note:'Fictional demo transfer'},
- {id:'op_demo_002',type:'PICK',productId:'prd_underlay_quiet',quantity:2,fromLocation:'A02',toLocation:'STAGING',status:'IN PROGRESS',createdAt:'2026-09-05T15:30:00.000Z',note:'Fictional demo pick'}
+ {id:5001,date:demoToday,time:'08:10',type:'Inventory Transfer',status:'Waiting',po:'PO-DEMO-T01',customer:'Sample Project A',product:'Cascade Oak LVP',quantity:6,unit:'Carton',location:'A01',toLocation:'A02',source:'Manual',operator:'Demo Staff',inventoryMode:'Stock',impactApplied:false},
+ {id:5002,date:demoToday,time:'09:25',type:'Order Picking & Preparation',status:'In Progress',po:'PO-DEMO-C01',customer:'Sample Project A',product:'QuietStep Underlayment',quantity:2,unit:'Roll',location:'A02',toLocation:'Staging',source:'Manual',operator:'Demo Staff',inventoryMode:'Stock',impactApplied:false},
+ {id:5003,date:demoToday,time:'10:40',type:'Supplier Pickup / Receiving / Put-away',status:'Completed',po:'PO-DEMO-002',supplier:'Demo Materials Supply',product:'ProBond Flooring Adhesive',quantity:18,unit:'Pail',location:'B01',source:'Manual',operator:'Demo Staff',inventoryMode:'Record Only',impactApplied:true}
+];
+const locations=[
+ {code:'A01',capacity:120,notes:'LVP cartons'},
+ {code:'A02',capacity:60,notes:'Underlayment'},
+ {code:'B01',capacity:40,notes:'Adhesive'},
+ {code:'B02',capacity:80,notes:'Trim'},
+ {code:'C01',capacity:6,notes:'Carpet rack'},
+ {code:'C02',capacity:6,notes:'Carpet rack'},
+ {code:'C03',capacity:6,notes:'Carpet rack'}
 ];
 put('runlu_product_master_v21',products);
-put('runlu_product_inventory_v21',inventory);
-put('runlu_carpet_inventory_v21',carpets);
-put('runlu_receiving_v21',receiving);
-put('runlu_customer_orders_v1',orders);
-put('runlu_operations_log_v1',operations);
-put('runlu_event_history_v1',[{id:'evt_demo_001',type:'RECEIVING',summary:'Received PO-DEMO-001 into A01 / A02',createdAt:'2026-09-03T16:00:00.000Z'},{id:'evt_demo_002',type:'TRANSFER',summary:'Moved 6 cartons A01 → A02',createdAt:'2026-09-05T15:00:00.000Z'}]);
+put('runlu_inventory_records_v21',inventory);
+put('runlu_carpet_inventory_v52',carpets);
+put('runlu_receiving_v50',receiving);
+put('runlu_orders_v20',orders);
+put('runlu_operations_log_v52',operations);
+put('runlu_location_master_v5518',locations);
+put('runlu_event_history_v52',[{id:'evt_demo_001',type:'RECEIVING',summary:'Received PO-DEMO-001 into A01 / A02',createdAt:new Date().toISOString()},{id:'evt_demo_002',type:'TRANSFER',summary:'Prepared 6 cartons A01 → A02',createdAt:new Date().toISOString()}]);
 localStorage.setItem('runlu-appstore-screenshot-marker',MARKER);
 await A.authenticate('owner','2468');
 location.replace('universal/preview.html');
@@ -75,8 +88,6 @@ const index=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
 await writeFile(resolve(out,'index.html'),index,'utf8');
 
 const shippingIndex=await readFile(resolve(source,'index.html'),'utf8');
-for(const marker of ['Northstar Flooring Supply','PO-DEMO-001','RUNLU_SCREENSHOT_FIXTURE_V1']){
-  if(shippingIndex.includes(marker))throw new Error('Screenshot fixture leaked into shipping index: '+marker);
-}
+for(const marker of ['Northstar Flooring Supply','PO-DEMO-001','RUNLU_SCREENSHOT_FIXTURE_V1'])if(shippingIndex.includes(marker))throw new Error('Screenshot fixture leaked into shipping index: '+marker);
 console.log('RUNLU screenshot-only bundle prepared:',out);
 console.log('Demo sign-in: owner / 2468 (fictional screenshot workspace only)');
