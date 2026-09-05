@@ -6,9 +6,14 @@ on:
       - appstore/universal-ios-v1
     paths:
       - '.github/workflows/appstore-universal-screenshot-ios-ci.yml'
+      - 'appstore/ios/package.json'
       - 'appstore/ios/scripts/capture-simulator-dashboard.sh'
       - 'appstore/ios/scripts/build-screenshot-fixture.mjs'
       - 'appstore/ios/scripts/verify-no-screenshot-fixture.mjs'
+      - 'appstore/ios/scripts/sanitize-local-first-network.mjs'
+      - 'appstore/ios/scripts/adapt-local-first-shell.mjs'
+      - 'appstore/ios/scripts/brand-flooring-edition.mjs'
+      - 'appstore/ios/scripts/disable-cloud-ai.mjs'
       - 'universal/**'
       - 'universal-app.html'
   workflow_dispatch:
@@ -38,6 +43,10 @@ jobs:
         run: |
           node --check scripts/build-screenshot-fixture.mjs
           node --check scripts/verify-no-screenshot-fixture.mjs
+          node --check scripts/sanitize-local-first-network.mjs
+          node --check scripts/adapt-local-first-shell.mjs
+          node --check scripts/brand-flooring-edition.mjs
+          node --check scripts/disable-cloud-ai.mjs
           bash -n scripts/capture-simulator-dashboard.sh
 
       - name: Build verified shipping bundle first
@@ -50,6 +59,8 @@ jobs:
           node scripts/build-screenshot-fixture.mjs
           test -f screenshot-www/screenshot-fixture.js
           grep -q 'RUNLU_SCREENSHOT_FIXTURE_V1' screenshot-www/screenshot-fixture.js
+          grep -q 'runluAppStoreLocalFirstAccessGate' screenshot-www/universal-app.html
+          grep -q 'runluAppStoreSafeArea' screenshot-www/universal/preview.html
           test ! -e www/screenshot-fixture.js
 
       - name: Generate Capacitor iOS project
