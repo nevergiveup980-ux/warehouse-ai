@@ -15,13 +15,11 @@ case "$FAMILY" in
     DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; d=json.load(sys.stdin).get("devicetypes",[]); prefs=["iPhone 17 Pro Max","iPhone 16 Pro Max","iPhone 15 Pro Max"]; by={x.get("name"):x.get("identifier") for x in d}; found=next((by[n] for n in prefs if n in by),None); found=found or next((x.get("identifier") for x in d if "iPhone" in x.get("name","") and "Pro Max" in x.get("name","")),None); print(found or "")')"
     [[ -n "$DEVICE_TYPE" ]] || { echo 'No Pro Max iPhone Simulator device type found'; exit 1; }
     DEVICE_LABEL='iPhone Pro Max'
-    SHOT_NAME='iphone-dashboard.png'
     ;;
   ipad)
     DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; d=json.load(sys.stdin).get("devicetypes",[]); prefs=["iPad Pro 13-inch (M5)","iPad Pro 13-inch (M4)","iPad Pro (13-inch) (M5)","iPad Pro (13-inch) (M4)"]; by={x.get("name"):x.get("identifier") for x in d}; found=next((by[n] for n in prefs if n in by),None); found=found or next((x.get("identifier") for x in d if "iPad" in x.get("name","") and "13-inch" in x.get("name","")),None); found=found or next((x.get("identifier") for x in d if "iPad Pro" in x.get("name","") and ("12.9-inch" in x.get("name","") or "12.9 inch" in x.get("name",""))),None); print(found or "")')"
     [[ -n "$DEVICE_TYPE" ]] || { echo 'No 13-inch/12.9-inch iPad Pro Simulator device type found'; exit 1; }
     DEVICE_LABEL='iPad Pro 13-inch'
-    SHOT_NAME='ipad-dashboard.png'
     ;;
   *)
     echo "Unsupported RUNLU_SCREENSHOT_FAMILY: $FAMILY (expected iphone or ipad)"
@@ -56,14 +54,41 @@ APP="$(find "$DERIVED/Build/Products/Debug-iphonesimulator" -maxdepth 1 -type d 
 xcrun simctl install "$UDID" "$APP"
 xcrun simctl launch "$UDID" ca.runlu.warehouseos
 
-# Allow PBKDF2 demo-account creation, iframe core loading and initial rendering to settle.
-sleep 14
-SHOT="$OUT_DIR/$SHOT_NAME"
-xcrun simctl io "$UDID" screenshot "$SHOT"
-test -s "$SHOT"
-WIDTH="$(sips -g pixelWidth "$SHOT" | awk '/pixelWidth/{print $2}')"
-HEIGHT="$(sips -g pixelHeight "$SHOT" | awk '/pixelHeight/{print $2}')"
-ALPHA="$(sips -g hasAlpha "$SHOT" | awk '/hasAlpha/{print $2}')"
-[[ "$ALPHA" == 'no' ]] || { echo "Screenshot unexpectedly has alpha: $SHOT"; exit 1; }
-echo "Captured RUNLU raw $FAMILY dashboard screenshot: ${WIDTH}x${HEIGHT} -> $SHOT"
-printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" "width=$WIDTH" "height=$HEIGHT" "has_alpha=$ALPHA" > "$OUT_DIR/capture-info.txt"
+INFO="$OUT_DIR/capture-info.txt"
+printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" > "$INFO"
+
+capture_scene(){
+  local order="$1" scene="$2" shot="$OUT_DIR/${order}-${scene}.png"
+  xcrun simctl io "$UDID" screenshot "$shot"
+  test -s "$shot"
+  local width height alpha
+  width="$(sips -g pixelWidth "$shot" | awk '/pixelWidth/{print $2}')"
+  height="$(sips -g pixelHeight "$shot" | awk '/pixelHeight/{print $2}')"
+  alpha="$(sips -g hasAlpha "$shot" | awk '/hasAlpha/{print $2}')"
+  [[ "$alpha" == 'no' ]] || { echo "Screenshot unexpectedly has alpha: $shot"; exit 1; }
+  echo "Captured RUNLU $FAMILY scene $scene: ${width}x${height} -> $shot"
+  printf '%s\n' "scene_${order}=${scene}|${width}x${height}|alpha=${alpha}" >> "$INFO"
+}
+
+# The screenshot-only controller holds the dashboard for 20 seconds, then moves
+# through the six mature-core operational scenes in ten-second windows before
+# opening Users and Backup. Capture in the middle of each stable window.
+sleep 15
+capture_scene '01' 'dashboard'
+for item in \
+  '02 inventory' \
+  '03 carpet' \
+  '04 receiving' \
+  '05 transfer' \
+  '06 scan' \
+  '07 users' \
+  '08 backup'
+do
+  sleep 10
+  set -- $item
+  capture_scene "$1" "$2"
+done
+
+COUNT="$(find "$OUT_DIR" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+[[ "$COUNT" == '8' ]] || { echo "Expected 8 screenshot PNGs, found $COUNT"; exit 1; }
+echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 scenes."
