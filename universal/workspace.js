@@ -7,7 +7,7 @@ const ROLES=Object.freeze({owner:5,admin:4,manager:3,member:2,viewer:1});
 const ACTION_ROLE=Object.freeze({
   view:'viewer',count:'member',receive:'member',transfer:'member',cutPick:'member',ship:'member',returnStock:'member',
   editInventory:'manager',manageProducts:'manager',manageOrders:'manager',manageWarehouse:'admin',manageMembers:'admin',
-  billing:'owner',deleteWorkspace:'owner'
+  backupData:'owner',restoreData:'owner',billing:'owner',deleteWorkspace:'owner'
 });
 function readJson(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v==null?fallback:v}catch(_){return fallback}}
 function writeJson(key,value){localStorage.setItem(key,JSON.stringify(value));return value}
