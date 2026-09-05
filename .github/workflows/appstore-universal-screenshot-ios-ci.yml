@@ -89,6 +89,8 @@ jobs:
           grep -q '<h1>Warehouse OS</h1>' screenshot-www/universal-app.html
           grep -q '<p>Flooring Operations</p>' screenshot-www/universal-app.html
           grep -q '<strong>Scan / OCR</strong>' screenshot-www/universal-app.html
+          grep -q 'RUNLU CARPET WORKBENCH · FLOORING EDITION' screenshot-www/universal-app.html
+          ! grep -q 'RUNLU CARPET WORKBENCH · INVENTORY 2.0 BUILD 003' screenshot-www/universal-app.html
           grep -q 'screenshot-scenes.js' screenshot-www/universal/preview.html
           grep -q 'runlu-subscription-shell.js' screenshot-www/universal/preview.html
           test ! -e www/screenshot-fixture.js
@@ -140,8 +142,18 @@ jobs:
           for scene in dashboard inventory carpet receiving transfer scan users backup; do
             find screenshots/raw/${{ matrix.family }} -maxdepth 1 -type f -name "*-${scene}.jpg" | grep -q .
           done
+          if [ "${{ matrix.family }}" = "iphone" ]; then
+            EXPECTED_W=1320
+            EXPECTED_H=2868
+          else
+            EXPECTED_W=2064
+            EXPECTED_H=2752
+          fi
           for shot in screenshots/raw/${{ matrix.family }}/*.jpg; do
             test "$(sips -g hasAlpha "$shot" | awk '/hasAlpha/{print $2}')" = "no"
+            test "$(sips -g pixelWidth "$shot" | awk '/pixelWidth/{print $2}')" = "$EXPECTED_W"
+            test "$(sips -g pixelHeight "$shot" | awk '/pixelHeight/{print $2}')" = "$EXPECTED_H"
+            test "$(stat -f%z "$shot")" -ge 250000
           done
 
       - name: Upload raw App Store screenshot capture
