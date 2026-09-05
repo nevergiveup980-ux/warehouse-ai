@@ -1,0 +1,29 @@
+{
+  "name": "runlu-warehouse-universal-ios",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App Store build workspace for RUNLU Warehouse OS Universal Edition",
+  "scripts": {
+    "web:build": "node scripts/build-web.mjs && npm run web:bridge && node scripts/verify-distribution.mjs",
+    "web:bridge": "esbuild src/native-bridge.js --bundle --format=iife --platform=browser --outfile=www/runlu-native.js",
+    "ios:add": "npx cap add ios",
+    "ios:sync": "npm run web:build && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:doctor": "npx cap doctor"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "8.5.0",
+    "@capacitor/share": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.0",
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4",
+    "cheerio": "1.0.0",
+    "esbuild": "^0.25.0"
+  }
+}
