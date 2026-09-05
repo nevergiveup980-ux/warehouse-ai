@@ -44,7 +44,7 @@ function previewSceneFor(ms){
    if(ms<80000)return 'carpet';
    if(ms<100000)return 'receiving';
    if(ms<120000)return 'transfer';
-   if(ms<112000)return 'scan';
+   if(ms<125000)return 'scan';
    return 'users';
  }
  if(ms<20000)return 'dashboard';
@@ -69,7 +69,7 @@ if(path.endsWith('/preview.html')){
 }
 if(path.endsWith('/users.html')){
  mark('users');
- const backupAt=mobile?127000:80000;
+ const backupAt=mobile?140000:80000;
  const go=()=>{if(elapsed()>=backupAt)location.replace('backup.html');};
  setTimeout(go,300);setInterval(go,300);
  return;
