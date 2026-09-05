@@ -11,8 +11,9 @@ const controller=`/* RUNLU App Store screenshot scene controller — screenshot 
 const START='runlu-appstore-screenshot-scene-start-v1';
 const SCENE='runlu-appstore-screenshot-scene-v1';
 const path=location.pathname.toLowerCase();
+const mobile=window.innerWidth<700;
 let start=Number(localStorage.getItem(START)||0);
-if(!start||Date.now()-start>180000){start=Date.now();localStorage.setItem(START,String(start));}
+if(!start||Date.now()-start>240000){start=Date.now();localStorage.setItem(START,String(start));}
 const elapsed=()=>Date.now()-start;
 function mark(name){localStorage.setItem(SCENE,name);document.documentElement.setAttribute('data-runlu-screenshot-scene',name);}
 function inner(){const f=document.getElementById('app');return f&&f.contentWindow;}
@@ -23,13 +24,29 @@ function applyPreviewScene(name){
  if(name==='carpet'){w.showPage('carpetInventory');return true;}
  if(name==='receiving'){w.showPage('receivingHub');return true;}
  if(name==='transfer'){
-   if(typeof w.startCommandOperation==='function'){w.startCommandOperation('Inventory Transfer');return true;}
+   if(typeof w.startCommandOperation==='function'){
+     w.startCommandOperation('Inventory Transfer');
+     if(mobile)setTimeout(()=>{
+       const field=w.document?.getElementById('operationLineType')||w.document?.getElementById('operationType');
+       field?.scrollIntoView?.({block:'center',behavior:'auto'});
+     },900);
+     return true;
+   }
    w.showPage('operations');return true;
  }
  if(name==='scan'){w.showPage('scan');return true;}
  return false;
 }
 function previewSceneFor(ms){
+ if(mobile){
+   if(ms<40000)return 'dashboard';
+   if(ms<60000)return 'inventory';
+   if(ms<80000)return 'carpet';
+   if(ms<100000)return 'receiving';
+   if(ms<120000)return 'transfer';
+   if(ms<140000)return 'scan';
+   return 'users';
+ }
  if(ms<20000)return 'dashboard';
  if(ms<30000)return 'inventory';
  if(ms<40000)return 'carpet';
@@ -52,7 +69,8 @@ if(path.endsWith('/preview.html')){
 }
 if(path.endsWith('/users.html')){
  mark('users');
- const go=()=>{if(elapsed()>=80000)location.replace('backup.html');};
+ const backupAt=mobile?160000:80000;
+ const go=()=>{if(elapsed()>=backupAt)location.replace('backup.html');};
  setTimeout(go,300);setInterval(go,300);
  return;
 }
