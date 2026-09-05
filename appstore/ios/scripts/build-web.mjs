@@ -73,12 +73,16 @@ for (const name of [
   await cp(resolve(universalSrc, name), resolve(universalOut, name));
 }
 
-// Public V1 is local-first. Multi-device sync will return only after a dedicated
-// Universal cloud environment exists; it must never point at production Warehouse OS.
+// Public V1 is local-first. Multi-device sync and subscription pricing are deliberately
+// not enabled until the dedicated Universal cloud and StoreKit product are approved.
 for (const name of ['runtime-config.js', 'templates.js']) {
   const p = resolve(universalOut, name);
   let text = await readFile(p, 'utf8');
   text = text.replaceAll('multiDeviceSync:true', 'multiDeviceSync:false');
+  if (name === 'runtime-config.js') {
+    text = text.replace("productName: 'RUNLU Warehouse OS', productCode: 'warehouse-os', channel: 'universal-development', trialDays: 14,", "productName: 'RUNLU Warehouse OS', productCode: 'warehouse-os', channel: 'app-store-local-first', trialDays: 0,");
+    text = text.replace("pricing: Object.freeze({monthlyUsd: 29.99, annualUsd: 299.99, includedUsers: 5, includedWarehouses: 1})", "pricing: Object.freeze({monthlyUsd: 0, annualUsd: 0, includedUsers: 1, includedWarehouses: 1})");
+  }
   await writeFile(p, text, 'utf8');
 }
 {
