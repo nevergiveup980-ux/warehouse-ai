@@ -43,16 +43,6 @@ xcrun simctl status_bar "$UDID" override --time '9:41' --batteryLevel 100 --batt
 rm -rf ios/App/App/public
 cp -R screenshot-www ios/App/App/public
 
-# Add a screenshot-only URL scheme to the generated simulator project. This is never
-# written back to the verified shipping bundle; it exists solely so the capture script
-# can tell the running screenshot app exactly which scene to display before each shot.
-PLIST="ios/App/App/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string ca.runlu.warehouseos.screenshot" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLName ca.runlu.warehouseos.screenshot" "$PLIST"
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string runlu-shot" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLSchemes:0 runlu-shot" "$PLIST"
-
 echo "Building screenshot simulator target: $FAMILY · $DEVICE_LABEL · $DEVICE_TYPE · $RUNTIME · $UDID"
 xcodebuild \
   -project ios/App/App.xcodeproj \
@@ -66,15 +56,26 @@ xcodebuild \
 APP="$(find "$DERIVED/Build/Products/Debug-iphonesimulator" -maxdepth 1 -type d -name '*.app' | head -n 1)"
 [[ -n "$APP" && -d "$APP" ]] || { echo 'Screenshot simulator .app not found'; exit 1; }
 xcrun simctl install "$UDID" "$APP"
+
+# Scene control is entirely internal to the screenshot-only app bundle. We rewrite a
+# tiny JSON file in the installed Simulator app; the injected WebView controller polls
+# it and changes pages itself. This avoids iOS URL-scheme confirmation dialogs.
+APP_CONTAINER="$(xcrun simctl get_app_container "$UDID" ca.runlu.warehouseos app)"
+COMMAND_FILE="$APP_CONTAINER/public/screenshot-scene-command.json"
+[[ -d "$APP_CONTAINER/public" ]] || { echo "Installed screenshot public directory not found: $APP_CONTAINER/public"; exit 1; }
+printf '%s\n' '{"scene":"dashboard","seq":0}' > "$COMMAND_FILE"
+
 xcrun simctl launch "$UDID" ca.runlu.warehouseos
 
 INFO="$OUT_DIR/capture-info.txt"
-printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" "scene_control=runlu-shot://scene/<name>" > "$INFO"
+printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" "scene_control=internal-json-file" > "$INFO"
 
 command_scene(){
-  local scene="$1"
-  echo "Commanding RUNLU $FAMILY scene: $scene"
-  xcrun simctl openurl "$UDID" "runlu-shot://scene/$scene"
+  local order="$1"
+  local scene="$2"
+  local seq=$((10#$order))
+  echo "Commanding RUNLU $FAMILY scene internally: $scene (seq=$seq)"
+  printf '{"scene":"%s","seq":%d}\n' "$scene" "$seq" > "$COMMAND_FILE"
   sleep "$SCENE_WAIT"
 }
 
@@ -104,9 +105,8 @@ capture_scene(){
   printf '%s\n' "scene_${order}=${scene}|${width}x${height}|format=jpeg|alpha=${alpha}|bytes=${bytes}" >> "$INFO"
 }
 
-# Give the fresh WebView one generous startup window. After that, every screenshot is
-# command-driven rather than time-driven: explicitly select the scene, let it settle,
-# then capture it. This prevents cumulative timing drift from mislabeling screenshots.
+# Give the fresh WebView one generous startup window. Every subsequent scene is selected
+# by rewriting the screenshot-only JSON command file, then allowing the page to settle.
 sleep "$FIRST_WAIT"
 for item in \
   '01 dashboard' \
@@ -119,10 +119,10 @@ for item in \
   '08 backup'
 do
   set -- $item
-  command_scene "$2"
+  command_scene "$1" "$2"
   capture_scene "$1" "$2"
 done
 
 COUNT="$(find "$OUT_DIR" -maxdepth 1 -type f -name '*.jpg' | wc -l | tr -d ' ')"
 [[ "$COUNT" == '8' ]] || { echo "Expected 8 screenshot JPEGs, found $COUNT"; exit 1; }
-echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 command-driven JPEG/no-alpha scenes."
+echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 internal-command JPEG/no-alpha scenes."
