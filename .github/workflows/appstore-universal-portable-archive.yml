@@ -1,0 +1,129 @@
+name: App Store Portable Xcode Archive Workspace
+
+on:
+  push:
+    branches:
+      - appstore/universal-ios-v1
+    paths:
+      - .github/workflows/appstore-universal-portable-archive.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-archive-workspace:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Checkout App Store branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install App Store build dependencies
+        working-directory: appstore/ios
+        run: npm install --no-audit --no-fund
+
+      - name: Build verified local-first web bundle
+        working-directory: appstore/ios
+        run: npm run web:build
+
+      - name: Generate Capacitor iOS project
+        working-directory: appstore/ios
+        run: |
+          rm -rf ios
+          npx cap add ios
+          npx cap sync ios
+          test -f node_modules/@runlu/warehouse-subscription/Package.swift
+          grep -R -q 'RunluWarehouseSubscription' ios
+
+      - name: Apply RUNLU family app icon
+        working-directory: appstore/ios
+        run: |
+          ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          ICON="$ICONSET/AppIcon-512@2x.png"
+          swift scripts/generate-runlu-app-icon.swift "$ICON"
+          test -f "$ICON"
+          test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
+          test "$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/{print $2}')" = "no"
+
+      - name: Configure iOS privacy usage descriptions
+        working-directory: appstore/ios
+        run: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Warehouse OS uses the microphone only when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription Warehouse OS uses the microphone only when you choose local voice input." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST"
+
+      - name: Lock release identity
+        working-directory: appstore/ios
+        env:
+          RUNLU_MARKETING_VERSION: '1.0.0'
+          RUNLU_BUILD_NUMBER: '1'
+        run: bash scripts/prepare-xcode-release.sh
+
+      - name: Verify local Swift package paths resolve
+        working-directory: appstore/ios
+        run: |
+          test -f ios/App/CapApp-SPM/Package.swift
+          test -f node_modules/@capacitor/app/Package.swift
+          test -f node_modules/@capacitor/camera/Package.swift
+          test -f node_modules/@capacitor/haptics/Package.swift
+          test -f node_modules/@capacitor/share/Package.swift
+          test -f plugins/runlu-subscription/Package.swift
+          xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App
+
+      - name: Compile unsigned Release device build
+        working-directory: appstore/ios
+        run: |
+          rm -rf PortableDerivedData
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath PortableDerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Assemble portable Xcode workspace
+        working-directory: appstore/ios
+        run: |
+          rm -rf portable-xcode-workspace
+          mkdir -p portable-xcode-workspace/node_modules/@capacitor
+          mkdir -p portable-xcode-workspace/plugins
+          cp -R ios portable-xcode-workspace/ios
+          cp -R node_modules/@capacitor/app portable-xcode-workspace/node_modules/@capacitor/app
+          cp -R node_modules/@capacitor/camera portable-xcode-workspace/node_modules/@capacitor/camera
+          cp -R node_modules/@capacitor/haptics portable-xcode-workspace/node_modules/@capacitor/haptics
+          cp -R node_modules/@capacitor/share portable-xcode-workspace/node_modules/@capacitor/share
+          cp -R plugins/runlu-subscription portable-xcode-workspace/plugins/runlu-subscription
+          cat > portable-xcode-workspace/OPEN-ME-FIRST.txt <<'EOF'
+RUNLU Warehouse OS - Flooring / App Store Archive Workspace
+
+1. Keep this entire folder together. Do not move only the ios/App folder.
+2. Open: ios/App/App.xcodeproj
+3. In Xcode, select target App -> Signing & Capabilities.
+4. Confirm Team and Bundle Identifier ca.runlu.warehouseos.
+5. Select Any iOS Device (arm64).
+6. Product -> Archive.
+
+The local Swift packages required by CapApp-SPM are included in this folder at the relative paths expected by Xcode.
+EOF
+          test -f portable-xcode-workspace/ios/App/CapApp-SPM/Package.swift
+          test -f portable-xcode-workspace/node_modules/@capacitor/app/Package.swift
+          test -f portable-xcode-workspace/plugins/runlu-subscription/Package.swift
+
+      - name: Upload portable Xcode archive workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-warehouse-portable-xcode-archive-workspace
+          path: appstore/ios/portable-xcode-workspace
+          if-no-files-found: error
+          retention-days: 7
