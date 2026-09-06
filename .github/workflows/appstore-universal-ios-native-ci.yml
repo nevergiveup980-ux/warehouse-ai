@@ -12,7 +12,7 @@ permissions:
 jobs:
   native-ios:
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout App Store branch
         uses: actions/checkout@v4
@@ -107,6 +107,44 @@ jobs:
           RUNLU_BUILD_NUMBER: '1'
         run: bash scripts/audit-ios-release.sh
 
+      - name: Verify portable local Swift package layout
+        working-directory: appstore/ios
+        run: |
+          test -f ios/App/CapApp-SPM/Package.swift
+          test -f node_modules/@capacitor/app/Package.swift
+          test -f node_modules/@capacitor/camera/Package.swift
+          test -f node_modules/@capacitor/haptics/Package.swift
+          test -f node_modules/@capacitor/share/Package.swift
+          test -f plugins/runlu-subscription/Package.swift
+          xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App
+
+      - name: Assemble portable Xcode archive workspace
+        working-directory: appstore/ios
+        run: |
+          rm -rf portable-xcode-workspace
+          mkdir -p portable-xcode-workspace/node_modules/@capacitor
+          mkdir -p portable-xcode-workspace/plugins
+          cp -R ios portable-xcode-workspace/ios
+          cp -R node_modules/@capacitor/app portable-xcode-workspace/node_modules/@capacitor/app
+          cp -R node_modules/@capacitor/camera portable-xcode-workspace/node_modules/@capacitor/camera
+          cp -R node_modules/@capacitor/haptics portable-xcode-workspace/node_modules/@capacitor/haptics
+          cp -R node_modules/@capacitor/share portable-xcode-workspace/node_modules/@capacitor/share
+          cp -R plugins/runlu-subscription portable-xcode-workspace/plugins/runlu-subscription
+          cat > portable-xcode-workspace/OPEN-ME-FIRST.txt <<'EOF'
+RUNLU Warehouse OS - Flooring / App Store Archive Workspace
+
+Keep this entire folder together. The local Swift packages required by CapApp-SPM are included at the relative paths expected by Xcode.
+
+Open: ios/App/App.xcodeproj
+Then confirm Signing & Capabilities, choose Any iOS Device (arm64), and use Product -> Archive.
+EOF
+          test -f portable-xcode-workspace/ios/App/CapApp-SPM/Package.swift
+          test -f portable-xcode-workspace/node_modules/@capacitor/app/Package.swift
+          test -f portable-xcode-workspace/node_modules/@capacitor/camera/Package.swift
+          test -f portable-xcode-workspace/node_modules/@capacitor/haptics/Package.swift
+          test -f portable-xcode-workspace/node_modules/@capacitor/share/Package.swift
+          test -f portable-xcode-workspace/plugins/runlu-subscription/Package.swift
+
       - name: Upload native release audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,5 +163,14 @@ jobs:
         with:
           name: runlu-warehouse-xcode-project
           path: appstore/ios/ios
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload portable Xcode archive workspace
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-warehouse-portable-xcode-archive-workspace
+          path: appstore/ios/portable-xcode-workspace
           if-no-files-found: error
           retention-days: 7
