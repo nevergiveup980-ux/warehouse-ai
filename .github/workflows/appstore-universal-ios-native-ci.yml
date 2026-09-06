@@ -130,14 +130,14 @@ jobs:
           cp -R node_modules/@capacitor/haptics portable-xcode-workspace/node_modules/@capacitor/haptics
           cp -R node_modules/@capacitor/share portable-xcode-workspace/node_modules/@capacitor/share
           cp -R plugins/runlu-subscription portable-xcode-workspace/plugins/runlu-subscription
-          cat > portable-xcode-workspace/OPEN-ME-FIRST.txt <<'EOF'
-RUNLU Warehouse OS - Flooring / App Store Archive Workspace
-
-Keep this entire folder together. The local Swift packages required by CapApp-SPM are included at the relative paths expected by Xcode.
-
-Open: ios/App/App.xcodeproj
-Then confirm Signing & Capabilities, choose Any iOS Device (arm64), and use Product -> Archive.
-EOF
+          printf '%s\n' \
+            'RUNLU Warehouse OS - Flooring / App Store Archive Workspace' \
+            '' \
+            'Keep this entire folder together. The local Swift packages required by CapApp-SPM are included at the relative paths expected by Xcode.' \
+            '' \
+            'Open: ios/App/App.xcodeproj' \
+            'Then confirm Signing & Capabilities, choose Any iOS Device (arm64), and use Product -> Archive.' \
+            > portable-xcode-workspace/OPEN-ME-FIRST.txt
           test -f portable-xcode-workspace/ios/App/CapApp-SPM/Package.swift
           test -f portable-xcode-workspace/node_modules/@capacitor/app/Package.swift
           test -f portable-xcode-workspace/node_modules/@capacitor/camera/Package.swift
