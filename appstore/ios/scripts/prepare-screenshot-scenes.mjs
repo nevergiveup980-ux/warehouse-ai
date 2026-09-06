@@ -69,7 +69,9 @@ if(path.endsWith('/preview.html')){
 }
 if(path.endsWith('/users.html')){
  mark('users');
- const backupAt=mobile?140000:80000;
+ // The iPhone capture cadence lands scene 07 around 130s and scene 08 around 147s.
+ // Hold Users long enough for scene 07 to settle, then switch shortly before scene 08.
+ const backupAt=mobile?145000:80000;
  const go=()=>{if(elapsed()>=backupAt)location.replace('backup.html');};
  setTimeout(go,300);setInterval(go,300);
  return;
