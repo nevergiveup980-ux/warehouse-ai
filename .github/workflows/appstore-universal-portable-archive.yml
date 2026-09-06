@@ -1,5 +1,6 @@
 name: App Store Portable Xcode Archive Workspace
 
+# Portable local-archive package for Mac/Xcode submission.
 on:
   push:
     branches:
