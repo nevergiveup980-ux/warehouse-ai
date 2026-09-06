@@ -8,13 +8,9 @@ const root=resolve(here,'../screenshot-www');
 const controller=`/* RUNLU App Store screenshot scene controller — screenshot bundle only. */
 (function(){
 'use strict';
-const START='runlu-appstore-screenshot-scene-start-v1';
-const SCENE='runlu-appstore-screenshot-scene-v1';
+const SCENE='runlu-appstore-screenshot-scene-v2';
 const path=location.pathname.toLowerCase();
 const mobile=window.innerWidth<700;
-let start=Number(localStorage.getItem(START)||0);
-if(!start||Date.now()-start>240000){start=Date.now();localStorage.setItem(START,String(start));}
-const elapsed=()=>Date.now()-start;
 function mark(name){localStorage.setItem(SCENE,name);document.documentElement.setAttribute('data-runlu-screenshot-scene',name);}
 function inner(){const f=document.getElementById('app');return f&&f.contentWindow;}
 function applyPreviewScene(name){
@@ -37,45 +33,53 @@ function applyPreviewScene(name){
  if(name==='scan'){w.showPage('scan');return true;}
  return false;
 }
-function previewSceneFor(ms){
- if(mobile){
-   if(ms<40000)return 'dashboard';
-   if(ms<60000)return 'inventory';
-   if(ms<80000)return 'carpet';
-   if(ms<100000)return 'receiving';
-   if(ms<120000)return 'transfer';
-   if(ms<125000)return 'scan';
-   return 'users';
+function routeScene(name){
+ if(!name)return false;
+ if(name==='users'){
+   mark('users');
+   if(!path.endsWith('/users.html'))location.replace('users.html');
+   return true;
  }
- if(ms<20000)return 'dashboard';
- if(ms<30000)return 'inventory';
- if(ms<40000)return 'carpet';
- if(ms<50000)return 'receiving';
- if(ms<60000)return 'transfer';
- if(ms<70000)return 'scan';
- return 'users';
+ if(name==='backup'){
+   mark('backup');
+   if(!path.endsWith('/backup.html'))location.replace('backup.html');
+   return true;
+ }
+ if(path.endsWith('/preview.html')){
+   const apply=()=>{if(applyPreviewScene(name)){mark(name);return true;}return false;};
+   if(apply())return true;
+   let tries=0;
+   const timer=setInterval(()=>{tries+=1;if(apply()||tries>40)clearInterval(timer);},250);
+   return true;
+ }
+ return false;
 }
-if(path.endsWith('/preview.html')){
- let active='';
- const tick=()=>{
-   const wanted=previewSceneFor(elapsed());
-   if(wanted==='users'){
-     mark('users');location.replace('users.html');return;
-   }
-   if(wanted!==active&&applyPreviewScene(wanted)){active=wanted;mark(wanted);}
+function sceneFromUrl(url){
+ try{
+   const u=new URL(url);
+   if(u.protocol!=='runlu-shot:')return '';
+   const host=(u.hostname||'').toLowerCase();
+   const seg=(u.pathname||'').split('/').filter(Boolean).pop()||'';
+   return (host==='scene'?seg:host||seg).toLowerCase();
+ }catch{return '';}
+}
+function listenForCommands(){
+ const attach=()=>{
+   const app=window.Capacitor?.Plugins?.App;
+   if(!app?.addListener)return false;
+   app.addListener('appUrlOpen',event=>routeScene(sceneFromUrl(event?.url||'')));
+   return true;
  };
- setTimeout(tick,700);setInterval(tick,300);
+ if(attach())return;
+ let tries=0;
+ const timer=setInterval(()=>{tries+=1;if(attach()||tries>40)clearInterval(timer);},250);
+}
+listenForCommands();
+if(path.endsWith('/preview.html')){
+ setTimeout(()=>routeScene('dashboard'),700);
  return;
 }
-if(path.endsWith('/users.html')){
- mark('users');
- // The iPhone capture cadence lands scene 07 around 130s and scene 08 around 147s.
- // Hold Users long enough for scene 07 to settle, then switch shortly before scene 08.
- const backupAt=mobile?145000:80000;
- const go=()=>{if(elapsed()>=backupAt)location.replace('backup.html');};
- setTimeout(go,300);setInterval(go,300);
- return;
-}
+if(path.endsWith('/users.html')){mark('users');return;}
 if(path.endsWith('/backup.html')){mark('backup');return;}
 })();`;
 await writeFile(resolve(root,'screenshot-scenes.js'),controller,'utf8');
@@ -97,4 +101,4 @@ for(const rel of ['screenshot-scenes.js','universal/preview.html','universal/use
   const text=await readFile(resolve(shipping,rel),'utf8');
   if(text.includes('screenshot-scenes.js')||text.includes('runlu-appstore-screenshot-scene'))throw new Error(`Screenshot scene controller leaked into shipping ${rel}`);
 }
-console.log('RUNLU screenshot scenes prepared: dashboard, inventory, carpet, receiving, transfer, scan, users, backup.');
+console.log('RUNLU screenshot scenes prepared with deterministic URL commands: dashboard, inventory, carpet, receiving, transfer, scan, users, backup.');
