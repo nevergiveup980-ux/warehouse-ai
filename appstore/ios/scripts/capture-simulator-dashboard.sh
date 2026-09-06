@@ -16,14 +16,14 @@ case "$FAMILY" in
     [[ -n "$DEVICE_TYPE" ]] || { echo 'No Pro Max iPhone Simulator device type found'; exit 1; }
     DEVICE_LABEL='iPhone Pro Max'
     FIRST_WAIT=30
-    STEP_WAIT=15
+    SCENE_WAIT=4
     ;;
   ipad)
     DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; d=json.load(sys.stdin).get("devicetypes",[]); prefs=["iPad Pro 13-inch (M5)","iPad Pro 13-inch (M4)","iPad Pro (13-inch) (M5)","iPad Pro (13-inch) (M4)"]; by={x.get("name"):x.get("identifier") for x in d}; found=next((by[n] for n in prefs if n in by),None); found=found or next((x.get("identifier") for x in d if "iPad" in x.get("name","") and "13-inch" in x.get("name","")),None); found=found or next((x.get("identifier") for x in d if "iPad Pro" in x.get("name","") and ("12.9-inch" in x.get("name","") or "12.9 inch" in x.get("name",""))),None); print(found or "")')"
     [[ -n "$DEVICE_TYPE" ]] || { echo 'No 13-inch/12.9-inch iPad Pro Simulator device type found'; exit 1; }
     DEVICE_LABEL='iPad Pro 13-inch'
     FIRST_WAIT=15
-    STEP_WAIT=10
+    SCENE_WAIT=3
     ;;
   *)
     echo "Unsupported RUNLU_SCREENSHOT_FAMILY: $FAMILY (expected iphone or ipad)"
@@ -43,6 +43,16 @@ xcrun simctl status_bar "$UDID" override --time '9:41' --batteryLevel 100 --batt
 rm -rf ios/App/App/public
 cp -R screenshot-www ios/App/App/public
 
+# Add a screenshot-only URL scheme to the generated simulator project. This is never
+# written back to the verified shipping bundle; it exists solely so the capture script
+# can tell the running screenshot app exactly which scene to display before each shot.
+PLIST="ios/App/App/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string ca.runlu.warehouseos.screenshot" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLName ca.runlu.warehouseos.screenshot" "$PLIST"
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string runlu-shot" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLSchemes:0 runlu-shot" "$PLIST"
+
 echo "Building screenshot simulator target: $FAMILY · $DEVICE_LABEL · $DEVICE_TYPE · $RUNTIME · $UDID"
 xcodebuild \
   -project ios/App/App.xcodeproj \
@@ -59,7 +69,14 @@ xcrun simctl install "$UDID" "$APP"
 xcrun simctl launch "$UDID" ca.runlu.warehouseos
 
 INFO="$OUT_DIR/capture-info.txt"
-printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" > "$INFO"
+printf '%s\n' "family=$FAMILY" "runtime=$RUNTIME" "device_label=$DEVICE_LABEL" "device_type=$DEVICE_TYPE" "udid=$UDID" "scene_control=runlu-shot://scene/<name>" > "$INFO"
+
+command_scene(){
+  local scene="$1"
+  echo "Commanding RUNLU $FAMILY scene: $scene"
+  xcrun simctl openurl "$UDID" "runlu-shot://scene/$scene"
+  sleep "$SCENE_WAIT"
+}
 
 capture_scene(){
   local order="$1"
@@ -87,12 +104,12 @@ capture_scene(){
   printf '%s\n' "scene_${order}=${scene}|${width}x${height}|format=jpeg|alpha=${alpha}|bytes=${bytes}" >> "$INFO"
 }
 
-# iPhone WebView startup on fresh simulators is slower than iPad. The screenshot-only
-# controller therefore gives iPhone scenes wider stable windows; these matching waits
-# keep captures near the middle of those windows instead of at transition boundaries.
+# Give the fresh WebView one generous startup window. After that, every screenshot is
+# command-driven rather than time-driven: explicitly select the scene, let it settle,
+# then capture it. This prevents cumulative timing drift from mislabeling screenshots.
 sleep "$FIRST_WAIT"
-capture_scene '01' 'dashboard'
 for item in \
+  '01 dashboard' \
   '02 inventory' \
   '03 carpet' \
   '04 receiving' \
@@ -101,11 +118,11 @@ for item in \
   '07 users' \
   '08 backup'
 do
-  sleep "$STEP_WAIT"
   set -- $item
+  command_scene "$2"
   capture_scene "$1" "$2"
 done
 
 COUNT="$(find "$OUT_DIR" -maxdepth 1 -type f -name '*.jpg' | wc -l | tr -d ' ')"
 [[ "$COUNT" == '8' ]] || { echo "Expected 8 screenshot JPEGs, found $COUNT"; exit 1; }
-echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 JPEG/no-alpha scenes."
+echo "RUNLU App Store $FAMILY screenshot sequence complete: 8 command-driven JPEG/no-alpha scenes."
