@@ -76,7 +76,19 @@ command_scene(){
   local seq=$((10#$order))
   echo "Commanding RUNLU $FAMILY scene internally: $scene (seq=$seq)"
   printf '{"scene":"%s","seq":%d}\n' "$scene" "$seq" > "$COMMAND_FILE"
-  sleep "$SCENE_WAIT"
+
+  # Carpet rendering is heavier than the other scenes. Re-issue only this scene with
+  # a fresh sequence number so a transient WebView polling/render miss cannot leave
+  # screenshot 03 on the previous Inventory page. All other scene timings stay intact.
+  if [[ "$scene" == 'carpet' ]]; then
+    sleep 1
+    local confirm_seq=$((seq + 100))
+    echo "Confirming RUNLU $FAMILY carpet scene internally (seq=$confirm_seq)"
+    printf '{"scene":"%s","seq":%d}\n' "$scene" "$confirm_seq" > "$COMMAND_FILE"
+    sleep 5
+  else
+    sleep "$SCENE_WAIT"
+  fi
 }
 
 capture_scene(){
