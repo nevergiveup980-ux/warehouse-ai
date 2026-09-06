@@ -4,13 +4,20 @@ import { fileURLToPath } from 'node:url';
 
 const here=dirname(fileURLToPath(import.meta.url));
 const root=resolve(here,'../screenshot-www');
+const commandFile=resolve(root,'screenshot-scene-command.json');
+
+// Seed the screenshot-only command file so the freshly launched fixture always has
+// a deterministic first scene. The capture script rewrites the installed copy before
+// every screenshot; this file is never part of the verified shipping web bundle.
+await writeFile(commandFile,JSON.stringify({scene:'dashboard',seq:0})+'\n','utf8');
 
 const controller=`/* RUNLU App Store screenshot scene controller — screenshot bundle only. */
 (function(){
 'use strict';
-const SCENE='runlu-appstore-screenshot-scene-v2';
+const SCENE='runlu-appstore-screenshot-scene-v3';
 const path=location.pathname.toLowerCase();
 const mobile=window.innerWidth<700;
+let lastSeq=null;
 function mark(name){localStorage.setItem(SCENE,name);document.documentElement.setAttribute('data-runlu-screenshot-scene',name);}
 function inner(){const f=document.getElementById('app');return f&&f.contentWindow;}
 function applyPreviewScene(name){
@@ -54,29 +61,24 @@ function routeScene(name){
  }
  return false;
 }
-function sceneFromUrl(url){
+async function readCommand(){
  try{
-   const u=new URL(url);
-   if(u.protocol!=='runlu-shot:')return '';
-   const host=(u.hostname||'').toLowerCase();
-   const seg=(u.pathname||'').split('/').filter(Boolean).pop()||'';
-   return (host==='scene'?seg:host||seg).toLowerCase();
- }catch{return '';}
+   const url=new URL('../screenshot-scene-command.json',location.href);
+   url.searchParams.set('_',Date.now().toString());
+   const res=await fetch(url.href,{cache:'no-store'});
+   if(!res.ok)return;
+   const cmd=await res.json();
+   const seq=Number(cmd?.seq);
+   const scene=String(cmd?.scene||'').toLowerCase();
+   if(!scene||!Number.isFinite(seq)||seq===lastSeq)return;
+   lastSeq=seq;
+   routeScene(scene);
+ }catch{}
 }
-function listenForCommands(){
- const attach=()=>{
-   const app=window.Capacitor?.Plugins?.App;
-   if(!app?.addListener)return false;
-   app.addListener('appUrlOpen',event=>routeScene(sceneFromUrl(event?.url||'')));
-   return true;
- };
- if(attach())return;
- let tries=0;
- const timer=setInterval(()=>{tries+=1;if(attach()||tries>40)clearInterval(timer);},250);
-}
-listenForCommands();
+setInterval(readCommand,250);
+readCommand();
 if(path.endsWith('/preview.html')){
- setTimeout(()=>routeScene('dashboard'),700);
+ setTimeout(()=>{if(lastSeq===null)routeScene('dashboard');},700);
  return;
 }
 if(path.endsWith('/users.html')){mark('users');return;}
@@ -93,12 +95,11 @@ await inject('universal/preview.html','../screenshot-scenes.js');
 await inject('universal/users.html','../screenshot-scenes.js');
 await inject('universal/backup.html','../screenshot-scenes.js');
 
-// This controller is an App Store capture aid only. The real shipping bundle must
-// remain completely free of the file and its scene keys.
+// This controller and its command file are App Store capture aids only. The real
+// shipping bundle must remain completely free of their files and scene keys.
 const shipping=resolve(here,'../www');
-for(const rel of ['screenshot-scenes.js','universal/preview.html','universal/users.html','universal/backup.html']){
-  if(rel==='screenshot-scenes.js')continue;
+for(const rel of ['universal/preview.html','universal/users.html','universal/backup.html']){
   const text=await readFile(resolve(shipping,rel),'utf8');
   if(text.includes('screenshot-scenes.js')||text.includes('runlu-appstore-screenshot-scene'))throw new Error(`Screenshot scene controller leaked into shipping ${rel}`);
 }
-console.log('RUNLU screenshot scenes prepared with deterministic URL commands: dashboard, inventory, carpet, receiving, transfer, scan, users, backup.');
+console.log('RUNLU screenshot scenes prepared with deterministic internal-file commands: dashboard, inventory, carpet, receiving, transfer, scan, users, backup.');
