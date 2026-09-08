@@ -83,14 +83,19 @@
       setStatus(`Central Supplier Task synced ✓ · PO #${h.po}`,true);
       try{localStorage.setItem('runlu_flooring_central_task_last_v104',JSON.stringify({po:h.po,at:new Date().toISOString()}))}catch(_){}
       try{window.refreshFlooringSupplierTasks?.()}catch(_){}
+      try{window.RUNLUWarehouseWorkBuild115?.refresh?.(false)}catch(_){}
     }catch(e){
       console.warn('[Build104] central supplier-task sync:',e?.message||e);
       setStatus('Central Supplier Task sync pending · receiving remains safe.');
       if(retryCount++<3)setTimeout(ensureCentralTask,1200);
     }finally{syncing=false}
   }
-  function boot(){[350,900,1800,3200].forEach(ms=>setTimeout(ensureCentralTask,ms))}
+  function loadWorkOrchestration(){
+    if(window.__RUNLU_BUILD115_WAREHOUSE_WORK__||document.querySelector('script[data-runlu-build115-work]'))return;
+    const s=document.createElement('script');s.src='build115-warehouse-work-orchestration.js?v=115';s.dataset.runluBuild115Work='1';s.async=true;s.onerror=()=>console.warn('[Build104] Build115 work orchestration could not load; base Warehouse OS remains available.');document.head.appendChild(s);
+  }
+  function boot(){loadWorkOrchestration();[350,900,1800,3200].forEach(ms=>setTimeout(ensureCentralTask,ms))}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.addEventListener('pageshow',()=>setTimeout(ensureCentralTask,500));
+  window.addEventListener('pageshow',()=>{loadWorkOrchestration();setTimeout(ensureCentralTask,500)});
   window.runluEnsureFlooringCentralTask=ensureCentralTask;
 })();
