@@ -1,0 +1,25 @@
+name: Warehouse Material Work Build116
+
+on:
+  pull_request:
+    paths:
+      - 'build104-flooring-central-task-authority.js'
+      - 'build116-material-work-orchestration.js'
+      - 'tests/build116-material-work.mjs'
+      - '.github/workflows/warehouse-material-work-build116.yml'
+  workflow_dispatch:
+
+jobs:
+  build116-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build104-flooring-central-task-authority.js
+          node --check build116-material-work-orchestration.js
+      - name: Material work regression
+        run: node tests/build116-material-work.mjs
