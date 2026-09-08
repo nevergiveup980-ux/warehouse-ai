@@ -90,9 +90,13 @@
       if(retryCount++<3)setTimeout(ensureCentralTask,1200);
     }finally{syncing=false}
   }
+  function loadAddon(src,attr,guard,label){
+    if(window[guard]||document.querySelector(`script[${attr}]`))return;
+    const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.async=true;s.onerror=()=>console.warn(`[Build104] ${label} could not load; base Warehouse OS remains available.`);document.head.appendChild(s);
+  }
   function loadWorkOrchestration(){
-    if(window.__RUNLU_BUILD115_WAREHOUSE_WORK__||document.querySelector('script[data-runlu-build115-work]'))return;
-    const s=document.createElement('script');s.src='build115-warehouse-work-orchestration.js?v=115';s.dataset.runluBuild115Work='1';s.async=true;s.onerror=()=>console.warn('[Build104] Build115 work orchestration could not load; base Warehouse OS remains available.');document.head.appendChild(s);
+    loadAddon('build115-warehouse-work-orchestration.js?v=115','data-runlu-build115-work','__RUNLU_BUILD115_WAREHOUSE_WORK__','Build115 work orchestration');
+    loadAddon('build116-material-work-orchestration.js?v=116','data-runlu-build116-work','__RUNLU_BUILD116_MATERIAL_WORK__','Build116 material work orchestration');
   }
   function boot(){loadWorkOrchestration();[350,900,1800,3200].forEach(ms=>setTimeout(ensureCentralTask,ms))}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
