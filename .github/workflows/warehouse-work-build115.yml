@@ -1,0 +1,25 @@
+name: Warehouse Work Build115
+
+on:
+  pull_request:
+    paths:
+      - 'build104-flooring-central-task-authority.js'
+      - 'build115-warehouse-work-orchestration.js'
+      - 'tests/build115-work-orchestration.mjs'
+      - '.github/workflows/warehouse-work-build115.yml'
+  workflow_dispatch:
+
+jobs:
+  build115-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build104-flooring-central-task-authority.js
+          node --check build115-warehouse-work-orchestration.js
+      - name: Work orchestration regression
+        run: node tests/build115-work-orchestration.mjs
