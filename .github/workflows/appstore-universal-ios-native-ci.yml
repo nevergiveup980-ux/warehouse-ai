@@ -74,15 +74,17 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Warehouse OS uses the microphone only when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription Warehouse OS uses the microphone only when you choose local voice input." "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Warehouse OS accesses your photo library only when you choose an existing image to import or attach to a warehouse record." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription Warehouse OS accesses your photo library only when you choose an existing image to import or attach to a warehouse record." "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription" "$PLIST"
 
       - name: Lock and verify release identity
         working-directory: appstore/ios
         env:
           RUNLU_MARKETING_VERSION: '1.0.0'
-          RUNLU_BUILD_NUMBER: '1'
+          RUNLU_BUILD_NUMBER: '3'
         run: bash scripts/prepare-xcode-release.sh
 
       - name: Compile unsigned iOS Simulator build
@@ -104,7 +106,7 @@ jobs:
         env:
           RUNLU_DERIVED_DATA: 'DerivedData'
           RUNLU_MARKETING_VERSION: '1.0.0'
-          RUNLU_BUILD_NUMBER: '1'
+          RUNLU_BUILD_NUMBER: '3'
         run: bash scripts/audit-ios-release.sh
 
       - name: Verify portable local Swift package layout
