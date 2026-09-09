@@ -84,7 +84,7 @@ jobs:
         working-directory: appstore/ios
         env:
           RUNLU_MARKETING_VERSION: '1.0.0'
-          RUNLU_BUILD_NUMBER: '3'
+          RUNLU_BUILD_NUMBER: '4'
         run: bash scripts/prepare-xcode-release.sh
 
       - name: Compile unsigned iOS Simulator build
@@ -106,7 +106,7 @@ jobs:
         env:
           RUNLU_DERIVED_DATA: 'DerivedData'
           RUNLU_MARKETING_VERSION: '1.0.0'
-          RUNLU_BUILD_NUMBER: '3'
+          RUNLU_BUILD_NUMBER: '4'
         run: bash scripts/audit-ios-release.sh
 
       - name: Verify portable local Swift package layout
