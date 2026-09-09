@@ -28,4 +28,52 @@ async function setPin(userId,newPin){if(!global.RUNLUWorkspace.can('manageMember
 function setDisabled(userId,disabled){if(!global.RUNLUWorkspace.can('manageMembers'))throw new Error('Administrator role required.');const users=readRaw(),u=users.find(x=>x.id===userId);if(!u)throw new Error('User not found.');if(u.role==='owner'&&disabled)throw new Error('The workspace owner cannot be disabled.');if(global.RUNLUWorkspace.session()?.userId===userId&&disabled)throw new Error('You cannot disable the account currently signed in.');u.disabled=!!disabled;u.updatedAt=new Date().toISOString();writeRaw(users);return clean(u)}
 function removeUser(userId){if(!global.RUNLUWorkspace.can('manageMembers'))throw new Error('Administrator role required.');const users=readRaw(),u=users.find(x=>x.id===userId);if(!u)throw new Error('User not found.');if(u.role==='owner')throw new Error('The workspace owner cannot be deleted.');if(global.RUNLUWorkspace.session()?.userId===userId)throw new Error('You cannot delete the account currently signed in.');writeRaw(users.filter(x=>x.id!==userId));return true}
 global.RUNLULocalAuth=Object.freeze({ITERATIONS,usersKey,listUsers,hasUsers,createOwner,createUser,authenticate,currentUser,signOut,setPin,setDisabled,removeUser});
+
+// iOS/WKWebView can suppress the browser's native validation bubble. On the
+// first-run setup form that made a required/invalid field look like a dead
+// blue button. Keep HTML constraints, but surface them through the app's own
+// visible error panel so setup can never fail silently.
+function installOnboardingValidation(){
+  if(typeof document==='undefined')return;
+  const form=document.getElementById('setupForm');
+  if(!form||form.dataset.runluValidationReady==='1')return;
+  form.dataset.runluValidationReady='1';
+  form.noValidate=true;
+  const error=document.getElementById('error');
+  const ready=document.getElementById('ready');
+  const clearInvalid=()=>form.querySelectorAll('[aria-invalid="true"]').forEach(el=>{el.removeAttribute('aria-invalid');el.style.borderColor=''});
+  const fieldLabel=el=>{
+    const container=el.closest('div');
+    const label=container?.querySelector('label');
+    return String(label?.textContent||el.getAttribute('aria-label')||el.id||'Field').trim();
+  };
+  const showValidationError=(el,message)=>{
+    clearInvalid();
+    if(ready)ready.classList.remove('show');
+    if(el){el.setAttribute('aria-invalid','true');el.style.borderColor='#a32638'}
+    if(error){error.textContent=message;error.classList.add('show');error.scrollIntoView({behavior:'smooth',block:'center'})}
+  };
+  form.addEventListener('input',e=>{
+    const el=e.target;
+    if(el?.getAttribute?.('aria-invalid')==='true'&&el.checkValidity?.()){el.removeAttribute('aria-invalid');el.style.borderColor=''}
+  });
+  form.addEventListener('submit',e=>{
+    const controls=[...form.querySelectorAll('input,select,textarea')];
+    const invalid=controls.find(el=>!el.disabled&&typeof el.checkValidity==='function'&&!el.checkValidity());
+    if(!invalid){clearInvalid();if(error)error.classList.remove('show');return}
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const label=fieldLabel(invalid);
+    let detail=String(invalid.validationMessage||'Please enter a valid value.').trim();
+    if(invalid.validity?.valueMissing)detail='This field is required.';
+    else if(invalid.validity?.typeMismatch)detail='Please enter a valid '+label.toLowerCase()+'.';
+    else if(invalid.validity?.tooShort)detail='Please enter at least '+invalid.minLength+' characters.';
+    else if(invalid.validity?.patternMismatch)detail='Please use the required format.';
+    showValidationError(invalid,label+': '+detail);
+  },true);
+}
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installOnboardingValidation,{once:true});
+  else installOnboardingValidation();
+}
 })(typeof window!=='undefined'?window:globalThis);
