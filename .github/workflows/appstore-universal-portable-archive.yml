@@ -68,7 +68,7 @@ jobs:
         working-directory: appstore/ios
         env:
           RUNLU_MARKETING_VERSION: '1.0.0'
-          RUNLU_BUILD_NUMBER: '3'
+          RUNLU_BUILD_NUMBER: '4'
         run: bash scripts/prepare-xcode-release.sh
 
       - name: Verify local Swift package paths resolve
