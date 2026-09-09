@@ -7,6 +7,8 @@ on:
       - appstore/universal-ios-v1
     paths:
       - .github/workflows/appstore-universal-portable-archive.yml
+      - universal/**
+      - appstore/ios/**
   workflow_dispatch:
 
 permissions:
@@ -60,12 +62,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription Warehouse OS uses the camera when you choose to scan labels, barcodes, or warehouse documents." "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Warehouse OS uses the microphone only when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription Warehouse OS uses the microphone only when you choose local voice input." "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSSpeechRecognitionUsageDescription Warehouse OS uses on-device speech recognition when you choose local voice input." "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Warehouse OS accesses your photo library only when you choose an existing image to import or attach to a warehouse record." "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription Warehouse OS accesses your photo library only when you choose an existing image to import or attach to a warehouse record." "$PLIST"
 
       - name: Lock release identity
         working-directory: appstore/ios
         env:
           RUNLU_MARKETING_VERSION: '1.0.0'
-          RUNLU_BUILD_NUMBER: '1'
+          RUNLU_BUILD_NUMBER: '3'
         run: bash scripts/prepare-xcode-release.sh
 
       - name: Verify local Swift package paths resolve
