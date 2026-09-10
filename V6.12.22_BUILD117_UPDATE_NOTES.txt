@@ -1,0 +1,19 @@
+RUNLU Warehouse AI V6.12.22 · Build117
+Date: 2026-09-10
+
+COMMAND CENTER CLOUD HISTORY RECOVERY
+
+What changed
+- Daily Work History now reads the cloud Operations dataset directly instead of relying only on this browser's local cache.
+- Cloud records and local/offline records are merged by stable operation identity and de-duplicated.
+- When the same operation exists in both places, the newer record wins.
+- History refreshes on page entry, focus, visibility return and every 15 seconds while Command Center history is open.
+- A small History Cloud status and Refresh History control were added below the daily history count.
+
+Safety
+- Build117 is display/history synchronization only.
+- It does not post inventory, alter carpet balances, cut rolls, ship material, transfer stock, receive product or replay historical inventory impact.
+- Existing local/offline history remains available when cloud access is unavailable.
+
+Regression target
+- A browser whose local history stops at Sep 4 must still display cloud work dated Sep 8, Sep 9 and Sep 10.
