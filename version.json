@@ -1,7 +1,7 @@
 {
-  "version": "6.12.21",
-  "build": "114",
-  "date": "2026-09-03",
+  "version": "6.12.22",
+  "build": "117",
+  "date": "2026-09-10",
   "channel": "stable",
-  "notes": "Restores the correct Inventory Transfer editor for older single-item records so From Location and To Location are visible before completion. Failed attempts remain non-destructive; Build113 Sample Checkout and Build112 product-link recovery remain active."
+  "notes": "Command Center Daily Work History now reads the cloud Operations dataset directly, merges it with local/offline records by stable identity, and refreshes automatically without changing inventory or physical warehouse transactions."
 }
