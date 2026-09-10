@@ -1,7 +1,7 @@
 {
-  "version": "6.12.23",
-  "build": "118",
+  "version": "6.12.24",
+  "build": "119",
   "date": "2026-09-10",
   "channel": "stable",
-  "notes": "Command Center Daily Work History now reads the active per-record Warehouse Cloud operations table (warehouse_records), merges it with local/offline history, and refreshes automatically without changing inventory or physical warehouse transactions."
+  "notes": "Command Center history now uses one live cloud source, automatically collapses duplicate-looking copies for display, and protects permanent work-history deletion with live-cloud verification plus explicit final confirmation."
 }
