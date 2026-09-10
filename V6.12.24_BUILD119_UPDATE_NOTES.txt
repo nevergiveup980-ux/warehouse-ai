@@ -1,0 +1,25 @@
+RUNLU Warehouse AI V6.12.24 · Build119
+Date: 2026-09-10
+
+DUPLICATE-SAFE COMMAND CENTER HISTORY
+
+What changed
+- Command Center history now uses one live source path: the active per-record Warehouse Cloud operations table.
+- The retired Build117 user_datasets history reader is no longer loaded.
+- Duplicate-looking copies of the same work are collapsed for display only using conservative, work-type-aware semantic matching.
+- The better representative is kept, preferring inventory-linked, newer, more advanced-status, live-cloud, and richer records.
+- Legitimate separate work remains separate; fallback matching keeps exact work time.
+- The history status line shows Duplicate-safe ✓ and, when applicable, how many display copies were hidden.
+
+Deletion protection
+- The action is labeled Delete Record… instead of a casual Delete.
+- Inventory-linked completed operations remain locked.
+- Real history deletion requires a live Warehouse Cloud session.
+- The user sees a warning that duplicate cleanup is automatic and should not use deletion for duplicate-looking rows.
+- Permanent deletion requires typing DELETE as a second confirmation.
+- If the same work exists as several live-cloud duplicate copies, an intentional confirmed delete removes the matching copies together.
+- Local history is removed only after the cloud deletion succeeds.
+
+Safety
+- Automatic de-duplication never changes inventory, carpet balances, cuts, shipping, transfer, receiving, or cloud work rows.
+- Build119 does not automatically delete any record from Warehouse Cloud.

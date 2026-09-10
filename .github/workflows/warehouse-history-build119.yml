@@ -1,0 +1,24 @@
+name: Warehouse History Build119
+
+on:
+  pull_request:
+    paths:
+      - 'build119-history-dedupe-delete-guard.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'tests/build119-history-dedupe-delete-guard.mjs'
+      - '.github/workflows/warehouse-history-build119.yml'
+  workflow_dispatch:
+
+jobs:
+  build119-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check build119-history-dedupe-delete-guard.js
+      - name: Duplicate-safe history regression
+        run: node tests/build119-history-dedupe-delete-guard.mjs
