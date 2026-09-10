@@ -59,6 +59,7 @@
     'build118-command-center-live-record-history.js',
     'build119-history-dedupe-delete-guard.js',
     'build120-carpet-receiving-cloud-identity.js',
+    'build120-carpet-receiving-completion-guard.js',
     'build082-version-authority.js'
   ];
 
