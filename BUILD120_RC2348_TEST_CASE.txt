@@ -1,0 +1,1 @@
+Regression target: new Carpet Receiving must reject RC2348 when the device cache is stale but live Warehouse Cloud already has record_id RC2348. The known cloud record is ELEGANT 40 / LIGHT GREY / 6B. This file contains no operational data changes; it documents the guard case only.
