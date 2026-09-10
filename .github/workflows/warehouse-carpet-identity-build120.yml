@@ -1,0 +1,25 @@
+name: Warehouse Carpet Identity Build120
+
+on:
+  pull_request:
+    paths:
+      - 'build120-carpet-receiving-cloud-identity.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build120-carpet-receiving-cloud-identity.mjs'
+      - '.github/workflows/warehouse-carpet-identity-build120.yml'
+  workflow_dispatch:
+
+jobs:
+  build120-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check build120-carpet-receiving-cloud-identity.js
+      - name: Carpet receiving live identity and safe conflict regression
+        run: node tests/build120-carpet-receiving-cloud-identity.mjs
