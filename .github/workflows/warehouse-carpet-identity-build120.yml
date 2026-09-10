@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - 'build120-carpet-receiving-cloud-identity.js'
+      - 'build120-carpet-receiving-completion-guard.js'
       - 'release-loader.js'
       - 'version.json'
       - 'build082-version-authority.js'
       - 'tests/build120-carpet-receiving-cloud-identity.mjs'
+      - 'tests/build120-carpet-receiving-completion-guard.mjs'
       - '.github/workflows/warehouse-carpet-identity-build120.yml'
   workflow_dispatch:
 
@@ -20,6 +22,10 @@ jobs:
         with:
           node-version: '22'
       - name: JavaScript syntax
-        run: node --check build120-carpet-receiving-cloud-identity.js
-      - name: Carpet receiving live identity and safe conflict regression
+        run: |
+          node --check build120-carpet-receiving-cloud-identity.js
+          node --check build120-carpet-receiving-completion-guard.js
+      - name: New receiving live identity and safe conflict regression
         run: node tests/build120-carpet-receiving-cloud-identity.mjs
+      - name: Saved receiving completion regression
+        run: node tests/build120-carpet-receiving-completion-guard.mjs
