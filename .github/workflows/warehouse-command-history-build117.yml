@@ -1,0 +1,24 @@
+name: Warehouse Command History Build117
+
+on:
+  pull_request:
+    paths:
+      - 'build117-command-center-cloud-history.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'tests/build117-command-center-cloud-history.mjs'
+      - '.github/workflows/warehouse-command-history-build117.yml'
+  workflow_dispatch:
+
+jobs:
+  build117-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check build117-command-center-cloud-history.js
+      - name: Command Center history regression
+        run: node tests/build117-command-center-cloud-history.mjs
