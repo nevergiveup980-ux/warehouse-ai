@@ -1,0 +1,16 @@
+RUNLU Warehouse AI V6.12.25 · Build120
+
+Carpet Receiving identity safety
+- New Carpet Receiving Roll # is checked against the device cache immediately.
+- Before stock is applied, Roll # is also checked against live warehouse_records.
+- A stale browser cannot create or overwrite an existing cloud carpet identity.
+- Manufacturer Roll # is checked against the live carpet set at final receiving validation.
+- If live cloud cannot be reached, Completed Carpet Receiving is blocked; draft work can be kept.
+
+Conflict safety
+- Existing record-level conflicts remain protected by Build072.
+- Build120 automatically clears only no-op conflicts whose queued business payload already equals the current live cloud record (ignoring sync-only timestamps/metadata).
+- Divergent device/cloud records are never auto-selected or deleted and remain for explicit review.
+
+Regression case
+- RC2348 already exists in live cloud as ELEGANT 40 · LIGHT GREY · 6B, so a new receive using RC2348 must be rejected before inventory mutation.

@@ -1,7 +1,7 @@
 {
-  "version": "6.12.24",
-  "build": "119",
+  "version": "6.12.25",
+  "build": "120",
   "date": "2026-09-10",
   "channel": "stable",
-  "notes": "Command Center history now uses one live cloud source, automatically collapses duplicate-looking copies for display, and protects permanent work-history deletion with live-cloud verification plus explicit final confirmation."
+  "notes": "New Carpet Receiving now verifies Roll # uniqueness against both device cache and live Warehouse Cloud before stock is applied. Redundant record conflicts that already match cloud are safely reconciled automatically; genuinely divergent conflicts remain for review."
 }

@@ -49,7 +49,8 @@ assert.equal(out.filter(x=>x.type==='Other').length,2,'conservative fallback mus
 assert.match(context.operationMobileActions({}),/Delete Record…/);
 assert.equal(context.RUNLUHistoryGuardBuild119.version,'119');
 
-assert.match(loader,/const RELEASE='119'/);
+const release=Number((loader.match(/const RELEASE='(\d+)'/)||[])[1]||0);
+assert.ok(release>=119,'Build119 history guard must remain loaded in Build119 or later releases');
 assert.match(loader,/build118-command-center-live-record-history\.js/);
 assert.match(loader,/build119-history-dedupe-delete-guard\.js/);
 assert.doesNotMatch(loader,/build117-command-center-cloud-history\.js/,'stale user_datasets history reader must not load');
