@@ -1,7 +1,7 @@
 {
-  "version": "6.12.25",
-  "build": "120",
+  "version": "6.12.26",
+  "build": "121",
   "date": "2026-09-10",
   "channel": "stable",
-  "notes": "New Carpet Receiving now verifies Roll # uniqueness against both device cache and live Warehouse Cloud before stock is applied. Redundant record conflicts that already match cloud are safely reconciled automatically; genuinely divergent conflicts remain for review."
+  "notes": "Product Link Recovery remains active but its repetitive blocking success dialog is now suppressed. Recovery results continue to be recorded and the passive Inventory notice remains available, while normal warehouse work can continue without repeated OK clicks."
 }
