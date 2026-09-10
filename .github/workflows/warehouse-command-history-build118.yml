@@ -1,0 +1,24 @@
+name: Warehouse Command History Build118
+
+on:
+  pull_request:
+    paths:
+      - 'build118-command-center-live-record-history.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'tests/build118-command-center-live-record-history.mjs'
+      - '.github/workflows/warehouse-command-history-build118.yml'
+  workflow_dispatch:
+
+jobs:
+  build118-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check build118-command-center-live-record-history.js
+      - name: Command Center live history regression
+        run: node tests/build118-command-center-live-record-history.mjs

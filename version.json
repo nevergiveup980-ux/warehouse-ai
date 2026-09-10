@@ -1,7 +1,7 @@
 {
-  "version": "6.12.22",
-  "build": "117",
+  "version": "6.12.23",
+  "build": "118",
   "date": "2026-09-10",
   "channel": "stable",
-  "notes": "Command Center Daily Work History now reads the cloud Operations dataset directly, merges it with local/offline records by stable identity, and refreshes automatically without changing inventory or physical warehouse transactions."
+  "notes": "Command Center Daily Work History now reads the active per-record Warehouse Cloud operations table (warehouse_records), merges it with local/offline history, and refreshes automatically without changing inventory or physical warehouse transactions."
 }
