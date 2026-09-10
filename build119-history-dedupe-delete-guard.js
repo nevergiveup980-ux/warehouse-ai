@@ -62,8 +62,10 @@
   }
   function decorateStatus(){
     const el=q('commandHistoryText118');if(!el)return;
-    const clean=String(el.textContent||'').replace(/ · Duplicate-safe ✓(?: · \d+ hidden)?/g,'');
-    el.textContent=clean+` · Duplicate-safe ✓${lastSuppressed?` · ${lastSuppressed} hidden`:''}`;
+    const current=String(el.textContent||'');
+    const clean=current.replace(/ · Duplicate-safe ✓(?: · \d+ hidden)?/g,'');
+    const desired=clean+` · Duplicate-safe ✓${lastSuppressed?` · ${lastSuppressed} hidden`:''}`;
+    if(current!==desired)el.textContent=desired;
   }
   function labelDeleteButton(html){
     return String(html||'').replace(/>Delete<\/button>/g,'>Delete Record…</button>');
@@ -89,7 +91,7 @@
   }
   function localRows(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch{return []}}
   function removeLocalSemantic(key){
-    try{localStorage.setItem(KEY,JSON.stringify(localRows().filter(r=>semanticKey(r)!==key)))}catch(e){console.warn('[Build119] local history cleanup:',e?.message||e)}
+    localStorage.setItem(KEY,JSON.stringify(localRows().filter(r=>semanticKey(r)!==key)));
   }
   async function fetchLiveRows(session){
     const path='/rest/v1/warehouse_records?select=record_id,payload,version,updated_at&user_id=eq.'+encodeURIComponent(session.user.id)+'&dataset_key=eq.'+encodeURIComponent(KEY)+'&deleted_at=is.null&order=updated_at.asc&limit=1000';
@@ -97,8 +99,11 @@
     if(!Array.isArray(rows))throw new Error('Live Operations response is not a record list.');
     return rows;
   }
-  async function tombstone(session,recordId,now){
-    const path='/rest/v1/warehouse_records?user_id=eq.'+encodeURIComponent(session.user.id)+'&dataset_key=eq.'+encodeURIComponent(KEY)+'&record_id=eq.'+encodeURIComponent(recordId);
+  async function tombstoneMany(session,recordIds,now){
+    const ids=[...new Set(recordIds.map(v=>String(v).replace(/[^0-9A-Za-z._:-]/g,'')).filter(Boolean))];
+    if(!ids.length)throw new Error('No matching live cloud record was found. History was kept.');
+    const filter='('+ids.join(',')+')';
+    const path='/rest/v1/warehouse_records?user_id=eq.'+encodeURIComponent(session.user.id)+'&dataset_key=eq.'+encodeURIComponent(KEY)+'&record_id=in.'+encodeURIComponent(filter);
     await window.cloudRequest(path,{method:'PATCH',headers:{...window.cloudHeaders(session.access_token),Prefer:'return=minimal'},body:JSON.stringify({deleted_at:now,updated_at:now})});
   }
   async function guardedDeleteOperation(id){
@@ -114,21 +119,22 @@
       if(typeof window.cloudEnsureSession!=='function'||typeof window.cloudRequest!=='function'||typeof window.cloudHeaders!=='function')throw new Error('Live Warehouse Cloud is not ready.');
       const session=await window.cloudEnsureSession();if(!session)throw new Error('Warehouse Cloud sign-in is required.');
       const key=semanticKey(x),rows=await fetchLiveRows(session),matches=rows.filter(r=>semanticKey(rowToOperation(r))===key);
+      if(!matches.length)throw new Error('No matching live cloud record was found. History was kept.');
       const now=new Date().toISOString();
-      for(const row of matches)await tombstone(session,row.record_id,now);
+      await tombstoneMany(session,matches.map(r=>r.record_id),now);
       removeLocalSemantic(key);
       await window.RUNLUCommandCenterHistoryBuild118?.refresh?.(false);
       try{window.renderOperationsDay?.();window.renderOperationsDays?.();window.renderDashboard?.()}catch(_){}
       alert(`Work-history record deleted.${matches.length>1?` ${matches.length} duplicate cloud copies of the same work were removed together.`:''}`);
     }catch(e){
       console.warn('[Build119] protected history delete:',e?.message||e);
-      alert('Delete was NOT completed. No local history was removed.\n\n'+(e?.message||e));
+      alert('Delete was NOT completed. The local work-history record was kept.\n\n'+(e?.message||e));
     }
   }
   function boot(){
     install();decorateStatus();
     const mo=new MutationObserver(()=>{install();decorateStatus()});
-    mo.observe(document.body,{childList:true,subtree:true,characterData:true});
+    mo.observe(document.body,{childList:true,subtree:true});
     setInterval(decorateStatus,1500);
   }
 
