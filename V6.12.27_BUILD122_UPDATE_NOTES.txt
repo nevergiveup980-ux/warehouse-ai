@@ -1,0 +1,19 @@
+RUNLU Warehouse OS V6.12.27 · Build122
+Delete Safety Shield
+
+ROOT CAUSE
+Build072 treated any record missing from a newly saved array as an intentional delete. A partial, filtered, stale or not-yet-fully-loaded local array could therefore enqueue cloud tombstones for valid records.
+
+FIX
+1. A new Build122 save guard preserves omitted existing records unless the omission occurs inside an explicit user-delete context.
+2. Existing queued delete mutations without an explicit-user-delete marker are neutralized before Cloud Master synchronization.
+3. Intentional Product, Inventory, Carpet and unlinked Operation deletes are tagged explicitly before cloud sync.
+4. Operation deletion no longer uses the Build119 direct REST tombstone path; Build122 routes it through the Cloud Master mutation queue and keeps the two-step DELETE confirmation.
+5. The Supabase warehouse_apply_mutation RPC now rejects every delete that lacks _runluDeleteIntent=explicit-user-delete.
+6. Completed operations with impactApplied=true are additionally protected server-side from deletion.
+
+RECOVERY
+On 2026-09-13, 34 Operations records that had been mass-tombstoned in bursts on 2026-09-10 and 2026-09-11 were restored in Warehouse Cloud. Restored rows are marked origin=cloud-master-repair-20260913 and device_id=server-repair-20260913 for traceability.
+
+SAFETY PRINCIPLE
+Record omission is never delete intent. Cloud deletion must be explicit, user-confirmed and server-authorized.
