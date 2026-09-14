@@ -1,9 +1,9 @@
-// RUNLU Warehouse AI V6.12.31 Build126 — Single Version Authority
+// RUNLU Warehouse AI V6.12.32 Build127 — Single Version Authority
 (() => {
   if (window.__RUNLU_VERSION_AUTHORITY__) return;
   window.__RUNLU_VERSION_AUTHORITY__ = true;
 
-  const FALLBACK = {version:'6.12.31', build:'126'};
+  const FALLBACK = {version:'6.12.32', build:'127'};
   let current = {...FALLBACK};
   let badgeObserver = null;
   let titleObserver = null;

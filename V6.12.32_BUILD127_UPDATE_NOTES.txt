@@ -1,0 +1,12 @@
+RUNLU Warehouse AI V6.12.32 Build127
+Date: 2026-09-14
+
+Carpet Receiving Guard Authority
+
+1. Fixes the case where Build125 correctly recognizes a Pending CHC022/CHC023 placeholder, but Build120 later re-wraps the save/completion handler and restores the old duplicate-manufacturer rejection.
+2. Build125 receiving handlers are now reclaimed as the final save/add/completion authority.
+3. Build120 compatibility ownership flags prevent its persistent MutationObserver from wrapping those handlers again.
+4. Build126 is reclaimed as the final stock-impact authority so Pending CHC adoption reaches inventory apply.
+5. Active Manufacturer Roll duplicates remain protected.
+6. Ordinary carpet receiving remains unchanged.
+7. Designed for consecutive CHC arrivals in the same workday.
