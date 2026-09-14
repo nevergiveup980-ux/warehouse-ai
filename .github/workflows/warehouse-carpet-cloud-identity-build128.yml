@@ -1,0 +1,28 @@
+name: Warehouse Carpet Cloud Identity Build128
+
+on:
+  pull_request:
+    paths:
+      - 'build128-carpet-cloud-identity-authority.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build128-carpet-cloud-identity-authority.mjs'
+      - '.github/workflows/warehouse-carpet-cloud-identity-build128.yml'
+  workflow_dispatch:
+
+jobs:
+  build128-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build128-carpet-cloud-identity-authority.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Carpet edit identity regression
+        run: node tests/build128-carpet-cloud-identity-authority.mjs
