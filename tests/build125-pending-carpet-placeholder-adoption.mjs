@@ -82,6 +82,10 @@ assert.equal(v.ok,true,'matching legacy Pending placeholder must be accepted loc
 v=await api.validateItems([{type:'Carpet Receiving',roll:'CHC022',manufacturerRoll:'2222'}],{requireCloud:true,announce:false});
 assert.equal(v.ok,false,'active manufacturer roll must remain protected');
 
+// While the row is still Pending, manifest validation may reuse it for the matching shared family.
+let issues=context.manifestIssues({roll:'CHC022',manufacturerRoll:'9692'},0);
+assert.equal(issues.length,0);
+
 // The replacement save guard must bypass Build120's old duplicate rejection only after Build125 validation succeeds.
 const saved=await context.saveOperation();
 assert.equal(saved,true);
@@ -105,8 +109,9 @@ assert.equal(adopted.lot,'P54596');
 assert.equal(adopted.sourceOperationId,200);
 assert.ok(adopted.length>146&&adopted.length<147);
 
-// Manifest validation may reuse the same pending placeholder, but only for the matching shared family.
-const issues=context.manifestIssues({roll:'CHC022',manufacturerRoll:'9692'},0);
-assert.equal(issues.length,0);
+// Once adopted/Active, a second receipt of the same manufacturer roll must again be blocked.
+issues=context.manifestIssues({roll:'CHC022',manufacturerRoll:'9692'},0);
+assert.equal(issues.length,1);
+assert.equal(issues[0].text,'This manufacturer roll already exists in Carpet Inventory.');
 
 console.log('Build125 pending shared-carpet placeholder adoption: PASS');
