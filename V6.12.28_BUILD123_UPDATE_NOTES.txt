@@ -1,0 +1,18 @@
+RUNLU Warehouse OS V6.12.28 · Build123
+Quiet Cloud Status
+
+PURPOSE
+The raw Cloud Master queue count was useful for diagnostics but visually dominated the mobile header. Large historical sync backlogs such as “650 pending” looked like an application warning even when warehouse records were present and protected.
+
+CHANGE
+1. The top header now shows only a compact semantic cloud state:
+   - Syncing… — queued cloud work is being processed.
+   - Cloud ✓ — no queued work or cloud issue is present.
+   - Review — record conflicts require attention in Settings.
+   - Offline — the device is offline; work remains locally queued.
+   - Cloud issue — synchronization needs attention.
+2. Exact queue and conflict counts remain visible in Settings → Cloud Master for diagnostics.
+3. This build is presentation-only. It does not discard, rewrite, merge, or alter warehouse records or Cloud Master queue contents.
+
+SAFETY
+Build122 Delete Safety Shield remains unchanged and active.
