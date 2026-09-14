@@ -1,7 +1,7 @@
 {
-  "version": "6.12.29",
-  "build": "124",
+  "version": "6.12.30",
+  "build": "125",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Shared Carpet Roll Identity: CHC022 and CHC023 may represent multiple physical carpet rolls. Each new shared-code roll receives a hidden unique physical/cloud identity while the warehouse-visible roll code stays unchanged; manufacturer-roll uniqueness and exact destructive targeting remain protected."
+  "notes": "Pending Carpet Arrival Adoption: CHC022/CHC023 receiving now recognizes legacy zero-length Pending placeholders such as CHC022-9692. A matching Manufacturer Roll updates that placeholder in place instead of being rejected as a duplicate, while active manufacturer rolls remain protected."
 }
