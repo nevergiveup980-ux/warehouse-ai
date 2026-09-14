@@ -1,0 +1,28 @@
+name: Warehouse Storage Quota Build131
+
+on:
+  pull_request:
+    paths:
+      - 'build131-storage-quota-recovery.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build131-storage-quota-recovery.mjs'
+      - '.github/workflows/warehouse-storage-quota-build131.yml'
+  workflow_dispatch:
+
+jobs:
+  build131-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build131-storage-quota-recovery.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Storage quota recovery regression
+        run: node tests/build131-storage-quota-recovery.mjs
