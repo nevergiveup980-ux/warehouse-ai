@@ -1,7 +1,7 @@
 {
-  "version": "6.12.27",
-  "build": "122",
+  "version": "6.12.28",
+  "build": "123",
   "date": "2026-09-13",
   "channel": "stable",
-  "notes": "Delete Safety Shield: array shrinkage can no longer be interpreted as a cloud delete. Unmarked queued deletes are neutralized, intentional deletes require an explicit user-delete marker accepted by the server, and inventory-linked completed operations remain protected from deletion."
+  "notes": "Quiet Cloud Status: the mobile header now shows a compact semantic state such as Syncing…, Cloud ✓, Review, Offline, or Cloud issue. Exact Cloud Master queue counts remain available in Settings instead of dominating the header."
 }
