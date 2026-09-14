@@ -1,0 +1,28 @@
+name: Warehouse Pending Carpet Adoption Build125
+
+on:
+  pull_request:
+    paths:
+      - 'build125-pending-carpet-placeholder-adoption.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build125-pending-carpet-placeholder-adoption.mjs'
+      - '.github/workflows/warehouse-pending-carpet-build125.yml'
+  workflow_dispatch:
+
+jobs:
+  build125-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build125-pending-carpet-placeholder-adoption.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Pending shared carpet adoption regression
+        run: node tests/build125-pending-carpet-placeholder-adoption.mjs
