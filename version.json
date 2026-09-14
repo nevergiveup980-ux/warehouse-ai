@@ -1,7 +1,7 @@
 {
-  "version": "6.12.32",
-  "build": "127",
+  "version": "6.12.33",
+  "build": "128",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Carpet Receiving Guard Authority: the Build125 pending-CHC receiving handlers now remain authoritative and cannot be re-wrapped by the persistent legacy Build120 duplicate-manufacturer guard. Build126 remains the final stock-impact authority, so recognized CHC022/CHC023 Pending placeholders can complete and apply stock reliably."
+  "notes": "Carpet Cloud Identity Authority: editing a normal carpet roll (including rack/location changes) now updates the existing cloud record keyed by Roll # instead of creating a second numeric-id record. Stale numeric carpet mutations are removed from the offline queue; CHC022/CHC023 physical cloud identities remain unchanged."
 }
