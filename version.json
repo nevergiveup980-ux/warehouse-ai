@@ -1,7 +1,7 @@
 {
-  "version": "6.12.28",
-  "build": "123",
-  "date": "2026-09-13",
+  "version": "6.12.29",
+  "build": "124",
+  "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Quiet Cloud Status: the mobile header now shows a compact semantic state such as Syncing…, Cloud ✓, Review, Offline, or Cloud issue. Exact Cloud Master queue counts remain available in Settings instead of dominating the header."
+  "notes": "Shared Carpet Roll Identity: CHC022 and CHC023 may represent multiple physical carpet rolls. Each new shared-code roll receives a hidden unique physical/cloud identity while the warehouse-visible roll code stays unchanged; manufacturer-roll uniqueness and exact destructive targeting remain protected."
 }
