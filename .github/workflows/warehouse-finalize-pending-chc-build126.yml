@@ -1,0 +1,28 @@
+name: Warehouse Finalize Pending CHC Build126
+
+on:
+  pull_request:
+    paths:
+      - 'build126-finalize-pending-carpet-arrival.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build126-finalize-pending-carpet-arrival.mjs'
+      - '.github/workflows/warehouse-finalize-pending-chc-build126.yml'
+  workflow_dispatch:
+
+jobs:
+  build126-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build126-finalize-pending-carpet-arrival.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Two pending CHC arrivals finalize independently
+        run: node tests/build126-finalize-pending-carpet-arrival.mjs
