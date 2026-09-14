@@ -1,7 +1,7 @@
 {
-  "version": "6.12.33",
-  "build": "128",
+  "version": "6.12.34",
+  "build": "129",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Carpet Cloud Identity Authority: editing a normal carpet roll (including rack/location changes) now updates the existing cloud record keyed by Roll # instead of creating a second numeric-id record. Stale numeric carpet mutations are removed from the offline queue; CHC022/CHC023 physical cloud identities remain unchanged."
+  "notes": "Operation Draft Resilience: Warehouse Work drafts now retry after safe local-storage cleanup, keep an independent IndexedDB recovery copy, recover unfinished drafts after a reload, and never show a false saved state when both device caches fail. Draft cache failures remain local-only and never overwrite Warehouse Cloud data."
 }

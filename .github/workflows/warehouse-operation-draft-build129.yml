@@ -1,0 +1,28 @@
+name: Warehouse Operation Draft Build129
+
+on:
+  pull_request:
+    paths:
+      - 'build129-operation-draft-resilience.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build129-operation-draft-resilience.mjs'
+      - '.github/workflows/warehouse-operation-draft-build129.yml'
+  workflow_dispatch:
+
+jobs:
+  build129-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build129-operation-draft-resilience.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Operation draft resilience regression
+        run: node tests/build129-operation-draft-resilience.mjs
