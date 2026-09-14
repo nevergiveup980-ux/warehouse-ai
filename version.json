@@ -1,7 +1,7 @@
 {
-  "version": "6.13.0",
-  "build": "133",
+  "version": "6.13.1",
+  "build": "134",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Cloud-First Pilot: Supabase Warehouse Cloud record storage is authoritative. Core warehouse datasets, draft work, cycle counts, scan learning, location settings and health history are loaded into runtime memory instead of persistent browser business storage. Any legacy offline queue is flushed before cutover; real conflicts pause migration without deleting the device copy. After verified cloud hydration, persistent company datasets and local recovery archives are removed from the terminal while small sign-in/UI metadata remains. Offline company-data queuing is disabled during the pilot."
+  "notes": "Shared Carpet Edit + Engineering Gate: CHC022/CHC023 may be edited even when the display roll code repeats. Save Changes now waits for Warehouse Cloud confirmation. If a Manufacturer Roll matches an existing pending placeholder, the edit atomically finalizes that placeholder and retires the accidental duplicate instead of creating a second physical identity. Adds a release engineering gate covering carpet receiving identity, pending-placeholder adoption, cloud-first storage, quota/navigation resilience and shared-roll edit confirmation."
 }
