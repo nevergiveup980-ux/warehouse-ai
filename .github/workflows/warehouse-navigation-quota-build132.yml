@@ -1,0 +1,28 @@
+name: Warehouse Navigation Quota Build132
+
+on:
+  pull_request:
+    paths:
+      - 'build132-navigation-quota-guard.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build132-navigation-quota-guard.mjs'
+      - '.github/workflows/warehouse-navigation-quota-build132.yml'
+  workflow_dispatch:
+
+jobs:
+  build132-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build132-navigation-quota-guard.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Navigation quota regression
+        run: node tests/build132-navigation-quota-guard.mjs
