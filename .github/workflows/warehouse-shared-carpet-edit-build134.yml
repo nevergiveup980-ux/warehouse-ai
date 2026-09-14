@@ -1,0 +1,28 @@
+name: Warehouse Shared Carpet Edit Build134
+
+on:
+  pull_request:
+    paths:
+      - 'build134-shared-carpet-edit-cloud-confirm.js'
+      - 'tests/build134-shared-carpet-edit-cloud-confirm.mjs'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - '.github/workflows/warehouse-shared-carpet-edit-build134.yml'
+  workflow_dispatch:
+
+jobs:
+  build134-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build134-shared-carpet-edit-cloud-confirm.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Shared carpet edit regression
+        run: node tests/build134-shared-carpet-edit-cloud-confirm.mjs
