@@ -91,9 +91,10 @@
   async function fetchRecords(){const s=await ensureSession();const rows=await request('/rest/v1/warehouse_records?select=dataset_key,record_id,payload,version,deleted_at,updated_at,origin,device_id&order=dataset_key.asc,record_id.asc',{headers:headers(s)});return Array.isArray(rows)?rows:[]}
   async function fetchState(){const s=await ensureSession();const rows=await request('/rest/v1/warehouse_cloud_state?select=mode,protocol_version,updated_at,metadata&limit=1',{headers:headers(s)});return Array.isArray(rows)&&rows[0]?rows[0]:null}
   async function applyMutation(dataset,recordId,payload,baseVersion=0,del=false){
-    const s=await ensureSession();
-    const res=await request('/rest/v1/rpc/warehouse_apply_mutation',{method:'POST',headers:headers(s),body:JSON.stringify({p_dataset_key:dataset,p_record_id:String(recordId),p_payload:payload??{},p_base_version:Number(baseVersion||0),p_delete:!!del,p_device_id:cloudDeviceId()})});
+    const s=await ensureSession(),rpcPayload=del?{...(payload&&typeof payload==='object'?payload:{}),_runluDeleteIntent:'explicit-user-delete'}:(payload??{});
+    const res=await request('/rest/v1/rpc/warehouse_apply_mutation',{method:'POST',headers:headers(s),body:JSON.stringify({p_dataset_key:dataset,p_record_id:String(recordId),p_payload:rpcPayload,p_base_version:Number(baseVersion||0),p_delete:!!del,p_device_id:cloudDeviceId()})});
     if(res?.status==='conflict'){const err=new Error(`Cloud conflict on ${dataset} / ${recordId}. The cloud copy was kept.`);err.cloudConflict=res;throw err}
+    if(res?.status==='blocked')throw new Error(`Cloud protected ${dataset} / ${recordId}: ${res.reason||'mutation blocked'}.`);
     if(res?.status!=='ok')throw new Error(`Warehouse Cloud did not confirm ${dataset} / ${recordId}.`);
     return res.record||null;
   }
@@ -135,15 +136,15 @@
     try{proto.getItem=g;proto.setItem=s;proto.removeItem=r}catch(e){console.error('[Build133] virtual storage unavailable',e);return false}storageInstalled=true;return true;
   }
 
-  function recordMap(dataset,value){const m=new Map();if(DOCUMENT_KEYS.has(dataset)){m.set('__document__',value);return m}for(const row of Array.isArray(value)?value:[]){const id=stableId(dataset,row);if(id)m.set(id,row)}return m}
+  function recordMap(dataset,value){const m=new Map();if(DOCUMENT_KEYS.has(dataset)){if(value!==undefined&&value!==null)m.set('__document__',value);return m}for(const row of Array.isArray(value)?value:[]){const id=stableId(dataset,row);if(id)m.set(id,row)}return m}
   function diffDataset(dataset,before,after){
     const a=recordMap(dataset,before),b=recordMap(dataset,after),out=[];
     for(const [id,row] of b){const old=a.get(id);if(!old||!eq(old,row))out.push({id,payload:row,del:false})}
     for(const [id,row] of a)if(!b.has(id))out.push({id,payload:row,del:true});return out;
   }
   async function refreshOne(dataset,{updateRam=true}={}){
-    const rows=(await fetchRecords()).filter(r=>r.dataset_key===dataset);buildVersions(await fetchRecords());
-    let value=DOCUMENT_KEYS.has(dataset)?null:[];for(const r of rows){if(r.deleted_at)continue;if(DOCUMENT_KEYS.has(dataset)){if(r.record_id==='__document__'||value==null)value=clone(r.payload)}else value.push(clone(r.payload))}
+    const all=await fetchRecords();buildVersions(all);const rows=all.filter(r=>r.dataset_key===dataset);let value=DOCUMENT_KEYS.has(dataset)?null:[];
+    for(const r of rows){if(r.deleted_at)continue;if(DOCUMENT_KEYS.has(dataset)){if(r.record_id==='__document__'||value==null)value=clone(r.payload)}else value.push(clone(r.payload))}
     if(ARRAY_KEYS.has(dataset))value=sortRows(dataset,value);if(value==null)value=dataset==='runlu_settings_v20'?{}:[];confirmed.set(dataset,clone(value));if(updateRam)ram.set(dataset,clone(value));return value;
   }
   function queueSave(dataset,value,{draft=false}={}){
@@ -161,7 +162,11 @@
     }).finally(()=>{pending=Math.max(0,pending-1);pendingByKey.set(key,Math.max(0,(pendingByKey.get(key)||1)-1));paint();rerender()});
     chains.set(key,task);return task;
   }
-  function queueDeleteDocument(dataset){const key=String(dataset);return queueSave(key,null,{draft:key===DRAFT}).then(()=>{ram.delete(key);confirmed.delete(key)}).catch(()=>{})}
+  function queueDeleteDocument(dataset){
+    const key=String(dataset),rev=(revisions.get(key)||0)+1;revisions.set(key,rev);pending++;pendingByKey.set(key,(pendingByKey.get(key)||0)+1);lastError='';paint();
+    const prior=chains.get(key)||Promise.resolve(),task=prior.catch(()=>{}).then(async()=>{const base=Number(versions.get(rowKey(key,'__document__'))||0),payload=confirmed.get(key)||{};if(base>0)await applyMutation(key,'__document__',payload,base,true);versions.delete(rowKey(key,'__document__'));confirmed.delete(key);ram.delete(key);lastError='';return true}).catch(async err=>{const latest=revisions.get(key)===rev;try{await refreshOne(key,{updateRam:latest})}catch{}if(latest){lastError='Cloud delete failed: '+String(err?.message||err);setTimeout(()=>alert(lastError),0)}throw err}).finally(()=>{pending=Math.max(0,pending-1);pendingByKey.set(key,Math.max(0,(pendingByKey.get(key)||1)-1));paint()});
+    chains.set(key,task);return task;
+  }
 
   function installCoreHooks(){
     if(coreInstalled)return true;if(typeof window.load!=='function'||typeof window.loadObj!=='function'||typeof window.save!=='function')return false;
@@ -182,7 +187,7 @@
   function activePage(){return document.querySelector('.page:not(.hidden)')?.id||'home'}
   function rerender(){if(typeof window.protectedInputActive==='function'&&window.protectedInputActive())return;const id=activePage(),map={home:'renderDashboard',products:'renderProducts',inventory:'renderInventory',carpetInventory:'renderCarpetInventory',operations:'renderOperations',operationsDay:'renderOperationsDay',ordersHub:'renderOrders',specialOrders:'renderSpecialOrders',receiving:'renderReceiving',warehouseMap:'renderMap',settings:'renderSettings'};const fn=map[id]&&window[map[id]];try{if(typeof fn==='function')fn()}catch(e){console.warn('[Build133] render isolated',e)}}
   async function refreshAll(announce=false){
-    if(!ready||pending)return false;try{const rows=await fetchRecords();buildVersions(rows);groupRecords(rows);buildMeta(rows);lastError='';paint();rerender();if(announce)alert('Warehouse Cloud is current.');return true}catch(e){lastError='Cloud refresh failed: '+String(e?.message||e);paint();if(announce)alert(lastError);return false}
+    if(!ready||pending)return false;try{const rows=await fetchRecords();buildVersions(rows);groupRecords(rows);buildMeta(rows);lastError='';paint();settingsStatus();rerender();if(announce)alert('Warehouse Cloud is current.');return true}catch(e){lastError='Cloud refresh failed: '+String(e?.message||e);paint();if(announce)alert(lastError);return false}
   }
   function disableLegacyDatasetSync(){
     window.cloudAutoRefresh=async()=>refreshAll(false);window.cloudDownloadAll=async()=>refreshAll(true);window.cloudSyncNow=async()=>refreshAll(true);window.cloudUploadAll=async()=>{alert('Cloud-First Pilot is active. Device-wide upload is retired because Warehouse Cloud is authoritative.');return false};window.startCloudPolling=function(){startRefreshLoop();return refreshTimer};
@@ -194,7 +199,7 @@
   async function flushLegacyQueue(){
     const conflicts=jsonRaw(LEGACY_CONFLICTS,[]);if(Array.isArray(conflicts)&&conflicts.length)throw new Error('A record-level Cloud Master conflict is waiting for review. Migration will not remove the device copy yet.');
     let queue=jsonRaw(LEGACY_QUEUE,[]);if(!Array.isArray(queue))queue=[];if(queue.some(x=>x?.blocked))throw new Error('A blocked offline change is waiting for conflict review.');
-    for(let i=0;i<queue.length;i++){const m=queue[i];const rec=await applyMutation(m.datasetKey,m.recordId,m.payload||{},Number(m.baseVersion||0),m.op==='delete');if(rec?.version)versions.set(rowKey(m.datasetKey,m.recordId),Number(rec.version));queue[i]=null;const rest=queue.filter(Boolean);rawWrite(LEGACY_QUEUE,JSON.stringify(rest))}
+    for(let i=0;i<queue.length;i++){const m=queue[i];const rec=await applyMutation(m.datasetKey,m.recordId,m.payload||{},Number(m.baseVersion||0),m.op==='delete');if(rec?.version)versions.set(rowKey(m.datasetKey,m.recordId),Number(rec.version));queue[i]=null;rawWrite(LEGACY_QUEUE,JSON.stringify(queue.filter(Boolean)))}
     rawDelete(LEGACY_QUEUE);rawDelete(LEGACY_CONFLICTS);
   }
   async function legacyDatasetRows(){try{const s=await ensureSession();const rows=await request('/rest/v1/user_datasets?select=dataset_key,payload,updated_at&order=updated_at.asc',{headers:headers(s)});return Array.isArray(rows)?rows:[]}catch{return[]}}
@@ -205,12 +210,18 @@
     const old=legacy.find(r=>r.dataset_key===DRAFT)?.payload,tOld=new Date(old?.savedAt||0).getTime()||0;if(old&&tOld>time)best=old;return best;
   }
   async function migrateExtraDocuments(rows){
-    const existing=new Set(rows.filter(r=>!r.deleted_at).map(r=>r.dataset_key)),legacy=await legacyDatasetRows();
-    for(const key of EXTRA_DOCS){if(existing.has(key))continue;let candidate=key===DRAFT?await bestDraftCandidate(legacy):localCandidate(key);if(candidate===undefined||candidate===null){candidate=legacy.find(r=>r.dataset_key===key)?.payload}if(candidate===undefined||candidate===null)continue;if(Array.isArray(candidate)&&!candidate.length&&key!==DRAFT)continue;if(candidate&&typeof candidate==='object'&&!Array.isArray(candidate)&&!Object.keys(candidate).length)continue;await applyMutation(key,'__document__',candidate,0,false)}
+    const legacy=await legacyDatasetRows();
+    for(const key of EXTRA_DOCS){
+      const remote=rows.find(r=>r.dataset_key===key&&r.record_id==='__document__'),active=remote&&!remote.deleted_at;
+      let candidate=key===DRAFT?await bestDraftCandidate(legacy):localCandidate(key);if(candidate===undefined||candidate===null)candidate=legacy.find(r=>r.dataset_key===key)?.payload;
+      if(candidate===undefined||candidate===null)continue;if(Array.isArray(candidate)&&!candidate.length&&key!==DRAFT)continue;if(candidate&&typeof candidate==='object'&&!Array.isArray(candidate)&&!Object.keys(candidate).length)continue;
+      if(active){if(key!==DRAFT)continue;const localT=new Date(candidate?.savedAt||0).getTime()||0,remoteT=new Date(remote.payload?.savedAt||0).getTime()||0;if(localT<=remoteT)continue}
+      await applyMutation(key,'__document__',candidate,Number(remote?.version||0),false);
+    }
   }
 
   function purgePhysicalCompanyData(){
-    const exact=new Set([...CLOUD_KEYS,...TRANSIENT_KEYS,LEGACY_QUEUE,LEGACY_VERSIONS,LEGACY_CONFLICTS,LEGACY_BOOTSTRAP,LEGACY_SUMMARY,'runlu_local_snapshots_v515','runlu_data_protection_v515','runlu_inventory_v13','runlu_orders_v13','runlu_v516_preupgrade_backup','runlu_operation_draft_v55','runlu_cloud_dirty_keys_v5544','runlu_cloud_dataset_conflicts_v659_','runlu_cloud_summary_v5544']);
+    const exact=new Set([...CLOUD_KEYS,...TRANSIENT_KEYS,LEGACY_QUEUE,LEGACY_VERSIONS,LEGACY_CONFLICTS,LEGACY_BOOTSTRAP,LEGACY_SUMMARY,'runlu_local_snapshots_v515','runlu_data_protection_v515','runlu_inventory_v13','runlu_orders_v13','runlu_v516_preupgrade_backup','runlu_cloud_dirty_keys_v5544','runlu_cloud_dataset_conflicts_v659_','runlu_cloud_summary_v5544']);
     for(const k of exact)rawDelete(k);
     try{const keys=[];for(let i=0;i<storage.length;i++)keys.push(storage.key(i));for(const k of keys)if(/^runlu_cloud_(local_updated_v583_|dataset_push_v583_|dataset_seen_v658_)/.test(k||''))rawDelete(k)}catch{}
     for(const db of ['runlu_warehouse_resilient_cache_v129','runlu_local_archive_v131'])try{indexedDB.deleteDatabase(db)}catch{}
