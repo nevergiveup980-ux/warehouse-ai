@@ -1,7 +1,7 @@
 {
-  "version": "6.12.34",
-  "build": "129",
+  "version": "6.12.35",
+  "build": "130",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Operation Draft Resilience: Warehouse Work drafts now retry after safe local-storage cleanup, keep an independent IndexedDB recovery copy, recover unfinished drafts after a reload, and never show a false saved state when both device caches fail. Draft cache failures remain local-only and never overwrite Warehouse Cloud data."
+  "notes": "Local Save Retry Authority: managed Warehouse saves that hit the iPhone/Safari local-cache limit now run the existing safe cleanup and retry before stopping. The first storage warning is suppressed when recovery succeeds; cloud mutation still occurs only after a confirmed local cache write. Build129 operation-draft IndexedDB recovery remains active."
 }
