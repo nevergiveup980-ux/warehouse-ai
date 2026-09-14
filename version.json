@@ -1,7 +1,7 @@
 {
-  "version": "6.12.35",
-  "build": "130",
+  "version": "6.12.36",
+  "build": "131",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Local Save Retry Authority: managed Warehouse saves that hit the iPhone/Safari local-cache limit now run the existing safe cleanup and retry before stopping. The first storage warning is suppressed when recovery succeeds; cloud mutation still occurs only after a confirmed local cache write. Build129 operation-draft IndexedDB recovery remains active."
+  "notes": "Storage Quota Recovery: when iPhone/Safari local browser storage is full, RUNLU safely archives obsolete pre-V21 duplicate local datasets into IndexedDB, removes only those archived legacy copies, runs disposable-cache cleanup, and retries Cloud Master. Quota errors are shown as a device-storage issue rather than a cloud-capacity failure. Cloud records are never deleted by this recovery path."
 }
