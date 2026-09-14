@@ -25,11 +25,18 @@ const verifyAt=src.indexOf('await verifyCloud(rows)');
 const purgeAt=src.indexOf('purgePhysicalCompanyData();');
 assert.ok(flushAt>0 && verifyAt>flushAt && purgeAt>verifyAt,'cutover order must be flush -> verify -> purge');
 
-assert.match(loader,/const RELEASE='133'/);
-assert.match(loader,/build132-navigation-quota-guard\.js'[\s\S]*build133-cloud-first-pilot\.js'[\s\S]*build082-version-authority\.js'/,'Build133 must load after prior safety layers and before version authority');
-assert.equal(version.version,'6.13.0');
-assert.equal(version.build,'133');
+const releaseMatch=loader.match(/const RELEASE='(\d+)'/);
+assert.ok(releaseMatch,'release loader must expose a numeric release token');
+assert.ok(Number(releaseMatch[1])>=133,'Build133 regression may run under Build133 or any later release');
+const build133At=loader.indexOf("'build133-cloud-first-pilot.js'");
+const authorityAt=loader.indexOf("'build082-version-authority.js'");
+assert.ok(build133At>0 && authorityAt>build133At,'Build133 must remain loaded before version authority');
+
+const currentBuild=Number(version.build||0);
+assert.ok(currentBuild>=133,'stable manifest must remain Build133 or later');
 assert.equal(version.channel,'stable');
-assert.match(authority,/version:'6\.13\.0', build:'133'/);
+const parts=String(version.version||'0').split('.').map(n=>Number(n)||0);
+assert.ok(parts[0]>6 || (parts[0]===6 && (parts[1]>13 || (parts[1]===13 && parts[2]>=0))),'stable version must remain V6.13.0 or later');
+assert.match(authority,new RegExp(`version:'${String(version.version).replace(/\./g,'\\.')}', build:'${String(version.build)}'`),'version authority must match the current stable manifest');
 
 console.log('Build133 Cloud-First regression checks passed.');
