@@ -1,0 +1,18 @@
+RUNLU Warehouse AI V6.12.30 Build125
+Date: 2026-09-14
+
+Pending Carpet Arrival Adoption
+
+FIELD CASE
+CHC022 / Manufacturer Roll 9692 already existed as a legacy zero-length Pending placeholder (CHC022-9692). Build124 correctly protected Manufacturer Roll uniqueness, but that made the actual arriving roll look like a duplicate.
+
+BUILD125 RULE
+1. CHC022 and CHC023 remain shared display roll codes.
+2. If the same Manufacturer Roll belongs to a zero-length Pending/CHECK placeholder in the same shared-roll family, receiving ADOPTS that placeholder instead of rejecting it.
+3. The legacy cloud record identity is preserved, so no destructive delete/recreate is needed.
+4. The visible Roll # becomes CHC022/CHC023 and actual length, lot, rack, FULL status and receiving linkage are written into the existing placeholder.
+5. Active, used or already-received Manufacturer Roll records remain strict duplicates and are blocked.
+6. Ordinary carpet Roll # uniqueness remains unchanged.
+
+PRIMARY FIELD CASE
+CHC022 + MFG 9692 + 146'1" + Lot P54596 + Rack 14D can complete by updating the existing CHC022-9692 Pending placeholder in place.
