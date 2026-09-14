@@ -1,0 +1,28 @@
+name: Warehouse Carpet Guard Authority Build127
+
+on:
+  pull_request:
+    paths:
+      - 'build127-carpet-receiving-guard-authority.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build127-carpet-receiving-guard-authority.mjs'
+      - '.github/workflows/warehouse-carpet-guard-authority-build127.yml'
+  workflow_dispatch:
+
+jobs:
+  build127-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build127-carpet-receiving-guard-authority.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Guard authority regression
+        run: node tests/build127-carpet-receiving-guard-authority.mjs
