@@ -1,7 +1,7 @@
 {
-  "version": "6.12.30",
-  "build": "125",
+  "version": "6.12.31",
+  "build": "126",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Pending Carpet Arrival Adoption: CHC022/CHC023 receiving now recognizes legacy zero-length Pending placeholders such as CHC022-9692. A matching Manufacturer Roll updates that placeholder in place instead of being rejected as a duplicate, while active manufacturer rolls remain protected."
+  "notes": "Final Pending CHC Arrival Apply: after a zero-length CHC022/CHC023 Pending placeholder is recognized, completed receiving now finalizes that placeholder before the legacy duplicate-manufacturer stock guard. Multiple CHC arrivals in the same workday are handled independently while active manufacturer-roll duplicates remain protected."
 }
