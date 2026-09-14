@@ -1,0 +1,12 @@
+RUNLU Warehouse AI V6.12.31 Build126
+Date: 2026-09-14
+
+Final Pending CHC Arrival Apply
+
+1. Fixes the last stock-apply block after Build125 correctly recognizes a zero-length Pending CHC022/CHC023 placeholder.
+2. Completed receiving now finalizes the matching Pending placeholder before the legacy duplicate-manufacturer final validator can reject it.
+3. The placeholder is updated in place: display Roll # becomes CHC022/CHC023, actual length/lot/rack are recorded, measure becomes FULL, status becomes Active, and the receiving operation is linked.
+4. The legacy cloud record identity is preserved; no duplicate physical record is created.
+5. Multiple CHC arrivals can be finalized independently in the same workday/order as long as their Manufacturer Roll # values are distinct.
+6. Active or already-used Manufacturer Roll duplicates remain protected and are not auto-adopted.
+7. Ordinary carpet receiving is unchanged.
