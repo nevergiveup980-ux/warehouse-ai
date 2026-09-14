@@ -1,7 +1,7 @@
 {
-  "version": "6.12.37",
-  "build": "132",
+  "version": "6.13.0",
+  "build": "133",
   "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Navigation Quota Guard: a full iPhone/Safari localStorage cache can no longer make Warehouse OS buttons appear dead. The disposable administrator-role marker may fail quietly while session authorization remains active, and page navigation has a quota-safe fallback. Business-data storage errors remain protected and are never suppressed."
+  "notes": "Cloud-First Pilot: Supabase Warehouse Cloud record storage is authoritative. Core warehouse datasets, draft work, cycle counts, scan learning, location settings and health history are loaded into runtime memory instead of persistent browser business storage. Any legacy offline queue is flushed before cutover; real conflicts pause migration without deleting the device copy. After verified cloud hydration, persistent company datasets and local recovery archives are removed from the terminal while small sign-in/UI metadata remains. Offline company-data queuing is disabled during the pilot."
 }
