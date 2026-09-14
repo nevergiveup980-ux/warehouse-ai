@@ -1,0 +1,16 @@
+RUNLU Warehouse AI V6.12.29 Build124
+Date: 2026-09-14
+
+Shared CHC Physical Roll Identity
+
+1. CHC022 and CHC023 are now recognized as shared warehouse display roll codes.
+2. Receiving may create multiple physical rolls with the same CHC022/CHC023 display code.
+3. Every new shared-code roll receives a hidden physicalRollId and cloudRecordId so Cloud Master records do not overwrite one another.
+4. Manufacturer Roll # remains unique and is still checked locally and against live Warehouse Cloud.
+5. Ordinary carpet Roll # values remain strictly unique.
+6. Carpet Cutting continues to use exact carpet-record targeting.
+7. Inventory Transfer now carries the selected physical carpet record ID; ambiguous shared-code transfers are blocked rather than guessing.
+8. Existing legacy CHC022/CHC023 cloud records retain their current identity until edited/received through the new model; no destructive migration is performed.
+
+Primary field case fixed:
+- A new CHC022 / CHC023 full roll can be received even when other physical rolls already use the same displayed Roll #.
