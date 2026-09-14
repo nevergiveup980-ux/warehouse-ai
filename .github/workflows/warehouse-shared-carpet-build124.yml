@@ -1,0 +1,40 @@
+name: Warehouse Shared Carpet Identity Build124
+
+on:
+  pull_request:
+    paths:
+      - 'build072-carpet-identity.js'
+      - 'build120-carpet-receiving-cloud-identity.js'
+      - 'build120-carpet-receiving-completion-guard.js'
+      - 'build124-shared-carpet-physical-identity.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build120-carpet-receiving-cloud-identity.mjs'
+      - 'tests/build120-carpet-receiving-completion-guard.mjs'
+      - 'tests/build124-shared-carpet-physical-identity.mjs'
+      - '.github/workflows/warehouse-shared-carpet-build124.yml'
+  workflow_dispatch:
+
+jobs:
+  build124-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check build072-carpet-identity.js
+          node --check build120-carpet-receiving-cloud-identity.js
+          node --check build120-carpet-receiving-completion-guard.js
+          node --check build124-shared-carpet-physical-identity.js
+          node --check build082-version-authority.js
+          node --check release-loader.js
+      - name: Receiving shared-roll policy regression
+        run: node tests/build120-carpet-receiving-cloud-identity.mjs
+      - name: Saved completion shared-roll policy regression
+        run: node tests/build120-carpet-receiving-completion-guard.mjs
+      - name: Physical identity and exact targeting regression
+        run: node tests/build124-shared-carpet-physical-identity.mjs
