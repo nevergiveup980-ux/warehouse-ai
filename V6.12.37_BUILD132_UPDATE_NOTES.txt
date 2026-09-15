@@ -1,0 +1,27 @@
+RUNLU Warehouse AI V6.12.37 Build132
+Carpet Cut Transaction Guard
+
+Purpose
+- Close the two risks found by the isolated V0.5 exact-cut audit: reconstructed retries could deduct a carpet roll twice, and a failed write in the multi-dataset cut path could leave partial state.
+
+Runtime behavior
+- Carpet Cutting requires a stable operation ID before physical inventory changes.
+- A verified retry with the same operation ID and the same cut details is treated as already applied; Carpet Inventory is not deducted again.
+- An operation-ID collision with different cut details is rejected.
+- Carpet Inventory, Cut History, linked Order and Event History are snapshotted before a new cut.
+- Cloud writes are buffered until all four local datasets are verified.
+- If a required local write fails or the post-write ledger check fails, every watched local dataset is restored and buffered Cloud writes are discarded.
+- Existing incomplete/ambiguous prior executions are stopped for review rather than deducted again.
+- The existing 3-inch allowance remains exactly once per actual cut; the established short-tail full-roll finish remains unchanged.
+
+Engineering gate
+- Exact current stable cut functions are extracted from index.html and executed under the Build132 wrapper in an isolated VM.
+- Fault injection covers Carpet Inventory, Cut History, linked Order and Event History.
+- Reconstructed-retry idempotency and operation-ID collision behavior are tested.
+- Deterministic fresh-cut + retry stress: 3,000 cycles.
+- Existing V0.5 exact-cut audit and Build129 actual execution lifecycle gate are re-run in the same workflow.
+
+Safety
+- No live Supabase data is used by the engineering gate.
+- Network APIs are blocked in the Build132 LAB.
+- This hardening does not change Flooring OS planning behavior; planned cuts remain advisory/read-only until Warehouse actual execution.
