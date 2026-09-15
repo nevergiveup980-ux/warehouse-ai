@@ -1,0 +1,43 @@
+name: Warehouse Carpet Cut Execution LAB V0.5
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'version.json'
+      - 'tests/v050-carpet-cut-execution-lab.mjs'
+      - '.github/workflows/warehouse-carpet-cut-execution-lab-v050.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'version.json'
+      - 'tests/v050-carpet-cut-execution-lab.mjs'
+      - '.github/workflows/warehouse-carpet-cut-execution-lab-v050.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  carpet-cut-execution-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check LAB runner syntax
+        run: node --check tests/v050-carpet-cut-execution-lab.mjs
+      - name: Execute exact current stable carpet cut path
+        env:
+          RUNLU_CUT_CYCLES: '3000'
+        run: node tests/v050-carpet-cut-execution-lab.mjs
+      - name: Upload V0.5 engineering evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-carpet-cut-execution-v050-evidence
+          path: warehouse-carpet-cut-execution-v050-report.json
+          if-no-files-found: error
+          retention-days: 30
