@@ -1,0 +1,62 @@
+name: Warehouse Carpet Cut Transaction Build132
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'build132-carpet-cut-transaction-guard.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build132-carpet-cut-transaction-guard.mjs'
+      - '.github/workflows/warehouse-carpet-cut-transaction-build132.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'build132-carpet-cut-transaction-guard.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - 'tests/build132-carpet-cut-transaction-guard.mjs'
+      - '.github/workflows/warehouse-carpet-cut-transaction-build132.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  carpet-cut-transaction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Build132 sources
+        run: |
+          node --check build132-carpet-cut-transaction-guard.js
+          node --check tests/build132-carpet-cut-transaction-guard.mjs
+      - name: Re-run exact V0.5 actual-cut audit
+        env:
+          RUNLU_CUT_CYCLES: 1000
+        run: node tests/v050-carpet-cut-execution-lab-final.mjs
+      - name: Run Build132 transactional hardening gate
+        env:
+          RUNLU_BUILD132_CYCLES: 3000
+        run: node tests/build132-carpet-cut-transaction-guard.mjs
+      - name: Re-run Build129 actual execution lifecycle gate
+        env:
+          RUNLU_EXECUTION_CYCLES: 500
+        run: node tests/actual-execution-adapter-v070.mjs
+      - name: Upload Build132 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-build132-carpet-cut-transaction-evidence
+          path: |
+            warehouse-build132-carpet-cut-transaction-report.json
+            warehouse-carpet-cut-execution-v050-report.json
+            warehouse-actual-execution-v070-report.json
+          if-no-files-found: error
+          retention-days: 30
