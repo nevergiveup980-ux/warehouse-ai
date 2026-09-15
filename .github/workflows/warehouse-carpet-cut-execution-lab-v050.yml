@@ -5,14 +5,14 @@ on:
     paths:
       - 'index.html'
       - 'version.json'
-      - 'tests/v050-carpet-cut-execution-lab-v2.mjs'
+      - 'tests/v050-carpet-cut-execution-lab-v3.mjs'
       - '.github/workflows/warehouse-carpet-cut-execution-lab-v050.yml'
   push:
     branches: [main]
     paths:
       - 'index.html'
       - 'version.json'
-      - 'tests/v050-carpet-cut-execution-lab-v2.mjs'
+      - 'tests/v050-carpet-cut-execution-lab-v3.mjs'
       - '.github/workflows/warehouse-carpet-cut-execution-lab-v050.yml'
   workflow_dispatch:
 
@@ -29,11 +29,11 @@ jobs:
         with:
           node-version: '22'
       - name: Check LAB runner syntax
-        run: node --check tests/v050-carpet-cut-execution-lab-v2.mjs
+        run: node --check tests/v050-carpet-cut-execution-lab-v3.mjs
       - name: Execute exact current stable carpet cut path
         env:
           RUNLU_CUT_CYCLES: '3000'
-        run: node tests/v050-carpet-cut-execution-lab-v2.mjs
+        run: node tests/v050-carpet-cut-execution-lab-v3.mjs
       - name: Upload V0.5 engineering evidence
         uses: actions/upload-artifact@v4
         with:
