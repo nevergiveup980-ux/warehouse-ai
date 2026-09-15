@@ -1,0 +1,48 @@
+name: Warehouse Actual Execution V0.7
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build129-general-internal-transfer-conservation.js'
+      - 'tests/actual-execution-adapter-v070.mjs'
+      - '.github/workflows/warehouse-actual-execution-v070.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'index.html'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build129-general-internal-transfer-conservation.js'
+      - 'tests/actual-execution-adapter-v070.mjs'
+      - '.github/workflows/warehouse-actual-execution-v070.yml'
+
+jobs:
+  actual-execution:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check execution sources
+        run: |
+          node --check build129-general-internal-transfer-conservation.js
+          node --check tests/actual-execution-adapter-v070.mjs
+          node --check build128-operation-save-authority.js
+      - name: Re-run Build128 save authority regression
+        run: node tests/build128-operation-save-authority.mjs
+      - name: Run isolated exact Warehouse lifecycle gate
+        env:
+          RUNLU_EXECUTION_CYCLES: 1000
+        run: node tests/actual-execution-adapter-v070.mjs
+      - name: Upload execution evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-actual-execution-v070-evidence
+          path: warehouse-actual-execution-v070-report.json
+          if-no-files-found: error
+          retention-days: 30
