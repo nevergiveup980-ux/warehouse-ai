@@ -1,0 +1,48 @@
+name: Warehouse Receipt Certificate Publisher V0.9
+
+on:
+  pull_request:
+    paths:
+      - 'warehouse-receipt-certificate-v090.js'
+      - 'tests/receipt-certificate-publisher-v090.mjs'
+      - '.github/workflows/warehouse-receipt-certificate-publisher-v090.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'warehouse-receipt-certificate-v090.js'
+      - 'tests/receipt-certificate-publisher-v090.mjs'
+      - '.github/workflows/warehouse-receipt-certificate-publisher-v090.yml'
+
+jobs:
+  receipt-certificate-publisher:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout Warehouse OS
+        uses: actions/checkout@v4
+      - name: Checkout pinned Flooring receipt consumer
+        uses: actions/checkout@v4
+        with:
+          repository: nevergiveup980-ux/Runlu.ca
+          ref: dbf9c02e24291275c6f17072dd6c896527e13efc
+          path: _lab_runlu_ca
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify pinned Flooring revision
+        run: test "$(git -C _lab_runlu_ca rev-parse HEAD)" = "dbf9c02e24291275c6f17072dd6c896527e13efc"
+      - name: JavaScript syntax
+        run: |
+          node --check warehouse-receipt-certificate-v090.js
+          node --check tests/receipt-certificate-publisher-v090.mjs
+      - name: Run isolated publisher → Flooring consumer gate
+        env:
+          RUNLU_CERT_CYCLES: 1000
+        run: node tests/receipt-certificate-publisher-v090.mjs
+      - name: Upload V0.9 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-receipt-certificate-v090-evidence
+          path: warehouse-receipt-certificate-v090-report.json
+          if-no-files-found: error
+          retention-days: 30
