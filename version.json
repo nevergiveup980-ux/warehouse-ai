@@ -1,7 +1,7 @@
 {
-  "version": "6.12.35",
-  "build": "130",
+  "version": "6.12.36",
+  "build": "131",
   "date": "2026-09-15",
   "channel": "stable",
-  "notes": "Global Carpet Search: entering a roll, manufacturer roll, product, colour, lot, PO or location now searches across all carpet statuses and racks instead of being silently constrained by the currently selected Active/status/rack filters. Existing filter selections are restored after the search. No carpet, inventory, Cloud or workflow data is modified by this display-only lookup fix."
+  "notes": "Exact Duplicate Conflict Auto-Resolver: record-level Cloud Master conflicts are now cleared automatically only when the queued device payload and the authoritative Cloud payload are the same business record. The system keeps the Cloud master copy and discards only the redundant queued device mutation; it never auto-deletes/tombstones warehouse records. Any quantity, status, location, product, note or other material difference remains in manual review."
 }
