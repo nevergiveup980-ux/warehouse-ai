@@ -1,7 +1,7 @@
 {
-  "version": "6.12.33",
-  "build": "128",
+  "version": "6.12.34",
+  "build": "129",
   "date": "2026-09-15",
   "channel": "candidate",
-  "notes": "Carpet Cut Transaction Guard candidate: exact cut execution IDs are idempotent, linked Carpet Inventory / Cutting History / Order / Event writes are journaled with rollback and crash recovery, and cloud queueing begins only after local commit verification."
+  "notes": "Carpet Cut Cloud Atomic candidate: local Build128 cut transactions remain idempotent and rollback-safe, while Build129 groups Carpet Inventory, Cutting History, Orders and Event History into one version-checked cloud commit so concurrent stale devices cannot partially overwrite the same cut state."
 }
