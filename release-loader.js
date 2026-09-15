@@ -67,6 +67,7 @@
     'build125-pending-carpet-placeholder-adoption.js',
     'build126-finalize-pending-carpet-arrival.js',
     'build127-carpet-receiving-guard-authority.js',
+    'build127-operation-status-tail.js',
     'build082-version-authority.js'
   ];
 
