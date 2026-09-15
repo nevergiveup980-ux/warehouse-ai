@@ -1,7 +1,7 @@
 {
-  "version": "6.12.33",
-  "build": "128",
+  "version": "6.12.34",
+  "build": "129",
   "date": "2026-09-15",
   "channel": "stable",
-  "notes": "Operation Save Authority: ordinary Warehouse Work saves now bypass the legacy carpet-receiving global checking lane, so Complete Work / Complete & Apply Stock cannot silently become unresponsive after a carpet identity check. Carpet Receiving still uses the approved Build125/126/127 cloud and duplicate protections."
+  "notes": "General Internal Transfer Conservation: Warehouse → Warehouse moves for general materials now deduct the exact source and add the same quantity to the destination, reject same-location moves, and restore the pre-transfer snapshot if destination posting fails. Carpet roll transfers remain on their independent carpet workflow. Actual Execution Adapter V0.7 verifies receive → internal move → ship → customer return → supplier return inventory conservation in an isolated exact-source gate."
 }
