@@ -33,6 +33,7 @@ jobs:
           node --check build133-cloud-first-pilot.js
           node --check build134-shared-carpet-edit-cloud-confirm.js
           node --check build135-carpet-save-readback.js
+          node --check build136-global-carpet-search.js
           node --check build082-version-authority.js
           node --check release-loader.js
       - name: Business workflow regression gate
@@ -51,6 +52,7 @@ jobs:
           node tests/build133-cloud-first-pilot.mjs
           node tests/build134-shared-carpet-edit-cloud-confirm.mjs
           node tests/build135-carpet-save-readback.mjs
+          node tests/build136-global-carpet-search.mjs
       - name: Release manifest consistency
         run: |
           node --input-type=module <<'NODE'
@@ -59,10 +61,10 @@ jobs:
           const version=JSON.parse(fs.readFileSync('version.json','utf8'));
           const loader=fs.readFileSync('release-loader.js','utf8');
           const authority=fs.readFileSync('build082-version-authority.js','utf8');
-          assert.equal(version.build,'135');
-          assert.equal(version.version,'6.13.2');
-          assert.match(loader,/const RELEASE='135'/);
-          assert.match(loader,/build134-shared-carpet-edit-cloud-confirm\.js'[\s\S]*build135-carpet-save-readback\.js'[\s\S]*build082-version-authority\.js/);
-          assert.match(authority,/version:'6\.13\.2', build:'135'/);
+          assert.equal(version.build,'136');
+          assert.equal(version.version,'6.13.3');
+          assert.match(loader,/const RELEASE='136'/);
+          assert.match(loader,/build135-carpet-save-readback\.js'[\s\S]*build136-global-carpet-search\.js'[\s\S]*build082-version-authority\.js/);
+          assert.match(authority,/version:'6\.13\.3', build:'136'/);
           console.log('Release manifest consistency: PASS');
           NODE
