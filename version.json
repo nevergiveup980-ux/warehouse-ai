@@ -1,7 +1,7 @@
 {
-  "version": "6.13.1",
-  "build": "134",
-  "date": "2026-09-14",
+  "version": "6.13.2",
+  "build": "135",
+  "date": "2026-09-15",
   "channel": "stable",
-  "notes": "Shared Carpet Edit + Engineering Gate: CHC022/CHC023 may be edited even when the display roll code repeats. Save Changes now waits for Warehouse Cloud confirmation. If a Manufacturer Roll matches an existing pending placeholder, the edit atomically finalizes that placeholder and retires the accidental duplicate instead of creating a second physical identity. Adds a release engineering gate covering carpet receiving identity, pending-placeholder adoption, cloud-first storage, quota/navigation resilience and shared-roll edit confirmation."
+  "notes": "Carpet Save Readback: after a shared CHC022/CHC023 edit is confirmed by Warehouse Cloud, the app now waits for pending cloud work to settle, refreshes the Cloud-First dataset, reads back the canonical physical roll, repaints Carpet Inventory, and reopens the confirmed roll detail. This fixes the case where Manufacturer Roll 9692/9716 was saved in Supabase but the browser still displayed stale pre-save data."
 }
