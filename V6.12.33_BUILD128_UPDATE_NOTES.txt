@@ -1,0 +1,15 @@
+RUNLU Warehouse AI V6.12.33 Build128
+
+Operation Save Authority
+
+Observed on iPhone: ordinary Work controls remained responsive, but the green Complete Work / Complete & Apply Stock button could silently do nothing while other buttons still worked.
+
+Root cause:
+A legacy Carpet Receiving identity guard owns a global checking/busy lane. Non-carpet Work saves still passed through that carpet-only lane. If the guard remained busy after a prior carpet identity check, saveOperation returned false without feedback even though Cancel, Delete Draft and other controls continued to work.
+
+Build128:
+- Routes Carpet Receiving through the approved Build125/126/127 safety path unchanged.
+- Routes all other Work saves directly to the pre-Build120 save chain.
+- Prevents Build120 / Build127 from re-wrapping or replacing the new save authority.
+- Converts unexpected save exceptions into a visible Work save stopped message instead of a silent no-op.
+- Does not relax exact inventory requirements for Stock work.
