@@ -51,7 +51,7 @@ function boot({patch=true}={}){
   const box={console:{log(){},info(){},warn(){},error(){},debug(){}},localStorage,document:doc,Date,JSON,Math,Number,String,Array,Object,Boolean,RegExp,Error,TypeError,Promise,Map,Set,
     alert:m=>alerts.push(String(m)),queueCloudSave(){},isQuotaError(){return false},pruneLocalApplicationCache(){return{}},aggressiveSafeStorageCleanup(){return{}},renderBackupStatus(){},
     underlaymentSpec(){return null},normalizeInventoryLifecycleRecord:r=>r,finalizeCustomerOrderInventory(){return{records:0,quantity:0}},
-    fetch:blocked('fetch'),XMLHttpRequest:class{constructor(){network++;throw new Error('LAB blocked XMLHttpRequest')}},WebSocket:class{constructor(){network++;throw new Error('LAB blocked WebSocket')},},
+    fetch:blocked('fetch'),XMLHttpRequest:class{constructor(){network++;throw new Error('LAB blocked XMLHttpRequest')}},WebSocket:class{constructor(){network++;throw new Error('LAB blocked WebSocket')}},
     ...K
   };
   box.window=box;box.window.addEventListener=()=>{};
