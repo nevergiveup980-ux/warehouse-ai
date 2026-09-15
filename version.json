@@ -1,7 +1,7 @@
 {
-  "version": "6.12.32",
-  "build": "127",
-  "date": "2026-09-14",
-  "channel": "stable",
-  "notes": "Carpet Receiving Guard Authority: the Build125 pending-CHC receiving handlers now remain authoritative and cannot be re-wrapped by the persistent legacy Build120 duplicate-manufacturer guard. Build126 remains the final stock-impact authority, so recognized CHC022/CHC023 Pending placeholders can complete and apply stock reliably."
+  "version": "6.12.34",
+  "build": "129",
+  "date": "2026-09-15",
+  "channel": "candidate",
+  "notes": "Carpet Cut Cloud Atomic candidate: local Build128 cut transactions remain idempotent and rollback-safe, while Build129 groups Carpet Inventory, Cutting History, Orders and Event History into one version-checked cloud commit so concurrent stale devices cannot partially overwrite the same cut state."
 }

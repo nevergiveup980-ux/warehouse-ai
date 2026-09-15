@@ -1,0 +1,49 @@
+name: Warehouse Carpet Cut Cloud Concurrency V0.5r2
+
+on:
+  pull_request:
+    paths:
+      - 'build129-carpet-cut-cloud-atomic-r1.js'
+      - 'supabase/migrations/20260915121500_warehouse_carpet_cut_atomic_v1.sql'
+      - 'tests/v052-carpet-cut-cloud-concurrency.mjs'
+      - '.github/workflows/warehouse-carpet-cut-cloud-concurrency-v052.yml'
+      - 'release-loader.js'
+      - 'version.json'
+  push:
+    branches: [lab-carpet-cut-transaction-guard-v051, main]
+    paths:
+      - 'build129-carpet-cut-cloud-atomic-r1.js'
+      - 'supabase/migrations/20260915121500_warehouse_carpet_cut_atomic_v1.sql'
+      - 'tests/v052-carpet-cut-cloud-concurrency.mjs'
+      - '.github/workflows/warehouse-carpet-cut-cloud-concurrency-v052.yml'
+      - 'release-loader.js'
+      - 'version.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  carpet-cut-cloud-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Build129 and LAB syntax
+        run: |
+          node --check build129-carpet-cut-cloud-atomic-r1.js
+          node --check tests/v052-carpet-cut-cloud-concurrency.mjs
+      - name: Execute two-device stale-version collision LAB
+        env:
+          RUNLU_CLOUD_RACE_ROUNDS: '1000'
+        run: node tests/v052-carpet-cut-cloud-concurrency.mjs
+      - name: Upload V0.5r2 engineering evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-carpet-cut-cloud-concurrency-v052-evidence
+          path: warehouse-carpet-cut-cloud-concurrency-v052-report.json
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,40 @@
+name: Warehouse Carpet Cut Transaction Guard V0.5r1
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'build128-carpet-cut-transaction-guard.js'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'tests/v051-carpet-cut-transaction-guard.mjs'
+      - '.github/workflows/warehouse-carpet-cut-transaction-guard-v051.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  carpet-cut-transaction-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check guard and LAB syntax
+        run: |
+          node --check build128-carpet-cut-transaction-guard.js
+          node --check tests/v051-carpet-cut-transaction-guard.mjs
+      - name: Execute guarded actual-cut path
+        env:
+          RUNLU_CUT_CYCLES: '3000'
+        run: node tests/v051-carpet-cut-transaction-guard.mjs
+      - name: Upload V0.5r1 engineering evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-carpet-cut-transaction-v051-evidence
+          path: warehouse-carpet-cut-transaction-v051-report.json
+          if-no-files-found: error
+          retention-days: 30
