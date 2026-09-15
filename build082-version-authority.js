@@ -1,9 +1,9 @@
-// RUNLU Warehouse AI V6.13.3 Build136 — Single Version Authority
+// RUNLU Warehouse AI V6.12.32 Build127 — Single Version Authority
 (() => {
   if (window.__RUNLU_VERSION_AUTHORITY__) return;
   window.__RUNLU_VERSION_AUTHORITY__ = true;
 
-  const FALLBACK = {version:'6.13.3', build:'136'};
+  const FALLBACK = {version:'6.12.32', build:'127'};
   let current = {...FALLBACK};
   let badgeObserver = null;
   let titleObserver = null;
@@ -22,6 +22,9 @@
     let badge=document.getElementById('runluVersionBadge');
     if(!badge) badge=document.getElementById('headerVersion') || document.querySelector('.version');
     if(!badge) return null;
+
+    // Retire the selectors used by all historical version guards. Older business
+    // hotfixes stay loaded, but they can no longer compete for this badge.
     if(badge.id!=='runluVersionBadge') badge.id='runluVersionBadge';
     if(badge.classList.contains('version')) badge.classList.remove('version');
     if(!badge.classList.contains('runluVersionBadge')) badge.classList.add('runluVersionBadge');
@@ -43,9 +46,15 @@
 
   function observe(){
     const badge=claimBadge();
-    if(badge && !badgeObserver){badgeObserver=new MutationObserver(()=>paint());badgeObserver.observe(badge,{childList:true,characterData:true,subtree:true});}
+    if(badge && !badgeObserver){
+      badgeObserver=new MutationObserver(()=>paint());
+      badgeObserver.observe(badge,{childList:true,characterData:true,subtree:true});
+    }
     const title=document.querySelector('title');
-    if(title && !titleObserver){titleObserver=new MutationObserver(()=>paint());titleObserver.observe(title,{childList:true,characterData:true,subtree:true});}
+    if(title && !titleObserver){
+      titleObserver=new MutationObserver(()=>paint());
+      titleObserver.observe(title,{childList:true,characterData:true,subtree:true});
+    }
   }
 
   async function refreshFromManifest(){
@@ -55,8 +64,11 @@
       const v=await res.json();
       if(text(v?.version)) current.version=text(v.version);
       if(text(v?.build)) current.build=text(v.build);
-    }catch(e){console.warn('[Build082] version manifest unavailable; using fallback',e)}
-    paint();observe();return {...current};
+    }catch(e){
+      console.warn('[Build082] version manifest unavailable; using fallback',e);
+    }
+    paint();observe();
+    return {...current};
   }
 
   paint();observe();refreshFromManifest();
@@ -64,5 +76,10 @@
   window.addEventListener('focus',paint);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')paint()});
 
-  window.runluVersionAuthority={get version(){return current.version},get build(){return current.build},refresh:refreshFromManifest,paint};
+  window.runluVersionAuthority={
+    get version(){return current.version},
+    get build(){return current.build},
+    refresh:refreshFromManifest,
+    paint
+  };
 })();
