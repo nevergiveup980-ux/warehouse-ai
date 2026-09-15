@@ -1,7 +1,7 @@
 {
-  "version": "6.13.2",
-  "build": "135",
+  "version": "6.13.3",
+  "build": "136",
   "date": "2026-09-15",
   "channel": "stable",
-  "notes": "Carpet Save Readback: after a shared CHC022/CHC023 edit is confirmed by Warehouse Cloud, the app now waits for pending cloud work to settle, refreshes the Cloud-First dataset, reads back the canonical physical roll, repaints Carpet Inventory, and reopens the confirmed roll detail. This fixes the case where Manufacturer Roll 9692/9716 was saved in Supabase but the browser still displayed stale pre-save data."
+  "notes": "Global Carpet Search: typing a roll, manufacturer roll, product, colour, rack or other carpet term now searches the full carpet dataset regardless of the currently selected Active/Used Up/measure/review/rack filters, then restores the user's filters when the search is cleared. This prevents physically present Pending/Check records such as RC2246 from appearing deleted."
 }
