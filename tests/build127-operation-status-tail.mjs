@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../build127-operation-status-tail.js',import.meta.url),'utf8');
+const loader=fs.readFileSync(new URL('../release-loader.js',import.meta.url),'utf8');
 const original=x=>x?.status==='Waiting'?'<button>Start</button>':'<button>Edit</button>';
 const context={window:null,operationMobileActions:original,console};
 context.window=context;
@@ -22,4 +23,5 @@ assert.equal(
 );
 assert.ok(!context.operationMobileActions({impactApplied:true,inventoryMode:'Stock'}).includes('Record locked'));
 assert.ok(!context.operationMobileActions({impactApplied:true,inventoryMode:'Record Only'}).includes('linked to inventory'));
+assert.ok(loader.includes("'build127-operation-status-tail.js'"),'release-loader must load the status-tail hotfix');
 console.log('Build127 operation status tail: PASS');
