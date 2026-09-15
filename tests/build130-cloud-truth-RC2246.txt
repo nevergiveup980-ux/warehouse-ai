@@ -1,0 +1,15 @@
+RC2246 production Cloud verification before Build130 release
+Checked: 2026-09-15
+Dataset: runlu_carpet_inventory_v52
+record_id: RC2246
+roll: RC2246
+manufacturerRoll: 7607
+collection: Gentle Guardian
+colour: 712 - Cozy Beige
+location: 3D
+status: Pending
+sourceStatus: CHECK
+length: 0
+deleted_at: null
+
+Purpose: regression evidence only. This file does not modify Warehouse Cloud data.

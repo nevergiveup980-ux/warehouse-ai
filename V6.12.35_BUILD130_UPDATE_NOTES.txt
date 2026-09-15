@@ -1,0 +1,14 @@
+RUNLU Warehouse AI V6.12.35 Build130
+Global Carpet Search
+
+Problem
+A known carpet roll such as RC2246 could appear missing when the Carpet Inventory screen had Active or a rack filter selected. The text search was being applied only after those filters.
+
+Fix
+When the text search box contains a value, search temporarily spans all roll statuses and rack locations. The user's prior quick/status and rack filters are restored immediately after rendering.
+
+Safety
+Display/search only. No carpet records, inventory quantities, Cloud rows, workflow records, receiving logic, or save logic are changed.
+
+Regression
+RC2246 search is tested with Active + rack 3D selected; the search render must bypass both filters, then restore them. Build128 green Work save regression is also re-run.

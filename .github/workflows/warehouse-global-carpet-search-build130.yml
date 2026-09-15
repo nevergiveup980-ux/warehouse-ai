@@ -1,0 +1,38 @@
+name: Warehouse Global Carpet Search Build130
+
+on:
+  pull_request:
+    paths:
+      - 'build130-global-carpet-search.js'
+      - 'tests/build130-global-carpet-search.mjs'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - '.github/workflows/warehouse-global-carpet-search-build130.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'build130-global-carpet-search.js'
+      - 'tests/build130-global-carpet-search.mjs'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build082-version-authority.js'
+      - '.github/workflows/warehouse-global-carpet-search-build130.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: |
+          node --check build130-global-carpet-search.js
+          node --check tests/build130-global-carpet-search.mjs
+      - name: RC2246 global-search regression
+        run: node tests/build130-global-carpet-search.mjs
+      - name: Re-run green Work save regression
+        run: node tests/build128-operation-save-authority.mjs
