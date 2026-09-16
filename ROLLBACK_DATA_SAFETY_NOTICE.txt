@@ -1,0 +1,5 @@
+CODE-ONLY ROLLBACK SAFETY NOTICE
+
+Do not clear, migrate, delete, rewrite, or resolve any device/cloud business data as part of this rollback.
+Preserve Supabase records, localStorage datasets, runlu_cloud_master_offline_queue_v680, and conflict records exactly as they exist on each device.
+This branch restores the Build127 runtime code snapshot only.
