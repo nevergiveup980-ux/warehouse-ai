@@ -1,0 +1,1 @@
+No data mutation: this rollback must not alter warehouse_records in Supabase or any device-local warehouse business dataset.
