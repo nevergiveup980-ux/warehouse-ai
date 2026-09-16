@@ -8,7 +8,6 @@
   const bust=Date.now();
   document.write(
     '<script src="qrcode-core.js?runlu-core=1"><\/script>'+
-    `<script src="release-loader.js?cb=${bust}"><\/script>`+
-    `<script src="build127-operation-status-tail.js?cb=${bust}"><\/script>`
+    `<script src="release-loader.js?cb=${bust}"><\/script>`
   );
 })();
