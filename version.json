@@ -1,7 +1,7 @@
 {
-  "version": "6.12.44",
-  "build": "139",
+  "version": "6.12.45",
+  "build": "140",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Settings visibility recovery. Fixes a Build138 UI regression where legacy Cloud conflict cleanup matched text inside the parent Settings card and hid the entire Settings page. Legacy whole-dataset conflict controls are now retired only by explicit element IDs and a leaf helper message; parent Settings containers are never hidden by text scanning. Adds a UI-only recovery guard that restores the main Settings card without changing warehouse records, Cloud Master queues, genuine record conflicts or cloud errors."
+  "notes": "Fast Entry performance release. Reduces iPhone/iPad input lag without changing warehouse business rules: expensive operation-form recalculation is debounced while typing, hidden Carpet Inventory rerenders are suppressed, operation draft autosave waits briefly for typing to pause, and large native datalist memories are capped to keep mobile keyboard suggestions responsive. Cloud Master remains paused during active form entry and resumes afterward."
 }
