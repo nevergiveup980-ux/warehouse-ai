@@ -1,7 +1,7 @@
 {
-  "version": "6.12.41",
-  "build": "136",
+  "version": "6.12.42",
+  "build": "137",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Stabilizes carpet operations after the canonical-view changes. Carpet Cutting now resolves and updates the raw canonical carpet inventory record instead of persisting the filtered carpetRecords() UI projection. Active FULL canonical rolls that are refreshed from cloud with a missing Current Length are narrowly repaired from their newest Cutting History balance or Original Size, then published through the normal Cloud Master save queue. This prevents the same roll from displaying a valid balance while completion reads 0 ft."
+  "notes": "Stability-first release candidate. Adds fail-closed protection for ambiguous active manufacturer-roll identities during carpet cutting, preserves the raw canonical carpet write authority from Build136, and prevents the passive bottom Cloud Reconnecting notice from covering the working screen indefinitely. Actionable cloud sign-in/error messages remain visible; routine reconnect status is left to the compact header Cloud pill."
 }
