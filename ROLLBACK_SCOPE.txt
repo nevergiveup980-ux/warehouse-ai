@@ -1,0 +1,1 @@
+Rollback scope is intentionally limited to the Build127 repository snapshot plus documentation commits on this rollback branch. The merge must not run any data migration or cleanup.
