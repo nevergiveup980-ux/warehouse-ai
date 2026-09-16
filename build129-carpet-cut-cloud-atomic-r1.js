@@ -1,6 +1,8 @@
-// RUNLU Warehouse OS Build129 · Carpet Cut Cloud Atomic Commit r1
+// RUNLU Warehouse OS Build129 · Carpet Cut Cloud Atomic Commit r2
 // Candidate only. Keeps the four cut-linked cloud datasets together and prevents
-// two devices from silently overwriting the same stale carpet state.
+// two devices from silently overwriting the same stale carpet state. While one
+// carpet-cut cloud commit is unresolved, a different actual cut is held locally so
+// its pending marker cannot be overwritten or lost.
 (() => {
   const BUILD='129';
   const PENDING='runlu_carpet_cut_cloud_atomic_v129_pending';
@@ -30,12 +32,23 @@
   function enqueue(ticket){chain=chain.then(()=>atomicPush(ticket)).catch(err=>{conflictAll(String(err?.message||err));return {status:'pending',error:String(err?.message||err)}});return chain}
   function ticketFrom(r,payloads=currentPayloads()){return {executionKey:executionKey(r),operationId:r?.id??'',carpetRecordId:r?.carpetRecordId??'',roll:r?.roll||'',po:r?.po||'',payloads:clone(payloads)}}
   function resumePending(){const p=pending();if(!p||p.phase!=='local_committed')return Promise.resolve(null);markLinkedDirty();return enqueue({...p,payloads:currentPayloads()})}
+  function holdForExistingPending(r){
+    const p=pending();if(!p)return false;const key=executionKey(r);
+    if(p.executionKey===key){
+      if(p.phase==='local_committed'){markLinkedDirty();enqueue({...p,payloads:currentPayloads()});return true}
+      alert('This carpet cut is already being committed locally. Wait for the current transaction to finish before retrying.');return true
+    }
+    const message='A previous carpet cut is still waiting for atomic cloud confirmation. Resolve/sync that cut before starting another actual cut so no pending transaction can be lost.';
+    conflictAll(message);alert(message);return true
+  }
   window.cloudPutDataset=async function build129CloudPutDataset(key,value){if(isLinked(key)&&pending())throw new Error('Atomic carpet-cut sync is pending; linked dataset push was deferred.');return baseCloudPut(key,value)};
   window.applySingleOperationImpact=function build129ApplySingleOperationImpact(r){
-    if(!isActualCut(r))return baseApply(r);const captured={},originalQueue=window.queueCloudSave;let marker=null,ok=false;
+    if(!isActualCut(r))return baseApply(r);
+    if(holdForExistingPending(r))return pending()?.executionKey===executionKey(r)&&pending()?.phase==='local_committed';
+    const captured={},originalQueue=window.queueCloudSave;let marker=null,ok=false;
     try{marker=setPending(r,'local_attempt');window.queueCloudSave=(k,v)=>{if(isLinked(k)){captured[k]=clone(v);return}return originalQueue(k,v)};ok=baseApply(r)===true}finally{window.queueCloudSave=originalQueue}
     if(!ok){clearPendingIf(marker?.executionKey);return false}const committed={...marker,phase:'local_committed',updatedAt:now()};localStorage.setItem(PENDING,JSON.stringify(committed));markLinkedDirty();const payloads=currentPayloads();for(const [k,v] of Object.entries(captured))payloads[k]=v;enqueue(ticketFrom(r,payloads));return true
   };
   setTimeout(()=>{resumePending().catch(()=>{})},0);const recoveryTimer=setInterval(()=>{if(pending()&&localStorage.getItem(ENABLED)==='1')resumePending().catch(()=>{})},15000);try{recoveryTimer.unref?.()}catch(_){}
-  window.RUNLU_CUT_CLOUD_ATOMIC_V129={build:BUILD,pendingKey:PENDING,linkedKeys:LINKED.slice(),atomicPush,enqueue,resumePending,flush:()=>chain,ticketFrom};console.info('[Build129] Carpet Cut Cloud Atomic Commit active');
+  window.RUNLU_CUT_CLOUD_ATOMIC_V129={build:BUILD,pendingKey:PENDING,linkedKeys:LINKED.slice(),atomicPush,enqueue,resumePending,flush:()=>chain,ticketFrom,holdForExistingPending};console.info('[Build129] Carpet Cut Cloud Atomic Commit active');
 })();
