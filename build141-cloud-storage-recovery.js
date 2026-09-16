@@ -1,8 +1,8 @@
 // RUNLU Warehouse OS V6.12.46 Build141 · Cloud Storage Recovery
 // Repairs the quota/conflict storm visible on mobile without choosing between genuinely
 // different warehouse records. Equivalent record conflicts are auto-cleared, disposable
-// browser caches are reclaimed first, and active form saves get storage headroom before
-// Cloud Master's local cache wrapper runs.
+// browser caches are reclaimed only under pressure, and active form saves get storage
+// headroom before Cloud Master's local cache wrapper runs.
 (() => {
   'use strict';
   if(window.__RUNLU_BUILD141_CLOUD_STORAGE_RECOVERY__)return;
@@ -48,7 +48,8 @@
   }
   function safeSetSmaller(key,value){
     const encoded=JSON.stringify(value),before=localStorage.getItem(key)||'';
-    // This helper is only for metadata repair. Never replace a larger business dataset here.
+    // Metadata repair is permitted only when the replacement is no larger than the
+    // current value. Business datasets are never written by this helper.
     if(before&&encoded.length>before.length)return false;
     try{localStorage.setItem(key,encoded);return true}catch(_){return false}
   }
@@ -71,6 +72,9 @@
 
     for(const c of conflicts){
       const qid=String(c?.queueId||''),m=qById.get(qid);
+      // A conflict with no corresponding mutation can no longer be acted on. It is stale
+      // sync metadata, not a warehouse record; dropping it lets the live record be checked
+      // again on the next Cloud Master pass.
       if(!qid||!m){staleConflictRemoved++;continue}
       const server=c?.serverRecord||m?.serverRecord||null;
       const serverPayload=server?.payload;
@@ -84,22 +88,17 @@
       }else keepConflicts.push(c);
     }
 
-    // Remove exact duplicate queued mutations that carry the same current payload. This is
-    // sync metadata only; genuine differing versions remain separate and reviewable.
-    const seen=new Map(),dedupeIds=new Set();
-    for(let i=queue.length-1;i>=0;i--){
-      const m=queue[i];if(!m||removeQueueIds.has(String(m.id||'')))continue;
-      const key=[m.datasetKey,m.recordId,m.op,JSON.stringify(stripVolatile(m.payload))].join('|');
-      if(seen.has(key))dedupeIds.add(String(m.id||''));else seen.set(key,String(m.id||''));
-    }
-    const nextQueue=queue.filter(m=>!removeQueueIds.has(String(m?.id||''))&&!dedupeIds.has(String(m?.id||'')));
-    const nextConflicts=keepConflicts.filter(c=>!dedupeIds.has(String(c?.queueId||'')));
+    // Do NOT collapse genuinely conflicting queue entries here. Even if two pending items
+    // look similar, a blocked mutation can represent a real user choice. Only the proven
+    // equivalent/stale entries above are removed automatically.
+    const nextQueue=queue.filter(m=>!removeQueueIds.has(String(m?.id||'')));
+    const nextConflicts=keepConflicts;
 
     // Queue/conflict strings can be enormous. Replacing them with smaller strings is safe
     // even under quota pressure and frees room before we touch the versions map.
     const queueWritten=safeSetSmaller(QUEUE,nextQueue);
     const conflictWritten=safeSetSmaller(CONFLICTS,nextConflicts);
-    if((equivalentResolved||staleConflictRemoved||dedupeIds.size)&&queueWritten&&conflictWritten){
+    if((equivalentResolved||staleConflictRemoved)&&queueWritten&&conflictWritten){
       try{localStorage.setItem(VERSIONS,JSON.stringify(versions))}catch(_){}
     }
     const afterBytes=storageBytes();
@@ -107,15 +106,18 @@
     if(afterBytes<SOFT_BYTES&&/quota|exceed|local cache|storage/i.test(err))try{localStorage.removeItem(LAST_ERROR)}catch(_){}
     return {
       beforeQueue:queue.length,afterQueue:nextQueue.length,beforeConflicts:conflicts.length,afterConflicts:nextConflicts.length,
-      equivalentResolved,staleConflictRemoved,deduped:dedupeIds.size,reclaimedBytes:Math.max(0,beforeBytes-afterBytes),
+      equivalentResolved,staleConflictRemoved,reclaimedBytes:Math.max(0,beforeBytes-afterBytes),
       queueWritten,conflictWritten,storageBytes:afterBytes
     };
   }
 
   function ensureHeadroom(){
-    let freed=0;if(storageBytes()>SOFT_BYTES)freed+=reclaimDisposable();
-    const result=compactCloudState();
+    let freed=0;
+    // First shrink proven no-op conflict metadata; this is usually the largest recovery.
+    let result=compactCloudState();
     if(storageBytes()>SOFT_BYTES)freed+=reclaimDisposable();
+    // Cleanup can make room for version metadata and any second-stage compaction.
+    if(freed)result=compactCloudState();
     return {...result,freedBytes:freed,storageBytes:storageBytes()};
   }
 
@@ -153,13 +155,15 @@
     document.documentElement.setAttribute('data-runlu-build',BUILD);
     document.documentElement.setAttribute('data-runlu-storage-recovery',BUILD);
     const box=document.getElementById('build072CloudMasterPanel');
-    if(box&&report&&(report.equivalentResolved||report.staleConflictRemoved||report.deduped)){
-      box.dataset.build141Recovered=String((report.equivalentResolved||0)+(report.staleConflictRemoved||0)+(report.deduped||0));
+    if(box&&report&&(report.equivalentResolved||report.staleConflictRemoved)){
+      box.dataset.build141Recovered=String((report.equivalentResolved||0)+(report.staleConflictRemoved||0));
     }
   }
 
   function bootRecovery(){
-    reclaimDisposable();
+    // Preserve local safety snapshots during normal operation; reclaim them only if this
+    // browser is actually under storage pressure.
+    if(storageBytes()>SOFT_BYTES)reclaimDisposable();
     const report=compactCloudState();
     installSaveHeadroom();installSyncRecovery();paintStatus(report);
     let tries=0;const settle=setInterval(()=>{
