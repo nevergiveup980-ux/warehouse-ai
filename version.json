@@ -1,7 +1,7 @@
 {
-  "version": "6.12.37",
-  "build": "132",
+  "version": "6.12.38",
+  "build": "133",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Carpet label cutting history now follows warehouse reading order: older cuts appear at the top and newer cuts below. If a roll has more than five cuts, the label keeps the most recent five while still displaying them oldest-to-newest, so the bottom row remains the latest balance."
+  "notes": "Carpet tag cutting history is now installed after the base app so the printed/preview ledger reliably displays older cuts at the top and newer cuts below. The same build also reconciles only provable stale carpet duplicates where the latest cutting log shows one active row is the pre-cut balance and another is the matching post-cut balance; the stale row is archived and removed from operational inventory without deleting its audit trail."
 }
