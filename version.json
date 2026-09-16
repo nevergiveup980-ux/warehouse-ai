@@ -1,7 +1,7 @@
 {
-  "version": "6.12.36",
-  "build": "131",
-  "date": "2026-09-15",
+  "version": "6.12.37",
+  "build": "132",
+  "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Exact Duplicate Conflict Auto-Resolver: record-level Cloud Master conflicts are now cleared automatically only when the queued device payload and the authoritative Cloud payload are the same business record. The system keeps the Cloud master copy and discards only the redundant queued device mutation; it never auto-deletes/tombstones warehouse records. Any quantity, status, location, product, note or other material difference remains in manual review."
+  "notes": "Carpet label cutting history now follows warehouse reading order: older cuts appear at the top and newer cuts below. If a roll has more than five cuts, the label keeps the most recent five while still displaying them oldest-to-newest, so the bottom row remains the latest balance."
 }

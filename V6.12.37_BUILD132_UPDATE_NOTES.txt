@@ -1,0 +1,8 @@
+RUNLU Warehouse OS V6.12.37 Build132
+Date: 2026-09-16
+
+CARPET LABEL CUT HISTORY ORDER
+- Carpet roll label/preview cutting history now reads oldest date at the top and newest date at the bottom.
+- Same-day cuts are ordered by recorded time, then creation/id fallback.
+- Labels still have five rows. For rolls with more than five cuts, the most recent five are retained and displayed oldest-to-newest so the bottom row is the latest balance.
+- No inventory quantities, cutting math, or historical records are changed by this build; this is a presentation-order fix only.
