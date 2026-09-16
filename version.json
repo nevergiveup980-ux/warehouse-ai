@@ -1,7 +1,7 @@
 {
-  "version": "6.12.39",
-  "build": "134",
+  "version": "6.12.40",
+  "build": "135",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Carpet edits now use one canonical record per non-shared Roll #, hiding compatible legacy/cloud backup rows instead of showing a new duplicate after each edit. The roll editor updates the canonical record in place and archives backup rows without deleting audit data. A Cut History editor is now available from the carpet roll detail/editor so historical cutting data can be entered or corrected even when the current length is unknown; the newest saved balance becomes the current carpet inventory length."
+  "notes": "Active FULL carpet rolls with a valid Original Size but missing Current Length now recover that opening balance in place when no cut history exists. If Cutting History exists, the newest logged remaining balance is used instead. This restores the standard Record Cut, TM, Return, REM and Transfer work buttons without creating a new carpet record, while keeping an audit event for every automatic balance recovery."
 }
