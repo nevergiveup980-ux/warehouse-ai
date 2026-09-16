@@ -1,7 +1,7 @@
 {
-  "version": "6.12.38",
-  "build": "133",
+  "version": "6.12.39",
+  "build": "134",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Carpet tag cutting history is now installed after the base app so the printed/preview ledger reliably displays older cuts at the top and newer cuts below. The same build also reconciles only provable stale carpet duplicates where the latest cutting log shows one active row is the pre-cut balance and another is the matching post-cut balance; the stale row is archived and removed from operational inventory without deleting its audit trail."
+  "notes": "Carpet edits now use one canonical record per non-shared Roll #, hiding compatible legacy/cloud backup rows instead of showing a new duplicate after each edit. The roll editor updates the canonical record in place and archives backup rows without deleting audit data. A Cut History editor is now available from the carpet roll detail/editor so historical cutting data can be entered or corrected even when the current length is unknown; the newest saved balance becomes the current carpet inventory length."
 }
