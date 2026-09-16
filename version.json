@@ -1,7 +1,7 @@
 {
-  "version": "6.12.42",
-  "build": "137",
+  "version": "6.12.43",
+  "build": "138",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Stability-first release candidate. Adds fail-closed protection for ambiguous active manufacturer-roll identities during carpet cutting, preserves the raw canonical carpet write authority from Build136, and prevents the passive bottom Cloud Reconnecting notice from covering the working screen indefinitely. Actionable cloud sign-in/error messages remain visible; routine reconnect status is left to the compact header Cloud pill."
+  "notes": "Cloud Master authority release. Retires the obsolete whole-dataset polling/conflict engine that could recreate Product Master, Product Inventory, Customer Orders, Special Orders and Cutting History conflicts after record-level Cloud Master was already active. Sync Now and background refresh now route only through the record-level Supabase Cloud Master path. Stale legacy conflict metadata and its Settings UI are cleared without modifying business records; genuine record-level Cloud Master queue items, conflicts and errors remain protected and visible."
 }
