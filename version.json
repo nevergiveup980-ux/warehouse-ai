@@ -1,7 +1,7 @@
 {
-  "version": "6.12.45",
-  "build": "140",
+  "version": "6.12.46",
+  "build": "141",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Fast Entry performance release. Reduces iPhone/iPad input lag without changing warehouse business rules: expensive operation-form recalculation is debounced while typing, hidden Carpet Inventory rerenders are suppressed, operation draft autosave waits briefly for typing to pause, and large native datalist memories are capped to keep mobile keyboard suggestions responsive. Cloud Master remains paused during active form entry and resumes afterward."
+  "notes": "Cloud Storage Recovery. Fixes the mobile quota/conflict storm without overwriting warehouse data: proven equivalent Cloud Master conflicts are auto-cleared, stale conflict metadata is removed, genuine differing records remain reviewable, and disposable local snapshots/caches are reclaimed only when browser storage is under pressure. Managed saves gain headroom before writing, allowing normal warehouse work to continue while Cloud Master reactivates."
 }
