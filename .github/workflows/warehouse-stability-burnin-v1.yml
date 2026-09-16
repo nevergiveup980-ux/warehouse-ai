@@ -17,6 +17,7 @@ on:
       - 'build136-carpet-raw-write-authority.js'
       - 'build137-quiet-cloud-recovery-banner.js'
       - 'build138-cloud-master-authority.js'
+      - 'build139-settings-visibility-recovery.js'
       - 'tests/**'
       - '.github/workflows/warehouse-stability-burnin-v1.yml'
   push:
@@ -36,6 +37,7 @@ on:
       - 'build136-carpet-raw-write-authority.js'
       - 'build137-quiet-cloud-recovery-banner.js'
       - 'build138-cloud-master-authority.js'
+      - 'build139-settings-visibility-recovery.js'
       - 'tests/**'
       - '.github/workflows/warehouse-stability-burnin-v1.yml'
   workflow_dispatch:
@@ -58,9 +60,11 @@ jobs:
           node --check build136-carpet-raw-write-authority.js
           node --check build137-quiet-cloud-recovery-banner.js
           node --check build138-cloud-master-authority.js
+          node --check build139-settings-visibility-recovery.js
           node --check tests/stability-burnin-build136.mjs
           node --check tests/build137-quiet-cloud-recovery-banner.mjs
           node --check tests/build138-cloud-master-authority.mjs
+          node --check tests/build139-settings-visibility-recovery.mjs
       - name: Existing production regressions
         run: |
           set -e
@@ -81,6 +85,7 @@ jobs:
           node tests/build131-exact-duplicate-conflict-auto-resolve.mjs
           node tests/build137-quiet-cloud-recovery-banner.mjs
           node tests/build138-cloud-master-authority.mjs
+          node tests/build139-settings-visibility-recovery.mjs
 
   carpet-burnin:
     name: Carpet raw-authority burn-in
@@ -91,7 +96,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: 20,000-cycle Build136/138 randomized burn-in
+      - name: 20,000-cycle Build136/139 randomized burn-in
         env:
           RUNLU_STABILITY_CYCLES: '20000'
         run: node tests/stability-burnin-build136.mjs
@@ -99,7 +104,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: warehouse-stability-burnin-build138-evidence
+          name: warehouse-stability-burnin-build139-evidence
           path: warehouse-stability-burnin-build136-report.json
           if-no-files-found: error
           retention-days: 30

@@ -1,7 +1,7 @@
 {
-  "version": "6.12.43",
-  "build": "138",
+  "version": "6.12.44",
+  "build": "139",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Cloud Master authority release. Retires the obsolete whole-dataset polling/conflict engine that could recreate Product Master, Product Inventory, Customer Orders, Special Orders and Cutting History conflicts after record-level Cloud Master was already active. Sync Now and background refresh now route only through the record-level Supabase Cloud Master path. Stale legacy conflict metadata and its Settings UI are cleared without modifying business records; genuine record-level Cloud Master queue items, conflicts and errors remain protected and visible."
+  "notes": "Settings visibility recovery. Fixes a Build138 UI regression where legacy Cloud conflict cleanup matched text inside the parent Settings card and hid the entire Settings page. Legacy whole-dataset conflict controls are now retired only by explicit element IDs and a leaf helper message; parent Settings containers are never hidden by text scanning. Adds a UI-only recovery guard that restores the main Settings card without changing warehouse records, Cloud Master queues, genuine record conflicts or cloud errors."
 }

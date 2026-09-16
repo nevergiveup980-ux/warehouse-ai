@@ -1,16 +1,16 @@
-// RUNLU Warehouse OS V6.12.43 Build138 — Cloud Master Authority
+// RUNLU Warehouse OS V6.12.44 Build139 compatibility layer — Cloud Master Authority
 // Retires the obsolete whole-dataset conflict engine. Supabase Cloud Master remains
 // the sole synchronization authority; local storage is only an offline/cache layer.
+// Build139 narrows legacy UI cleanup so Settings itself can never be hidden.
 (() => {
   'use strict';
   if (window.__RUNLU_BUILD138_CLOUD_MASTER_AUTHORITY__) return;
   window.__RUNLU_BUILD138_CLOUD_MASTER_AUTHORITY__ = true;
 
-  const VERSION='6.12.43', BUILD='138';
+  const VERSION='6.12.44', BUILD='139';
   const LEGACY_CONFLICT='runlu_cloud_dataset_conflicts_v659_';
   const LEGACY_DIRTY='runlu_cloud_dirty_keys_v5544';
   const LEGACY_ERROR='runlu_cloud_last_error_v5544';
-  const MASTER_ERROR='runlu_cloud_master_last_error_v680';
   const MANAGED=new Set([
     'runlu_product_master_v21','runlu_inventory_records_v21','runlu_orders_v20','runlu_receiving_v50',
     'runlu_tasks_v50','runlu_special_orders_v51','runlu_operations_log_v52','runlu_carpet_inventory_v52',
@@ -34,7 +34,23 @@
     localStorage.removeItem(LEGACY_ERROR);
   }
 
+  function restoreSettingsVisibility(){
+    const settings=document.getElementById('settings');
+    if(!settings)return;
+    const children=Array.from(settings.children||[]);
+    const mainCard=children.find(el=>el?.classList?.contains?.('card'));
+    if(mainCard?.style?.display==='none'){
+      if(typeof mainCard.style.removeProperty==='function')mainCard.style.removeProperty('display');
+      else mainCard.style.display='';
+    }
+  }
+
   function hideLegacyConflictUI(){
+    // Build138 originally scanned every ancestor DIV by text. Because the main Settings
+    // card contains the legacy help sentence in a descendant, that broad scan could hide
+    // the entire Settings page. Build139 only touches explicit legacy controls and the
+    // exact helper META leaf; parent containers are never hidden by text matching.
+    restoreSettingsVisibility();
     const details=document.getElementById('cloudSyncDetails');
     if(details)details.style.display='none';
     const actions=document.getElementById('cloudConflictActions');
@@ -42,15 +58,13 @@
     for(const id of ['build069MergeNotice','build065MergeNotice','build066MergeNotice']){
       const el=document.getElementById(id);if(el)el.style.display='none';
     }
-    const settings=document.getElementById('settings')||document;
-    const nodes=settings.querySelectorAll?.('div,span,p,small')||[];
-    for(const el of nodes){
+    const settings=document.getElementById('settings');
+    const metas=settings?.querySelectorAll?.('.meta')||[];
+    for(const el of metas){
       const t=String(el.textContent||'').trim();
-      if(/Conflict\s*[—-]\s*changed on this device and another device/i.test(t) ||
-         (/Keep Cloud for Conflict Only/i.test(t)&&/Full Upload\/Download/i.test(t))){
-        el.style.display='none';
-      }
+      if(/Keep Cloud for Conflict Only/i.test(t)&&/Full Upload\/Download/i.test(t))el.style.display='none';
     }
+    restoreSettingsVisibility();
   }
 
   function refreshCloudUI(){
@@ -89,7 +103,7 @@
     const start=function(){
       try{if(typeof cloudPollTimer!=='undefined'&&cloudPollTimer)clearInterval(cloudPollTimer)}catch(_){ }
       const timer=setInterval(()=>masterAutoRefresh(false),15000);
-      try{cloudPollTimer=timer}catch(_){window.__RUNLU_BUILD138_POLL_TIMER__=timer}
+      try{cloudPollTimer=timer}catch(_){window.__RUNLU_BUILD139_POLL_TIMER__=timer}
       return timer;
     };
     try{cloudAutoRefresh=masterAutoRefresh}catch(_){ }
@@ -102,10 +116,10 @@
   }
 
   function installSyncButtonAuthority(){
-    // Build072 already owns cloudSyncNow. Keep reinforcing the same record-level path
+    // Build072 already owns record-level Cloud Master. Keep reinforcing the same path
     // in case an older hotfix tries to restore the retired dataset-level function.
     const fn=async(...args)=>masterSync({silent:args[0]===true});
-    fn.__build138=true;
+    fn.__build139=true;
     window.cloudSyncNow=fn;
   }
 
@@ -116,6 +130,7 @@
 
   function install(){
     showVersion();
+    restoreSettingsVisibility();
     clearLegacyDatasetState();
     replaceLegacyPolling();
     installSyncButtonAuthority();
@@ -126,14 +141,14 @@
     install();
     // Older layers retry their installers for a short time. Reassert authority while
     // startup settles, then leave only the normal 15-second Cloud Master refresh.
-    let n=0;const settle=setInterval(()=>{installSyncButtonAuthority();clearLegacyDatasetState();hideLegacyConflictUI();showVersion();if(++n>=50)clearInterval(settle)},200);
+    let n=0;const settle=setInterval(()=>{installSyncButtonAuthority();restoreSettingsVisibility();clearLegacyDatasetState();hideLegacyConflictUI();showVersion();if(++n>=50)clearInterval(settle)},200);
     setTimeout(()=>masterAutoRefresh(true),900);
     window.addEventListener('online',()=>masterAutoRefresh(true));
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')masterAutoRefresh(false)});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){restoreSettingsVisibility();masterAutoRefresh(false)}});
   }
 
   window.RUNLUCloudMasterAuthorityBuild138={
-    version:VERSION,build:BUILD,clearLegacyDatasetState,hideLegacyConflictUI,masterSync,masterAutoRefresh
+    version:VERSION,build:BUILD,clearLegacyDatasetState,restoreSettingsVisibility,hideLegacyConflictUI,masterSync,masterAutoRefresh
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else setTimeout(boot,0);
 })();
