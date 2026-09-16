@@ -1,7 +1,7 @@
 {
-  "version": "6.12.48",
-  "build": "143",
-  "date": "2026-09-16",
+  "version": "6.12.32",
+  "build": "127",
+  "date": "2026-09-14",
   "channel": "stable",
-  "notes": "Pending Work Overlay Recovery. Prevents Cloud Master pulls from hiding unsynchronized work that is still safely preserved in the device queue. Pending upserts are overlaid back into Operations, Orders, Receiving, Special Orders and Cutting History after every sync; pending deletes remain deleted. No conflict is auto-resolved and no cloud record is overwritten by this recovery layer."
+  "notes": "Carpet Receiving Guard Authority: the Build125 pending-CHC receiving handlers now remain authoritative and cannot be re-wrapped by the persistent legacy Build120 duplicate-manufacturer guard. Build126 remains the final stock-impact authority, so recognized CHC022/CHC023 Pending placeholders can complete and apply stock reliably."
 }
