@@ -21,6 +21,7 @@ on:
       - 'build140-fast-entry.js'
       - 'build141-cloud-storage-recovery.js'
       - 'build142-mobile-cache-drain.js'
+      - 'build143-pending-overlay-recovery.js'
       - 'tests/**'
       - '.github/workflows/warehouse-stability-burnin-v1.yml'
   push:
@@ -44,6 +45,7 @@ on:
       - 'build140-fast-entry.js'
       - 'build141-cloud-storage-recovery.js'
       - 'build142-mobile-cache-drain.js'
+      - 'build143-pending-overlay-recovery.js'
       - 'tests/**'
       - '.github/workflows/warehouse-stability-burnin-v1.yml'
   workflow_dispatch:
@@ -70,6 +72,7 @@ jobs:
           node --check build140-fast-entry.js
           node --check build141-cloud-storage-recovery.js
           node --check build142-mobile-cache-drain.js
+          node --check build143-pending-overlay-recovery.js
           node --check tests/stability-burnin-build136.mjs
           node --check tests/build137-quiet-cloud-recovery-banner.mjs
           node --check tests/build138-cloud-master-authority.mjs
@@ -77,6 +80,7 @@ jobs:
           node --check tests/build140-fast-entry.mjs
           node --check tests/build141-cloud-storage-recovery.mjs
           node --check tests/build142-mobile-cache-drain.mjs
+          node --check tests/build143-pending-overlay-recovery.mjs
       - name: Existing production regressions
         run: |
           set -e
@@ -101,6 +105,7 @@ jobs:
           node tests/build140-fast-entry.mjs
           node tests/build141-cloud-storage-recovery.mjs
           node tests/build142-mobile-cache-drain.mjs
+          node tests/build143-pending-overlay-recovery.mjs
 
   carpet-burnin:
     name: Carpet raw-authority burn-in
@@ -111,7 +116,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: 20,000-cycle Build136/142 randomized burn-in
+      - name: 20,000-cycle Build136/143 randomized burn-in
         env:
           RUNLU_STABILITY_CYCLES: '20000'
         run: node tests/stability-burnin-build136.mjs
@@ -119,7 +124,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: warehouse-stability-burnin-build142-evidence
+          name: warehouse-stability-burnin-build143-evidence
           path: warehouse-stability-burnin-build136-report.json
           if-no-files-found: error
           retention-days: 30

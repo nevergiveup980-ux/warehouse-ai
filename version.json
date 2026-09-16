@@ -1,7 +1,7 @@
 {
-  "version": "6.12.47",
-  "build": "142",
+  "version": "6.12.48",
+  "build": "143",
   "date": "2026-09-16",
   "channel": "stable",
-  "notes": "Mobile Cache Drain. Finishes Cloud Master quota recovery by compacting only redundant blocked-conflict metadata, preserving all business records and genuine review decisions. The final save guard is pinned so Build072 cannot reinstall its older direct localStorage writer outside the recovery layer. Normal warehouse saves regain browser storage headroom while Cloud Master review remains intact."
+  "notes": "Pending Work Overlay Recovery. Prevents Cloud Master pulls from hiding unsynchronized work that is still safely preserved in the device queue. Pending upserts are overlaid back into Operations, Orders, Receiving, Special Orders and Cutting History after every sync; pending deletes remain deleted. No conflict is auto-resolved and no cloud record is overwritten by this recovery layer."
 }
