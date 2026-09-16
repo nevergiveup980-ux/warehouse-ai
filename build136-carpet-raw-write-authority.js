@@ -45,12 +45,21 @@
     const wantedRoll=norm(r?.roll),family=(Array.isArray(raw)?raw:[]).filter(x=>operational(x)&&sameRoll(x?.roll,wantedRoll));
     if(!family.length)return null;
     const selected=r?.carpetRecordId!=null&&r.carpetRecordId!==''?family.find(x=>String(x.id)===String(r.carpetRecordId))||null:null;
+    // An exact, usable record-id selection remains authoritative.
     if(selected&&Number(selected.length||0)>0)return selected;
+
+    // Once the selected record is missing/stale, do not let the UI's first visible row silently
+    // choose between two different physical manufacturer-roll identities. That is a real ambiguity.
+    const positive=family.filter(x=>Number(x.length||0)>0);
+    if(positive.length>1){
+      const mfrs=[...new Set(positive.map(x=>norm(x.manufacturerRoll)).filter(Boolean))];
+      if(mfrs.length>1)throw new Error(`Roll ${r?.roll||'—'} has more than one active manufacturer-roll identity. Review the duplicate before cutting.`);
+    }
+
     const canonicalId=visibleCanonicalId(wantedRoll),canonical=canonicalId?family.find(x=>String(x.id)===canonicalId)||null:null;
     if(canonical&&Number(canonical.length||0)>0)return canonical;
-    const positive=family.filter(x=>Number(x.length||0)>0);
     if(positive.length===1)return positive[0];
-    if(positive.length>1){const mfrs=[...new Set(positive.map(x=>norm(x.manufacturerRoll)).filter(Boolean))];if(mfrs.length>1)throw new Error(`Roll ${r?.roll||'—'} has more than one active manufacturer-roll identity. Review the duplicate before cutting.`);return [...positive].sort((a,b)=>completeness(b)-completeness(a))[0]}
+    if(positive.length>1)return [...positive].sort((a,b)=>completeness(b)-completeness(a))[0];
     if(selected)return selected;if(canonical)return canonical;if(family.length===1)return family[0];
     const mfrs=[...new Set(family.map(x=>norm(x.manufacturerRoll)).filter(Boolean))];if(mfrs.length>1)throw new Error(`Roll ${r?.roll||'—'} has conflicting physical identities. Review the duplicate before cutting.`);
     return [...family].sort((a,b)=>completeness(b)-completeness(a))[0]||null;
