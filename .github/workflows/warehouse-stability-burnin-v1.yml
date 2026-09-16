@@ -1,0 +1,123 @@
+name: Warehouse Stability Burn-in V1
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build128-operation-save-authority.js'
+      - 'build129-general-internal-transfer-conservation.js'
+      - 'build130-global-carpet-search.js'
+      - 'build131-exact-duplicate-conflict-auto-resolve.js'
+      - 'build132-carpet-label-cut-order.js'
+      - 'build133-carpet-ledger-reconcile.js'
+      - 'build134-carpet-edit-cut-history.js'
+      - 'build135-full-balance-action-restore.js'
+      - 'build136-carpet-raw-write-authority.js'
+      - 'tests/**'
+      - '.github/workflows/warehouse-stability-burnin-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'release-loader.js'
+      - 'version.json'
+      - 'build128-operation-save-authority.js'
+      - 'build129-general-internal-transfer-conservation.js'
+      - 'build130-global-carpet-search.js'
+      - 'build131-exact-duplicate-conflict-auto-resolve.js'
+      - 'build132-carpet-label-cut-order.js'
+      - 'build133-carpet-ledger-reconcile.js'
+      - 'build134-carpet-edit-cut-history.js'
+      - 'build135-full-balance-action-restore.js'
+      - 'build136-carpet-raw-write-authority.js'
+      - 'tests/**'
+      - '.github/workflows/warehouse-stability-burnin-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression-sweep:
+    name: Regression sweep
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax gate
+        run: |
+          node --check build136-carpet-raw-write-authority.js
+          node --check tests/stability-burnin-build136.mjs
+      - name: Existing production regressions
+        run: |
+          set -e
+          node tests/build115-work-orchestration.mjs
+          node tests/build116-material-work.mjs
+          node tests/build117-command-center-cloud-history.mjs
+          node tests/build118-command-center-live-record-history.mjs
+          node tests/build119-history-dedupe-delete-guard.mjs
+          node tests/build120-carpet-receiving-cloud-identity.mjs
+          node tests/build120-carpet-receiving-completion-guard.mjs
+          node tests/build124-shared-carpet-physical-identity.mjs
+          node tests/build125-pending-carpet-placeholder-adoption.mjs
+          node tests/build126-finalize-pending-carpet-arrival.mjs
+          node tests/build127-carpet-receiving-guard-authority.mjs
+          node tests/build127-operation-status-tail.mjs
+          node tests/build128-operation-save-authority.mjs
+          node tests/build130-global-carpet-search.mjs
+          node tests/build131-exact-duplicate-conflict-auto-resolve.mjs
+
+  carpet-burnin:
+    name: Carpet raw-authority burn-in
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 20,000-cycle Build136 randomized burn-in
+        env:
+          RUNLU_STABILITY_CYCLES: '20000'
+        run: node tests/stability-burnin-build136.mjs
+      - name: Upload burn-in evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-stability-burnin-build136-evidence
+          path: warehouse-stability-burnin-build136-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+  lifecycle-stress:
+    name: Existing lifecycle stress
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: General warehouse lifecycle — 5,000 cycles
+        env:
+          RUNLU_EXECUTION_CYCLES: '5000'
+        run: node tests/actual-execution-adapter-v070.mjs
+      - name: Carpet cut execution — 5,000 cycles
+        env:
+          RUNLU_CUT_CYCLES: '5000'
+        run: node tests/v050-carpet-cut-execution-lab-final.mjs
+      - name: Upload lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-stability-lifecycle-evidence
+          path: |
+            warehouse-actual-execution-v070-report.json
+            warehouse-carpet-cut-execution-v050-report.json
+          if-no-files-found: warn
+          retention-days: 30
