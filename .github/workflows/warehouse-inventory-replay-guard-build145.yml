@@ -33,6 +33,9 @@ jobs:
         run: |
           node --check build072-hotfix.js
           node --check build145-inventory-replay-guard.js
+          node --check release-loader.js
+      - name: Build145 loader activation
+        run: node tests/build145-loader-activation.mjs
       - name: Build072 core integration anchors
         run: node tests/build145-build072-core-integration.mjs
       - name: Stale device replay regression
