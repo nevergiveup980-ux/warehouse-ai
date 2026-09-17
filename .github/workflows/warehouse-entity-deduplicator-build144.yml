@@ -1,0 +1,26 @@
+name: Warehouse Entity Deduplicator Build144
+on:
+  pull_request:
+    paths:
+      - 'build144-safe-data-hygiene.js'
+      - 'tests/build144-entity-deduplicator.mjs'
+      - '.github/workflows/warehouse-entity-deduplicator-build144.yml'
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: |
+          node --check build144-safe-data-hygiene.js
+          node --check tests/build144-entity-deduplicator.mjs
+      - name: Entity dedupe safety regression
+        run: node tests/build144-entity-deduplicator.mjs
+      - name: Existing exact duplicate regression
+        run: node tests/build131-exact-duplicate-conflict-auto-resolve.mjs
+      - name: Inventory lifecycle regression
+        run: node tests/warehouse-lifecycle-stress.mjs
