@@ -81,14 +81,14 @@
   function saveConflicts(x){write(CONFLICTS,x);renderPanel()}
   function qid(){return 'Q-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
 
-  function enqueue(dataset,id,op,payload,baseVersion){
+  function enqueue(dataset,id,op,payload,baseVersion,source=''){
     if(!dataset||!id)return;
     let q=queue(),idx=q.findIndex(x=>x.datasetKey===dataset&&x.recordId===id&&!x.blocked);
     if(idx>=0){
       const cur=q[idx];
       if(cur.baseVersion===0&&op==='delete'){q.splice(idx,1);write(QUEUE,q);renderPanel();return}
-      q[idx]={...cur,op,payload:clone(payload),queuedAt:nowIso(),attempts:0};
-    }else q.push({id:qid(),datasetKey:dataset,recordId:id,op,payload:clone(payload),baseVersion:Number(baseVersion||0),queuedAt:nowIso(),attempts:0,blocked:false});
+      q[idx]={...cur,op,payload:clone(payload),queuedAt:nowIso(),attempts:0,source:source||cur.source||'',replayHeld:false,replayHoldReason:null,replayHeldAt:null};
+    }else q.push({id:qid(),datasetKey:dataset,recordId:id,op,payload:clone(payload),baseVersion:Number(baseVersion||0),queuedAt:nowIso(),attempts:0,blocked:false,source:source||'',replayHeld:false});
     write(QUEUE,q);renderPanel();scheduleFlush();
   }
   function diffAndQueue(dataset,before,after){
@@ -101,8 +101,8 @@
     const a=new Map(),b=new Map();
     before.forEach(r=>{const id=stableId(dataset,r);if(id)a.set(id,r)});
     after.forEach(r=>{const id=stableId(dataset,r);if(id)b.set(id,r)});
-    for(const [id,row] of b){const old=a.get(id);if(!old||!eq(old,row))enqueue(dataset,id,'upsert',row,getVersion(dataset,id))}
-    for(const [id,row] of a){if(!b.has(id))enqueue(dataset,id,'delete',row,getVersion(dataset,id))}
+    for(const [id,row] of b){const old=a.get(id);if(!old||!eq(old,row))enqueue(dataset,id,'upsert',row,getVersion(dataset,id),dataset===INV?'live-save':'')}
+    for(const [id,row] of a){if(!b.has(id))enqueue(dataset,id,'delete',row,getVersion(dataset,id),dataset===INV?'live-save':'')}
   }
 
   async function fetchRecords(s){
@@ -145,10 +145,16 @@
       for(const row of local){
         const id=stableId(dataset,row);if(!id)continue;
         const rr=remote.get(versionKey(dataset,id));
-        if(!rr){enqueue(dataset,id,'upsert',row,0);audit.push({dataset,id,action:'adopt-local-only'});continue}
+        if(!rr){
+          if(dataset===INV){audit.push({dataset,id,action:'replay-held-local-only'});continue}
+          enqueue(dataset,id,'upsert',row,0);audit.push({dataset,id,action:'adopt-local-only'});continue
+        }
         if(rr.origin==='cloud-master-repair')continue;
         if(dataset===PM&&productIncompatible(row,rr.payload)){audit.push({dataset,id,action:'cloud-identity-kept',device:[row.name,row.color,row.sku].filter(Boolean).join(' · '),cloud:[rr.payload?.name,rr.payload?.color,rr.payload?.sku].filter(Boolean).join(' · ')});continue}
-        if(rowMs(row)>rowMs(rr.payload)+1000&&!eq(row,rr.payload)){enqueue(dataset,id,'upsert',row,rr.version);audit.push({dataset,id,action:'adopt-newer-local'})}
+        if(rowMs(row)>rowMs(rr.payload)+1000&&!eq(row,rr.payload)){
+          if(dataset===INV){audit.push({dataset,id,action:'replay-held-newer-local'});continue}
+          enqueue(dataset,id,'upsert',row,rr.version);audit.push({dataset,id,action:'adopt-newer-local'})
+        }
       }
     }
     write(BOOTSTRAP,{capturedAt:nowIso(),audit});return audit;
@@ -158,7 +164,13 @@
     const st=stateCache||await fetchState(s);if(st?.mode!=='active'&&!allowShadow)return {flushed:0,pending:queue().length};
     let q=queue(),flushed=0,cs=conflicts();
     for(let i=0;i<q.length;i++){
-      const m=q[i];if(m.blocked)continue;
+      const m=q[i];if(m.blocked||m.replayHeld)continue;
+      if(m.datasetKey===INV&&m.op==='upsert'&&m.source!=='live-save'){
+        m.replayHeld=true;
+        m.replayHoldReason='build145-unproven-inventory-replay';
+        m.replayHeldAt=m.replayHeldAt||nowIso();
+        continue;
+      }
       try{
         m.attempts=Number(m.attempts||0)+1;
         const res=await applyMutation(s,m);
