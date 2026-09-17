@@ -1,0 +1,28 @@
+name: Warehouse Adoption Replay Guard Build146
+on:
+  push:
+    branches: [build146-adoption-replay-guard]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'build072-adoption.js'
+      - 'release-loader.js'
+      - 'tests/build146-adoption-replay-guard.mjs'
+      - '.github/workflows/warehouse-adoption-replay-guard-build146.yml'
+jobs:
+  replay-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build072 adoption syntax
+        run: node --check build072-adoption.js
+      - name: Build146 legacy adoption replay regression
+        run: node tests/build146-adoption-replay-guard.mjs
+      - name: Build072 replay guard syntax
+        run: node --check build072-hotfix.js
+      - name: Build145 stale-device and dirty-queue regression
+        run: node tests/build145-inventory-replay-guard.mjs
+      - name: Build145 Cloud118 stale250 simulation
+        run: node tests/build145-cloud118-stale250-simulation.mjs
+      - name: Build127 frozen baseline regression
+        run: node tests/build127-carpet-receiving-guard-authority.mjs
