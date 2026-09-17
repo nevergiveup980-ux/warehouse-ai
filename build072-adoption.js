@@ -1,6 +1,8 @@
 // RUNLU Build072 device-adoption safety net.
 // Snapshot this device BEFORE the first Cloud Master pull, then after Cloud Master loads,
 // re-submit only records that are missing in cloud or genuinely newer than the cloud copy.
+// Build146: Inventory is never re-submitted from this legacy snapshot path. Inventory
+// mutations must originate from the guarded live-save path in build072-hotfix.js.
 (() => {
   if(window.__RUNLU_BUILD072_ADOPTION__)return;
   window.__RUNLU_BUILD072_ADOPTION__=true;
@@ -37,6 +39,10 @@
       const old=snap.datasets[k],cur=read(k);if(old==null)continue;
       if(k==='runlu_settings_v20')continue;
       if(!Array.isArray(old)||!Array.isArray(cur))continue;
+      if(k===INV){
+        audit.push({dataset:k,action:'build146-held-legacy-inventory-snapshot',records:old.length});
+        continue;
+      }
       const map=new Map();cur.forEach(r=>{const id=rid(k,r);if(id)map.set(id,r)});let touched=false;
       for(const r of old){
         const id=rid(k,r);if(!id)continue;const now=map.get(id);
