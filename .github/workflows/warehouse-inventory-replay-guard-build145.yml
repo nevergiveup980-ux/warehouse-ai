@@ -13,6 +13,8 @@ jobs:
           node-version: '22'
       - name: Syntax
         run: node --check build145-inventory-replay-guard.js
+      - name: Build072 core integration anchors
+        run: node tests/build145-build072-core-integration.mjs
       - name: Stale device replay regression
         run: node tests/build145-inventory-replay-guard.mjs
       - name: Cloud118 stale250 dirty-queue fresh-Receiving simulation
