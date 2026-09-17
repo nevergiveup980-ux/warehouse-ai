@@ -18,9 +18,17 @@ jobs:
         run: |
           node --check build144-safe-data-hygiene.js
           node --check tests/build144-entity-deduplicator.mjs
-      - name: Entity dedupe safety regression
+      - name: Build144 engineering regression
         run: node tests/build144-entity-deduplicator.mjs
       - name: Existing exact duplicate regression
         run: node tests/build131-exact-duplicate-conflict-auto-resolve.mjs
-      - name: Inventory lifecycle regression
-        run: node tests/warehouse-lifecycle-stress.mjs
+      - name: Carpet cloud identity regression
+        run: node tests/build120-carpet-receiving-cloud-identity.mjs
+      - name: Carpet completion guard regression
+        run: node tests/build120-carpet-receiving-completion-guard.mjs
+      - name: Shared physical identity regression
+        run: node tests/build124-shared-carpet-physical-identity.mjs
+      - name: Pending carpet adoption regression
+        run: node tests/build125-pending-carpet-placeholder-adoption.mjs
+      - name: Finalize pending carpet regression
+        run: node tests/build126-finalize-pending-carpet-arrival.mjs
