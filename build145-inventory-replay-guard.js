@@ -1,0 +1,46 @@
+// RUNLU Warehouse Build145 — Inventory Replay Guard policy (engineering only)
+// Pure policy module: no production hooks, no localStorage mutation, no cloud mutation.
+(() => {
+  const INV='runlu_inventory_records_v21';
+  const text=v=>String(v??'').trim();
+  const norm=v=>text(v).toUpperCase().replace(/\s+/g,' ');
+  const idOf=r=>text(r?.inventoryId||r?.id||r?.cloudRecordId);
+  const key=r=>[
+    norm(r?.masterId),norm(r?.po||r?.poNumber),norm(r?.location),norm(r?.unit),
+    Number(r?.quantity||0)
+  ].join('|');
+
+  function remoteIndex(rows){
+    const liveIds=new Set(), tombstoneIds=new Set(), liveKeys=new Set(), tombstoneKeys=new Set();
+    for(const r of rows||[]){
+      if(r?.dataset_key!==INV)continue;
+      const id=text(r.record_id),k=key(r.payload||{});
+      if(r.deleted_at){if(id)tombstoneIds.add(id);if(k)tombstoneKeys.add(k)}
+      else {if(id)liveIds.add(id);if(k)liveKeys.add(k)}
+    }
+    return {liveIds,tombstoneIds,liveKeys,tombstoneKeys};
+  }
+
+  // Bootstrap/adoption is the dangerous path: an old cache is not evidence of new work.
+  function allowBootstrapInventoryAdoption(row,remoteRows){
+    const idx=remoteIndex(remoteRows),id=idOf(row),k=key(row);
+    if(!id)return {allow:false,reason:'missing-id'};
+    if(idx.tombstoneIds.has(id))return {allow:false,reason:'cloud-tombstone-id'};
+    if(idx.liveIds.has(id))return {allow:false,reason:'already-in-cloud'};
+    if(idx.liveKeys.has(k)||idx.tombstoneKeys.has(k))return {allow:false,reason:'business-entity-already-known'};
+    return {allow:false,reason:'unproven-bootstrap-local-only'};
+  }
+
+  // Normal save mutations are preserved. Build145 must not suppress fresh Receiving/Cutting/
+  // Shipping/Transfer inventory effects created through the active save -> queue path.
+  function allowLiveSaveMutation(dataset,op,row){
+    if(dataset!==INV)return {allow:true,reason:'non-inventory'};
+    if(op!=='upsert'&&op!=='delete')return {allow:false,reason:'unknown-op'};
+    if(!idOf(row))return {allow:false,reason:'missing-id'};
+    return {allow:true,reason:'live-save-mutation'};
+  }
+
+  const api={INV,key,remoteIndex,allowBootstrapInventoryAdoption,allowLiveSaveMutation};
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  if(typeof window!=='undefined')window.RUNLUInventoryReplayGuardBuild145=api;
+})();
