@@ -1,0 +1,34 @@
+name: Warehouse Entity Deduplicator Build144
+on:
+  pull_request:
+    paths:
+      - 'build144-safe-data-hygiene.js'
+      - 'tests/build144-entity-deduplicator.mjs'
+      - '.github/workflows/warehouse-entity-deduplicator-build144.yml'
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: |
+          node --check build144-safe-data-hygiene.js
+          node --check tests/build144-entity-deduplicator.mjs
+      - name: Build144 engineering regression
+        run: node tests/build144-entity-deduplicator.mjs
+      - name: Existing exact duplicate regression
+        run: node tests/build131-exact-duplicate-conflict-auto-resolve.mjs
+      - name: Carpet cloud identity regression
+        run: node tests/build120-carpet-receiving-cloud-identity.mjs
+      - name: Carpet completion guard regression
+        run: node tests/build120-carpet-receiving-completion-guard.mjs
+      - name: Shared physical identity regression
+        run: node tests/build124-shared-carpet-physical-identity.mjs
+      - name: Pending carpet adoption regression
+        run: node tests/build125-pending-carpet-placeholder-adoption.mjs
+      - name: Finalize pending carpet regression
+        run: node tests/build126-finalize-pending-carpet-arrival.mjs
