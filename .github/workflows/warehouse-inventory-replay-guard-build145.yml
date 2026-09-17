@@ -15,6 +15,8 @@ jobs:
         run: node --check build145-inventory-replay-guard.js
       - name: Stale device replay regression
         run: node tests/build145-inventory-replay-guard.mjs
+      - name: Cloud118 stale250 dirty-queue fresh-Receiving simulation
+        run: node tests/build145-cloud118-stale250-simulation.mjs
       - name: Build144 data hygiene regression
         run: node tests/build144-entity-deduplicator.mjs
       - name: Build127 frozen baseline regression
