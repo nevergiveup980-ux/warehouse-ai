@@ -3,20 +3,38 @@ on:
   pull_request:
   push:
     branches: [build145-inventory-replay-guard]
+permissions:
+  contents: write
 jobs:
   replay-guard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Materialize Build145 guard into Build072 engineering source
+        if: github.event_name == 'push'
+        run: |
+          if grep -q "build145-unproven-inventory-replay" build072-hotfix.js; then
+            echo "Build072 already carries Build145 replay guard"
+          else
+            node scripts/build145-integrate-build072.mjs build072-hotfix.js /tmp/build072-hotfix.js
+            mv /tmp/build072-hotfix.js build072-hotfix.js
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add build072-hotfix.js
+            git commit -m "Build145: integrate replay guard into Build072 core"
+            git push origin HEAD:build145-inventory-replay-guard
+          fi
       - name: Syntax
-        run: node --check build145-inventory-replay-guard.js
+        run: |
+          node --check build072-hotfix.js
+          node --check build145-inventory-replay-guard.js
       - name: Build072 core integration anchors
         run: node tests/build145-build072-core-integration.mjs
-      - name: Generate and syntax-check Build072 integrated core
-        run: node tests/build145-build072-generated-core.mjs
       - name: Stale device replay regression
         run: node tests/build145-inventory-replay-guard.mjs
       - name: Cloud118 stale250 dirty-queue fresh-Receiving simulation
