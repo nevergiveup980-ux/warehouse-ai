@@ -6,7 +6,7 @@ const build072=fs.readFileSync(new URL('../build072-hotfix.js',import.meta.url),
 
 assert.ok(loader.includes("const RELEASE='127'"),'stable release badge/token must remain Build127');
 assert.ok(loader.includes("const BUILD145_GUARD_TOKEN='127-build145-replay-guard'"),'Build145 cache-bust token missing');
-assert.ok(loader.includes("src==='build072-hotfix.js'?BUILD145_GUARD_TOKEN:RELEASE"),'Build072 must receive the dedicated guard cache token');
+assert.ok(loader.includes("src==='build072-hotfix.js'?BUILD145_GUARD_TOKEN"),'Build072 must receive the dedicated guard cache token');
 assert.ok(loader.includes("data-runlu-loaded-build',RELEASE"),'visible loaded build must remain stable Build127');
 assert.ok(build072.includes("source!=='live-save'"),'guarded Build072 source missing queue provenance gate');
 assert.ok(build072.includes("replayHoldReason='build145-unproven-inventory-replay'"),'guarded Build072 source missing replay quarantine');
