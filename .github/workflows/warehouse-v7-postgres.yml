@@ -43,3 +43,5 @@ jobs:
         run: python3 tests/v7-db/concurrency_same_uuid.py
       - name: Same stock version real concurrency attack
         run: python3 tests/v7-db/concurrency_same_stock.py
+      - name: Same roll version real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_roll.py
