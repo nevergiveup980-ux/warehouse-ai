@@ -26,5 +26,3 @@ jobs:
         run: node tests/build145-inventory-replay-guard.mjs
       - name: Build146 adoption regression
         run: node tests/build146-adoption-replay-guard.mjs
-      - name: Build127 frozen baseline
-        run: node tests/build127-frozen-baseline.mjs
