@@ -14,7 +14,17 @@ language plpgsql security invoker as $$
 declare c warehouse_v7.command; fp text;
 begin
  fp:=warehouse_v7.canonical_fingerprint(coalesce(p_payload,'{}'::jsonb));
- select * into c from warehouse_v7.command where tenant_id=p_tenant and id=p_command;
+ -- First writer creates the command. Concurrent retries never fail on the PK;
+ -- they converge on the same row, which is then locked before validation.
+ insert into warehouse_v7.command(tenant_id,id,command_type,entity_type,entity_id,expected_version,
+   payload,payload_fingerprint,actor_id,device_id)
+ values(p_tenant,p_command,p_type,p_entity_type,p_entity,p_expected,coalesce(p_payload,'{}'::jsonb),
+   fp,p_actor,p_device)
+ on conflict (tenant_id,id) do nothing;
+
+ select * into c from warehouse_v7.command
+ where tenant_id=p_tenant and id=p_command
+ for update;
  if found then
    if c.payload_fingerprint<>fp or c.command_type<>p_type or c.entity_type<>p_entity_type
       or c.entity_id is distinct from p_entity then
@@ -22,11 +32,7 @@ begin
    end if;
    return c;
  end if;
- insert into warehouse_v7.command(tenant_id,id,command_type,entity_type,entity_id,expected_version,
-   payload,payload_fingerprint,actor_id,device_id)
- values(p_tenant,p_command,p_type,p_entity_type,p_entity,p_expected,coalesce(p_payload,'{}'::jsonb),
-   fp,p_actor,p_device) returning * into c;
- return c;
+ raise exception using errcode='P0002',message='COMMAND_NOT_FOUND_AFTER_UPSERT';
 end $$;
 
 create or replace function warehouse_v7.commit_command(
