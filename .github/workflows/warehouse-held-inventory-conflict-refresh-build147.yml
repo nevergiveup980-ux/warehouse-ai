@@ -1,0 +1,32 @@
+name: Warehouse Held Inventory Conflict Refresh Build147
+
+on:
+  push:
+    branches:
+      - build147-conflict-isolated-held-inventory-refresh
+  pull_request:
+    paths:
+      - 'build147-held-inventory-conflict-refresh.js'
+      - 'tests/build147-held-inventory-conflict-refresh.mjs'
+      - 'build072-hotfix.js'
+      - 'build090-conflict-isolated-refresh.js'
+      - '.github/workflows/warehouse-held-inventory-conflict-refresh-build147.yml'
+
+jobs:
+  build147-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build147 syntax
+        run: node --check build147-held-inventory-conflict-refresh.js
+      - name: Build147 held Inventory conflict regression
+        run: node tests/build147-held-inventory-conflict-refresh.mjs
+      - name: Build145 stale replay regression
+        run: node tests/build145-inventory-replay-guard.mjs
+      - name: Build146 adoption replay regression
+        run: node tests/build146-adoption-replay-guard.mjs
+      - name: Build127 frozen baseline regression
+        run: node tests/build127-carpet-receiving-guard-authority.mjs
