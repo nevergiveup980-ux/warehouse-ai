@@ -18,6 +18,17 @@ begin
  if not found then perform warehouse_v7.reject_command(p_tenant,p_command,'INVALID_LOCATION');
  return jsonb_build_object('status','rejected','code','INVALID_LOCATION'); end if;
 
+ -- Lock the stock aggregate before shipment/return totals are evaluated.
+ -- This serializes competing returns for the same stock item so a second
+ -- return cannot validate against a stale already-returned total.
+ select * into s from warehouse_v7.stock_item where tenant_id=p_tenant and id=p_stock_item for update;
+ if not found then perform warehouse_v7.reject_command(p_tenant,p_command,'STOCK_NOT_FOUND');
+ return jsonb_build_object('status','rejected','code','STOCK_NOT_FOUND'); end if;
+ if s.unit<>p_unit then perform warehouse_v7.reject_command(p_tenant,p_command,'UNIT_MISMATCH');
+ return jsonb_build_object('status','rejected','code','UNIT_MISMATCH'); end if;
+ if s.version<>p_expected_version then perform warehouse_v7.reject_command(p_tenant,p_command,'STALE_VERSION');
+ return jsonb_build_object('status','rejected','code','STALE_VERSION'); end if;
+
  select coalesce(sum(quantity),0) into shipped from warehouse_v7.inventory_movement
  where tenant_id=p_tenant and command_id=p_original_ship_command and stock_item_id=p_stock_item and movement_type='SHIP';
  if shipped=0 then perform warehouse_v7.reject_command(p_tenant,p_command,'ORIGINAL_SHIPMENT_NOT_FOUND');
@@ -30,14 +41,6 @@ begin
  if returned+p_quantity>shipped then perform warehouse_v7.reject_command(p_tenant,p_command,'RETURN_EXCEEDS_SHIPPED',
  jsonb_build_object('shipped',shipped,'already_returned',returned));
  return jsonb_build_object('status','rejected','code','RETURN_EXCEEDS_SHIPPED'); end if;
-
- select * into s from warehouse_v7.stock_item where tenant_id=p_tenant and id=p_stock_item for update;
- if not found then perform warehouse_v7.reject_command(p_tenant,p_command,'STOCK_NOT_FOUND');
- return jsonb_build_object('status','rejected','code','STOCK_NOT_FOUND'); end if;
- if s.unit<>p_unit then perform warehouse_v7.reject_command(p_tenant,p_command,'UNIT_MISMATCH');
- return jsonb_build_object('status','rejected','code','UNIT_MISMATCH'); end if;
- if s.version<>p_expected_version then perform warehouse_v7.reject_command(p_tenant,p_command,'STALE_VERSION');
- return jsonb_build_object('status','rejected','code','STALE_VERSION'); end if;
 
  update warehouse_v7.stock_item set quantity=quantity+p_quantity,location_id=p_to_location,
  lifecycle='active',version=version+1 where tenant_id=p_tenant and id=p_stock_item;
