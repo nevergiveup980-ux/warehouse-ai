@@ -11,6 +11,7 @@ jobs:
         with: {node-version: '22'}
       - run: node tests/v7-foundation-schema.mjs
       - run: node tests/v7-architecture-contracts.mjs
+      - run: node tests/v7-schema-2.mjs
       - name: Ensure V7 cannot touch V6 sync/cache architecture
         run: |
           ! grep -R --include="*.js" --include="*.ts" --include="*.sql" "runlu_cloud_master_offline_queue_v680\|warehouse_apply_mutation\|localStorage" v7
