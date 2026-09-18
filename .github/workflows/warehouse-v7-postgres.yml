@@ -45,3 +45,5 @@ jobs:
         run: python3 tests/v7-db/concurrency_same_stock.py
       - name: Same roll version real concurrency attack
         run: python3 tests/v7-db/concurrency_same_roll.py
+      - name: Concurrent over-return attack
+        run: python3 tests/v7-db/concurrency_over_return.py
