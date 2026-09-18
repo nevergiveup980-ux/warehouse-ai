@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const loader=fs.readFileSync(new URL('../release-loader.js',import.meta.url),'utf8');
+const b147=fs.readFileSync(new URL('../build147-held-inventory-conflict-refresh.js',import.meta.url),'utf8');
+assert.match(loader,/const RELEASE='127'/,'stable badge must remain Build127');
+assert.match(loader,/BUILD147_CONFLICT_REFRESH_TOKEN='127-build147-held-inventory-conflict-refresh'/,'Build147 needs dedicated cache token');
+assert.match(loader,/build147-held-inventory-conflict-refresh\.js/,'Build147 must be loaded');
+assert.match(loader,/src==='build147-held-inventory-conflict-refresh\.js'\?BUILD147_CONFLICT_REFRESH_TOKEN/,'Build147 must use cache-busting token');
+assert.match(b147,/heldQueueIds/);
+assert.match(b147,/source==='live-save'/);
+assert.match(b147,/build147-untrusted-inventory-conflict/);
+console.log('Build147 loader activation PASS');

@@ -1,0 +1,28 @@
+name: Warehouse Build147 Loader Activation
+on:
+  push:
+    branches: [build147-loader-activation]
+  pull_request:
+    paths:
+      - 'release-loader.js'
+      - 'build147-held-inventory-conflict-refresh.js'
+      - 'tests/build147-loader-activation.mjs'
+      - '.github/workflows/warehouse-build147-loader-activation.yml'
+jobs:
+  loader-activation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: node --check release-loader.js && node --check build147-held-inventory-conflict-refresh.js
+      - name: Build147 loader activation
+        run: node tests/build147-loader-activation.mjs
+      - name: Build147 regression
+        run: node tests/build147-held-inventory-conflict-refresh.mjs
+      - name: Build145 replay regression
+        run: node tests/build145-inventory-replay-guard.mjs
+      - name: Build146 adoption regression
+        run: node tests/build146-adoption-replay-guard.mjs
