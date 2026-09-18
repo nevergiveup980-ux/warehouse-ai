@@ -68,7 +68,8 @@ create table warehouse_v7.inventory_movement (
  foreign key(tenant_id,stock_item_id) references warehouse_v7.stock_item(tenant_id,id) on delete restrict,
  foreign key(tenant_id,carpet_roll_id) references warehouse_v7.carpet_roll(tenant_id,id) on delete restrict,
  foreign key(tenant_id,from_location_id) references warehouse_v7.location(tenant_id,id) on delete restrict,
- foreign key(tenant_id,to_location_id) references warehouse_v7.location(tenant_id,id) on delete restrict
+ foreign key(tenant_id,to_location_id) references warehouse_v7.location(tenant_id,id) on delete restrict,
+ unique(tenant_id,command_id,movement_type,stock_item_id,carpet_roll_id)
 );
 
 create table warehouse_v7.migration_staging (
