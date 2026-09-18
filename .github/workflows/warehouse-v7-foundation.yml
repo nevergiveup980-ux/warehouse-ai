@@ -1,0 +1,15 @@
+name: Warehouse V7 Foundation
+on:
+  push: {branches: [warehouse-v7-foundation]}
+  pull_request: {paths: ['v7/**','tests/v7-*.mjs','.github/workflows/warehouse-v7-foundation.yml']}
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node tests/v7-foundation-schema.mjs
+      - name: Ensure V7 cannot touch V6 sync/cache architecture
+        run: |
+          ! grep -R "runlu_cloud_master_offline_queue_v680\|warehouse_apply_mutation\|localStorage" v7
