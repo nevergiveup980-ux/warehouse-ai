@@ -17,6 +17,7 @@ jobs:
       - run: node tests/v7-receiving-engine.mjs
       - run: node tests/v7-transfer-engine.mjs
       - run: node tests/v7-shipping-engine.mjs
+      - run: node tests/v7-return-engine.mjs
       - name: Ensure V7 cannot touch V6 sync/cache architecture
         run: |
           ! grep -R --include="*.js" --include="*.ts" --include="*.sql" "runlu_cloud_master_offline_queue_v680\|warehouse_apply_mutation\|localStorage" v7
