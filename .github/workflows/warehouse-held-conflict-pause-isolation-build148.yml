@@ -1,0 +1,30 @@
+name: Warehouse Held Conflict Pause Isolation Build148
+on:
+  push:
+    branches: [build148-held-conflict-pause-isolation]
+  pull_request:
+    paths:
+      - 'build148-held-conflict-pause-isolation.js'
+      - 'build147-held-inventory-conflict-refresh.js'
+      - 'release-loader.js'
+      - 'tests/build148-held-conflict-pause-isolation.mjs'
+      - '.github/workflows/warehouse-held-conflict-pause-isolation-build148.yml'
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Syntax
+        run: node --check build148-held-conflict-pause-isolation.js && node --check release-loader.js
+      - name: Build148 mixed 82-conflict regression
+        run: node tests/build148-held-conflict-pause-isolation.mjs
+      - name: Build147 regression
+        run: node tests/build147-held-inventory-conflict-refresh.mjs
+      - name: Build147 loader activation
+        run: node tests/build147-loader-activation.mjs
+      - name: Build145 replay guard
+        run: node tests/build145-inventory-replay-guard.mjs
+      - name: Build146 adoption guard
+        run: node tests/build146-adoption-replay-guard.mjs
