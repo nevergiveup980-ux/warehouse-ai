@@ -1,5 +1,7 @@
 name: Warehouse V7 Disposable Postgres
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [warehouse-v7-foundation]
     paths: ['v7/**','tests/v7-db/**','.github/workflows/warehouse-v7-postgres.yml']
