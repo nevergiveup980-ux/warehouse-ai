@@ -1,0 +1,17 @@
+name: Warehouse Emergency Work Save Build149
+on:
+  push:
+    branches: [build149-emergency-work-save]
+  pull_request:
+    paths: ['build149-emergency-work-save.js','release-loader.js','tests/build149-emergency-work-save.mjs','.github/workflows/warehouse-emergency-work-save-build149.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --check build149-emergency-work-save.js && node --check release-loader.js
+      - run: node tests/build149-emergency-work-save.mjs
+      - run: node tests/build145-inventory-replay-guard.mjs
+      - run: node tests/build147-held-inventory-conflict-refresh.mjs
