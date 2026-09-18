@@ -1,0 +1,5 @@
+RUNLU Warehouse OS production runtime target
+Version: 6.12.32
+Build: 127
+Stable snapshot: fcad5dcb32ba2896118d4fa8a2496e99be36817a
+Rollback scope: code/runtime only; preserve all business data.

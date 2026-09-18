@@ -1,0 +1,1 @@
+Production rollback candidate: V6.12.32 Build127. Verify on iPhone after deployment before resuming normal warehouse entry.

@@ -1,0 +1,1 @@
+Missing Sep 16 work remains a separate recovery task. Do not re-enter missing operations and do not clear Safari/site data until local pending-queue recovery is exhausted. Rolling back runtime code does not itself prove that missing unsynchronized records are lost.

@@ -1,0 +1,7 @@
+Verification checklist for V6.12.32 Build127 rollback:
+- release-loader RELEASE must be 127.
+- version.json must report 6.12.32 / 127 / stable.
+- build082 fallback must report 6.12.32 / 127.
+- qrcode bootstrap remains cache-busted.
+- no Supabase mutation is part of this PR.
+- no localStorage cleanup is part of this PR.
