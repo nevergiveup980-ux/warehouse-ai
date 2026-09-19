@@ -2,6 +2,8 @@ name: Warehouse V7 Incremental Live Shadow
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
   push:
     branches: [warehouse-v7-foundation]
     paths:
@@ -10,7 +12,7 @@ on:
       - 'v7/*-engine-1.0.sql'
       - '.github/workflows/warehouse-v7-incremental-shadow.yml'
 
-# Watermark advances only after a full disposable shadow PASS and source revalidation (bridge v8 shared-feed revalidation).
+# Watermark advances only after a full disposable shadow PASS and source revalidation. Scheduled runs activate when this workflow exists on the default branch.
 permissions:
   contents: read
   id-token: write
