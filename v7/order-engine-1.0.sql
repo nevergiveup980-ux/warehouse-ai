@@ -45,6 +45,7 @@ create table if not exists warehouse_v7.order_source_evidence (
     'deferred'
   )),
   source_fingerprint text not null,
+  exception_reason text,
   source_payload jsonb not null default '{}',
   source_updated_at timestamptz,
   staged_at timestamptz not null default now(),
@@ -58,6 +59,28 @@ create table if not exists warehouse_v7.order_source_evidence (
 create index if not exists order_source_evidence_recovery_idx
   on warehouse_v7.order_source_evidence(tenant_id,recovery_key)
   where recovery_key is not null;
+
+create or replace function warehouse_v7.reject_order_source_evidence_mutation()
+returns trigger language plpgsql security invoker as $
+begin
+  raise exception using errcode='55000',message='ORDER_SOURCE_EVIDENCE_APPEND_ONLY';
+end $;
+
+drop trigger if exists order_source_evidence_append_only on warehouse_v7.order_source_evidence;
+create trigger order_source_evidence_append_only
+before update or delete on warehouse_v7.order_source_evidence
+for each row execute function warehouse_v7.reject_order_source_evidence_mutation();
+
+create or replace function warehouse_v7.reject_order_record_delete()
+returns trigger language plpgsql security invoker as $
+begin
+  raise exception using errcode='55000',message='ORDER_RECORD_DELETE_FORBIDDEN_USE_ARCHIVE';
+end $;
+
+drop trigger if exists order_record_no_delete on warehouse_v7.order_record;
+create trigger order_record_no_delete
+before delete on warehouse_v7.order_record
+for each row execute function warehouse_v7.reject_order_record_delete();
 
 create or replace function warehouse_v7.transition_order(
   p_tenant uuid,
@@ -126,6 +149,11 @@ begin
     return jsonb_build_object(
       'status','rejected','code','STALE_VERSION','current_version',o.version
     );
+  end if;
+
+  if p_to_lifecycle=o.lifecycle and p_to_fulfillment=o.fulfillment_status then
+    perform warehouse_v7.reject_command(p_tenant,p_command,'ORDER_NO_STATE_CHANGE');
+    return jsonb_build_object('status','rejected','code','ORDER_NO_STATE_CHANGE');
   end if;
 
   if p_to_lifecycle<>o.lifecycle and not (
