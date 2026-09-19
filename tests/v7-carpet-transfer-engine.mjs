@@ -5,7 +5,7 @@ for(const x of [
   'CARPET_TRANSFERRED','CARPET_PIECE_OUT','CARPET_PIECE_IN',
   'CARPET_PIECE_TRANSFERRED_OUT','CARPET_PIECE_TRANSFERRED_IN',
   'PIECE_TRANSFER_REQUIRES_PARTIAL_LENGTH','CHILD_ROLL_ALREADY_EXISTS',
-  'measure_status','TM','source_roll'
+  'measure_status','TM','source_roll','REMNANT_WHOLE_ROLL_PREFERRED'
 ]) assert.ok(s.toLowerCase().includes(x.toLowerCase()),x);
 assert.equal((s.match(/insert into warehouse_v7\.inventory_movement/g)||[]).length,3);
 assert.equal((s.match(/insert into warehouse_v7\.event/g)||[]).length,3);
