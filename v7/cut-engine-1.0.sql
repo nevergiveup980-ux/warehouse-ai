@@ -5,6 +5,7 @@ create or replace function warehouse_v7.cut_carpet_roll(
 returns jsonb language plpgsql security invoker as $$
 declare c warehouse_v7.command; r warehouse_v7.carpet_roll; new_remaining bigint; out_result jsonb;
 begin
+ perform warehouse_v7.assert_command_identity(p_tenant,p_actor);
  if p_deduct_sixteenths<=0 then raise exception using errcode='22023',message='INVALID_CUT_LENGTH'; end if;
 
  c:=warehouse_v7.begin_command(p_tenant,p_command,'CUT','carpet_roll',p_roll,p_expected_version,
