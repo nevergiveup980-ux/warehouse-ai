@@ -20,6 +20,7 @@ jobs:
       - run: node tests/v7-return-engine.mjs
       - run: node tests/v7-carpet-transfer-engine.mjs
       - run: node tests/v7-carpet-return-engine.mjs
+      - run: node tests/v7-incremental-shadow-bridge.mjs
       - run: node tests/v7-core-lifecycle-attack.mjs
       - run: node tests/v7-snapshot-transformer.mjs
       - run: node tests/v7-snapshot-envelope.mjs
