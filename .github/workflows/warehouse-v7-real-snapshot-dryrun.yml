@@ -179,6 +179,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
 
 
       - name: Replay real V6 CUT history through V7 shadow engine
