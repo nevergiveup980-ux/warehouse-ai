@@ -221,7 +221,8 @@ returns uuid language plpgsql security invoker set search_path='' as $$
 declare
  st warehouse_v7.migration_staging;
  rid uuid; pid uuid; lid uuid; cmd warehouse_v7.command;
- product_legacy text; location_code text; roll_no text; status_text text;
+ product_legacy text; location_code text; roll_no text; physical_key_text text;
+ manufacturer_roll_text text; source_roll_text text; status_text text;
  original_text text; remaining_text text; original_units bigint; remaining_units bigint;
 begin
  perform warehouse_v7.assert_admin_identity(p_tenant,p_actor);
@@ -243,6 +244,9 @@ begin
  product_legacy:=nullif(btrim(st.source_payload->>'product_legacy_record_id'),'');
  location_code:=nullif(btrim(st.source_payload->>'location_code'),'');
  roll_no:=nullif(btrim(st.source_payload->>'roll_number'),'');
+ physical_key_text:=nullif(btrim(st.source_payload->>'physical_key'),'');
+ manufacturer_roll_text:=nullif(btrim(st.source_payload->>'manufacturer_roll'),'');
+ source_roll_text:=nullif(btrim(st.source_payload->>'source_roll'),'');
  status_text:=upper(nullif(btrim(st.source_payload->>'measure_status'),''));
  original_text:=nullif(btrim(st.source_payload->>'original_sixteenths'),'');
  remaining_text:=nullif(btrim(st.source_payload->>'remaining_sixteenths'),'');
@@ -250,6 +254,9 @@ begin
  if product_legacy is null or location_code is null or roll_no is null or status_text is null
     or original_text is null or remaining_text is null then
   raise exception using errcode='22023',message='MIGRATION_CARPET_REQUIRED_FIELDS';
+ end if;
+ if physical_key_text is null then
+  raise exception using errcode='22023',message='MIGRATION_CARPET_PHYSICAL_KEY_REQUIRED';
  end if;
  if original_text !~ '^[0-9]+$' or remaining_text !~ '^[0-9]+$' then
   raise exception using errcode='22023',message='MIGRATION_CARPET_MEASURE_INVALID';
@@ -276,22 +283,27 @@ begin
  if lid is null then raise exception using errcode='23503',message='MIGRATION_LOCATION_LINK_NOT_FOUND'; end if;
 
  if exists(select 1 from warehouse_v7.carpet_roll r
-           where r.tenant_id=p_tenant and (r.legacy_record_id=st.source_record_id or r.roll_number=roll_no)) then
+           where r.tenant_id=p_tenant and
+             (r.legacy_record_id=st.source_record_id or r.physical_key=physical_key_text)) then
   raise exception using errcode='23505',message='MIGRATION_CANONICAL_CONFLICT';
  end if;
 
  insert into warehouse_v7.carpet_roll(
-   tenant_id,roll_number,product_id,location_id,original_sixteenths,remaining_sixteenths,
+   tenant_id,roll_number,physical_key,manufacturer_roll,source_roll,
+   product_id,location_id,original_sixteenths,remaining_sixteenths,
    measure_status,version,lifecycle,legacy_record_id)
- values(p_tenant,roll_no,pid,lid,original_units,remaining_units,status_text,1,'active',st.source_record_id)
+ values(p_tenant,roll_no,physical_key_text,manufacturer_roll_text,source_roll_text,
+        pid,lid,original_units,remaining_units,status_text,1,'active',st.source_record_id)
  returning id into rid;
 
  cmd:=warehouse_v7.begin_command(
    p_tenant,st.id,'MIGRATION_OPENING_CARPET','carpet_roll',rid,0,
    jsonb_build_object('source_dataset',st.source_dataset,'source_record_id',st.source_record_id,
-                      'roll_number',roll_no,'original_sixteenths',original_units,
-                      'remaining_sixteenths',remaining_units,'measure_status',status_text,
-                      'location_code',location_code,'product_legacy_record_id',product_legacy),
+                      'roll_number',roll_no,'physical_key',physical_key_text,
+                      'manufacturer_roll',manufacturer_roll_text,'source_roll',source_roll_text,
+                      'original_sixteenths',original_units,'remaining_sixteenths',remaining_units,
+                      'measure_status',status_text,'location_code',location_code,
+                      'product_legacy_record_id',product_legacy),
    p_actor,'MIGRATION');
 
  insert into warehouse_v7.inventory_movement(
@@ -302,12 +314,14 @@ begin
    tenant_id,command_id,entity_type,entity_id,event_type,entity_version,payload)
  values(p_tenant,st.id,'carpet_roll',rid,'MIGRATED_CARPET_ROLL',1,
    jsonb_build_object('source_dataset',st.source_dataset,'source_record_id',st.source_record_id,
-                      'roll_number',roll_no,'original_sixteenths',original_units,
-                      'remaining_sixteenths',remaining_units,'measure_status',status_text,
-                      'location_id',lid,'product_id',pid));
+                      'roll_number',roll_no,'physical_key',physical_key_text,
+                      'manufacturer_roll',manufacturer_roll_text,'source_roll',source_roll_text,
+                      'original_sixteenths',original_units,'remaining_sixteenths',remaining_units,
+                      'measure_status',status_text,'location_id',lid,'product_id',pid));
 
  perform warehouse_v7.commit_command(
    p_tenant,st.id,jsonb_build_object('status','committed','carpet_roll_id',rid,
+                                     'physical_key',physical_key_text,
                                      'remaining_sixteenths',remaining_units,'measure_status',status_text));
 
  update warehouse_v7.migration_staging
