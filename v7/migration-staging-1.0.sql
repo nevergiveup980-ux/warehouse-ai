@@ -351,7 +351,7 @@ begin
  if st.classification<>'valid' then
   raise exception using errcode='22023',message='MIGRATION_NOT_VALID';
  end if;
- if st.source_dataset<>'runlu_carpet_inventory_v52' then
+ if st.source_dataset not in ('runlu_carpet_inventory_v52','derived_carpet_roll_v6') then
   raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_CARPET';
  end if;
 
