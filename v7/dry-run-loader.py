@@ -41,7 +41,9 @@ def ensure_admin(tenant, actor):
     run(f"insert into warehouse_v7.tenant_member(tenant_id,user_id,role,lifecycle) values({q(tenant)}::uuid,{q(actor)}::uuid,'admin','active') on conflict(tenant_id,user_id) do update set role='admin',lifecycle='active';")
 
 def stage_legacy(tenant, item):
-    r=run(f"select warehouse_v7.stage_legacy_record({q(tenant)}::uuid,{q(item['dataset'])},{q(item['record_id'])},{j(item.get('transformed') or {})});")
+    source=item.get("source_payload") or {}
+    normalized=item.get("transformed") or {}
+    r=run(f"select warehouse_v7.stage_legacy_record({q(tenant)}::uuid,{q(item['dataset'])},{q(item['record_id'])},{j(source)},{j(normalized)});")
     return value(r)
 
 def stage_derived_carpet_product(tenant, item):
