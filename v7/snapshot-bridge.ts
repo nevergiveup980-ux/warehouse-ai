@@ -6,11 +6,17 @@ const EXPECTED_REPOSITORY = "nevergiveup980-ux/warehouse-ai";
 const ALLOWED_WORKFLOW_REFS = new Map([
   [
     "refs/heads/warehouse-v7-foundation",
-    "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/warehouse-v7-foundation",
+    [
+      "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/warehouse-v7-foundation",
+      "/.github/workflows/warehouse-v7-order-shadow.yml@refs/heads/warehouse-v7-foundation",
+    ],
   ],
   [
     "refs/heads/main",
-    "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/main",
+    [
+      "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/main",
+      "/.github/workflows/warehouse-v7-order-shadow.yml@refs/heads/main",
+    ],
   ],
 ]);
 const EXPECTED_AUDIENCE = "warehouse-v7-snapshot";
@@ -51,13 +57,13 @@ Deno.serve(async (req: Request) => {
     });
     if (payload.repository !== EXPECTED_REPOSITORY) return deny(403, "REPOSITORY_DENIED");
     if (payload.actor !== "nevergiveup980-ux") return deny(403, "ACTOR_DENIED");
-    const expectedWorkflowSuffix = typeof payload.ref === "string"
+    const expectedWorkflowSuffixes = typeof payload.ref === "string"
       ? ALLOWED_WORKFLOW_REFS.get(payload.ref)
       : undefined;
-    if (!expectedWorkflowSuffix) return deny(403, "REF_DENIED");
+    if (!expectedWorkflowSuffixes) return deny(403, "REF_DENIED");
     if (
       typeof payload.workflow_ref !== "string" ||
-      !payload.workflow_ref.endsWith(expectedWorkflowSuffix)
+      !expectedWorkflowSuffixes.some((suffix) => payload.workflow_ref.endsWith(suffix))
     ) return deny(403, "WORKFLOW_DENIED");
 
     const dbUrl = Deno.env.get("SUPABASE_DB_URL");
