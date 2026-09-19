@@ -1,0 +1,105 @@
+name: Warehouse V7 Disposable Postgres
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [warehouse-v7-foundation]
+    paths: ['v7/**','tests/v7-db/**','.github/workflows/warehouse-v7-postgres.yml']
+  workflow_dispatch:
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install V7 database
+        run: |
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+      - name: Migration quarantine attack
+        run: python3 tests/v7-db/migration_staging_attack.py
+      - name: Migration classification isolation attack
+        run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/migration_classification_attack.sql
+      - name: Migration source evidence immutability attack
+        run: python3 tests/v7-db/migration_source_immutability.py
+      - name: Derived Carpet Product staging attack
+        run: python3 tests/v7-db/migration_derived_carpet_product.py
+      - name: Valid-only Product import attack
+        run: python3 tests/v7-db/migration_valid_product_import.py
+      - name: Valid-only Location import attack
+        run: python3 tests/v7-db/migration_valid_location_import.py
+      - name: Valid-only Stock Item import attack
+        run: python3 tests/v7-db/migration_valid_stock_import.py
+      - name: Valid-only Carpet Roll import attack
+        run: python3 tests/v7-db/migration_valid_carpet_import.py
+      - name: Disposable snapshot dry-run loader
+        run: |
+          node v7/snapshot-manifest-cli.mjs tests/v7-db/fixtures/snapshot-small.json > /tmp/v7-manifest.json
+          python3 v7/dry-run-loader.py /tmp/v7-manifest.json --report /tmp/v7-dry-run-1.json --tenant 11111111-1111-4111-8111-111111111111 --actor 22222222-2222-4222-8222-222222222222
+          python3 v7/dry-run-loader.py /tmp/v7-manifest.json --report /tmp/v7-dry-run-2.json --tenant 11111111-1111-4111-8111-111111111111 --actor 22222222-2222-4222-8222-222222222222
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-dry-run-1.json'))
+          b=json.load(open('/tmp/v7-dry-run-2.json'))
+          assert a['reconciliation']['pass'] and b['reconciliation']['pass']
+          assert a['reconciliation']['actual']==b['reconciliation']['actual']
+          print('V7 disposable snapshot dry-run + replay: PASS')
+          PY
+      - name: Upload dry-run reconciliation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-disposable-dry-run-report
+          path: |
+            /tmp/v7-manifest.json
+            /tmp/v7-dry-run-1.json
+            /tmp/v7-dry-run-2.json
+          retention-days: 7
+      - name: Database smoke and integrity tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
+      - name: Same UUID real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_uuid.py
+      - name: Same stock version real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_stock.py
+      - name: Same roll version real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_roll.py
+      - name: Concurrent over-return attack
+        run: python3 tests/v7-db/concurrency_over_return.py
+      - name: Append-only ledger attack
+        run: python3 tests/v7-db/append_only_ledger.py
+      - name: Movement causal uniqueness attack
+        run: python3 tests/v7-db/movement_causal_uniqueness.py
+      - name: Cross-tenant RLS attack
+        run: python3 tests/v7-db/cross_tenant_rls.py
+      - name: Cross-tenant WRITE attack
+        run: python3 tests/v7-db/cross_tenant_write.py
+      - name: Command identity spoof attack
+        run: python3 tests/v7-db/command_identity_spoof.py
+      - name: Lifecycle auth pre-mutation attack
+        run: python3 tests/v7-db/lifecycle_auth_pre_mutation.py
+      - name: Admin role boundary attack
+        run: python3 tests/v7-db/admin_role_boundary.py
