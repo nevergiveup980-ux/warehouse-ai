@@ -29,13 +29,14 @@ create table warehouse_v7.stock_item (
 
 create table warehouse_v7.carpet_roll (
  tenant_id uuid not null, id uuid not null default gen_random_uuid(), roll_number text not null,
+ physical_key text not null default ('v7:'||gen_random_uuid()::text), manufacturer_roll text, source_roll text,
  product_id uuid not null, location_id uuid,
  original_sixteenths bigint not null check(original_sixteenths>=0),
  remaining_sixteenths bigint not null check(remaining_sixteenths>=0 and remaining_sixteenths<=original_sixteenths),
  measure_status text not null check(measure_status in ('FULL','CAL','TM')),
  version bigint not null default 1 check(version>0), lifecycle text not null default 'active',
  legacy_record_id text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
- primary key(tenant_id,id), unique(tenant_id,roll_number), unique(tenant_id,legacy_record_id),
+ primary key(tenant_id,id), unique(tenant_id,physical_key), unique(tenant_id,legacy_record_id),
  foreign key(tenant_id,product_id) references warehouse_v7.product(tenant_id,id) on delete restrict,
  foreign key(tenant_id,location_id) references warehouse_v7.location(tenant_id,id) on delete restrict
 );
