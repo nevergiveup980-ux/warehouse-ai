@@ -1,10 +1,8 @@
 -- V7 Command Engine 1.0. Engineering draft; do not apply to production.
-create extension if not exists pgcrypto;
-
 create or replace function warehouse_v7.canonical_fingerprint(p_payload jsonb)
-returns text language sql immutable strict as $$
-  select encode(digest(p_payload::text,'sha256'),'hex')
-$$;
+returns text language sql immutable strict set search_path='' as $
+  select pg_catalog.md5(p_payload::text)
+$;
 
 create or replace function warehouse_v7.begin_command(
  p_tenant uuid,p_command uuid,p_type text,p_entity_type text,p_entity uuid,
@@ -26,7 +24,8 @@ begin
  where tenant_id=p_tenant and id=p_command
  for update;
  if found then
-   if c.payload_fingerprint<>fp or c.command_type<>p_type or c.entity_type<>p_entity_type
+   if c.payload is distinct from coalesce(p_payload,'{}'::jsonb)
+      or c.payload_fingerprint<>fp or c.command_type<>p_type or c.entity_type<>p_entity_type
       or c.entity_id is distinct from p_entity then
      raise exception using errcode='22023', message='COMMAND_FINGERPRINT_MISMATCH';
    end if;
