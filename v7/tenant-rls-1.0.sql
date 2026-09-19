@@ -34,3 +34,18 @@ alter table warehouse_v7.tenant_member force row level security;
 drop policy if exists own_membership_select on warehouse_v7.tenant_member;
 create policy own_membership_select on warehouse_v7.tenant_member for select
  using(user_id=warehouse_v7.current_user_id());
+
+-- Write policies: active tenant members may mutate only rows in their own tenant.
+-- Ledger tables remain append-only by trigger; lifecycle engines add finer role checks later.
+do $$
+declare t text;
+begin
+ foreach t in array array['location','product','stock_item','carpet_roll','command','event','inventory_movement','migration_staging'] loop
+   execute format('drop policy if exists tenant_member_insert on warehouse_v7.%I',t);
+   execute format('drop policy if exists tenant_member_update on warehouse_v7.%I',t);
+   execute format('drop policy if exists tenant_member_delete on warehouse_v7.%I',t);
+   execute format('create policy tenant_member_insert on warehouse_v7.%I for insert with check (warehouse_v7.is_tenant_member(tenant_id))',t);
+   execute format('create policy tenant_member_update on warehouse_v7.%I for update using (warehouse_v7.is_tenant_member(tenant_id)) with check (warehouse_v7.is_tenant_member(tenant_id))',t);
+   execute format('create policy tenant_member_delete on warehouse_v7.%I for delete using (warehouse_v7.is_tenant_member(tenant_id))',t);
+ end loop;
+end $$;
