@@ -51,3 +51,5 @@ jobs:
         run: python3 tests/v7-db/concurrency_over_return.py
       - name: Append-only ledger attack
         run: python3 tests/v7-db/append_only_ledger.py
+      - name: Cross-tenant RLS attack
+        run: python3 tests/v7-db/cross_tenant_rls.py
