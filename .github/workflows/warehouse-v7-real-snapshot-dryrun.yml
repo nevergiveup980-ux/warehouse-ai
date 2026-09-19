@@ -234,7 +234,9 @@ jobs:
           python3 v7/carpet-lifecycle-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
             --report /tmp/v7-carpet-lifecycle-shadow-report.json \
             --tenant 22222222-3333-4444-8555-666666666666 \
-            --actor 77777777-8888-4999-8aaa-bbbbbbbbbbbb
+            --actor 77777777-8888-4999-8aaa-bbbbbbbbbbbb \
+            --expected-transfer-count 4 \
+            --expected-return-count 4
 
       - name: Run real V6 snapshot through disposable V7 migration
         run: |
