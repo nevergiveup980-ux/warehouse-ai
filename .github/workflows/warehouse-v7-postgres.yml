@@ -40,6 +40,9 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+      - name: Migration quarantine attack
+        run: python3 tests/v7-db/migration_staging_attack.py
       - name: Database smoke and integrity tests
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
       - name: Same UUID real concurrency attack
