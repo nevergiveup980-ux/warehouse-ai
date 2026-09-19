@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
   id-token: write
+concurrency:
+  group: warehouse-v7-real-snapshot-dryrun-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   real-snapshot-dry-run:
