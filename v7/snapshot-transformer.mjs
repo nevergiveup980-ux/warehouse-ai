@@ -44,7 +44,7 @@ export function classifySnapshot(rows){
   const productManifest=products.map(r=>{
     const p=r.payload||{}, base_unit=productBaseUnit(p.coverageUnit);
     const ok=!!key(p.name)&&!!base_unit;
-    return {dataset:r.dataset_key,record_id:r.record_id,classification:ok?'valid':'conflict',
+    return {dataset:r.dataset_key,record_id:r.record_id,source_payload:p,classification:ok?'valid':'conflict',
       reason:ok?'PRODUCT_READY':'PRODUCT_REQUIRED_FIELDS_OR_UNIT',
       transformed:{name:key(p.name),sku:key(p.sku)||null,colour:key(p.color)||null,base_unit,lifecycle:'active'}};
   });
@@ -73,7 +73,7 @@ export function classifySnapshot(rows){
       const k=[key(x.p.masterId),key(x.p.poNumber),x.loc,x.unit,String(x.qty)].join('|');
       if((dupCount.get(k)||0)>1){classification='duplicate';reason='DUPLICATE_BUSINESS_TUPLE_REVIEW';}
     }
-    return {dataset:x.r.dataset_key,record_id:x.r.record_id,classification,reason,
+    return {dataset:x.r.dataset_key,record_id:x.r.record_id,source_payload:x.p,classification,reason,
       transformed:{product_legacy_record_id:key(x.p.masterId),location_code:x.loc||null,quantity:x.qty,unit:x.unit,
         po_number:key(x.p.poNumber)||null,lot_number:key(x.p.lotNumber)||null}};
   });
@@ -92,7 +92,7 @@ export function classifySnapshot(rows){
     const conflict=labels.length>1;
     const name=labels.find(x=>key(x.name))?.name||'';
     return {dataset:'derived_carpet_product_v6',record_id:'CARPET_SOURCE:'+g.source,
-      classification:conflict?'conflict':(name?'valid':'deferred'),
+      source_payload:{source_code:g.source,observed_labels:labels},classification:conflict?'conflict':(name?'valid':'deferred'),
       reason:conflict?'CARPET_SOURCE_LABEL_VARIANT':(name?'DERIVED_PRODUCT_READY':'CARPET_SOURCE_NAME_MISSING'),
       evidence:labels,
       transformed:{source_code:g.source,name,colour:labels[0]?.colour||null,base_unit:'1/16_IN',lifecycle:'active'}};
@@ -124,7 +124,7 @@ export function classifySnapshot(rows){
     if(classification==='valid'&&measure==='FULL'&&remaining!==original){
       classification='conflict';reason='CARPET_FULL_MISMATCH';
     }
-    return {dataset:r.dataset_key,record_id:r.record_id,classification,reason,
+    return {dataset:r.dataset_key,record_id:r.record_id,source_payload:p,classification,reason,
       transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(p.roll),
         physical_key:physical,manufacturer_roll:key(p.manufacturerRoll)||null,source_roll:key(p.sourceRoll)||source||null,
         original_sixteenths:original,remaining_sixteenths:remaining,measure_status:measure}};
@@ -133,7 +133,7 @@ export function classifySnapshot(rows){
   const locationCodes=new Set();
   for(const x of inventoryManifest) if(x.transformed.location_code&&x.transformed.location_code!=='PHYSICAL COUNT REQUIRED') locationCodes.add(x.transformed.location_code);
   for(const x of carpetManifest) if(x.transformed.location_code) locationCodes.add(x.transformed.location_code);
-  const locations=[...locationCodes].sort().map(code=>({dataset:'derived_location_v6',record_id:'LOC:'+code,classification:'valid',reason:'LOCATION_REFERENCE_OBSERVED',transformed:{code,kind:code==='Receiving'?'receiving':'rack',lifecycle:'active'}}));
+  const locations=[...locationCodes].sort().map(code=>({dataset:'derived_location_v6',record_id:'LOC:'+code,source_payload:{observed_code:code},classification:'valid',reason:'LOCATION_REFERENCE_OBSERVED',transformed:{code,kind:code==='Receiving'?'receiving':'rack',lifecycle:'active'}}));
 
   return {products:productManifest,derived_carpet_products:derivedProducts,locations,inventory:inventoryManifest,carpet:carpetManifest,
     summary:{products:counts(productManifest),derived_carpet_products:counts(derivedProducts),locations:counts(locations),inventory:counts(inventoryManifest),carpet:counts(carpetManifest)}};
