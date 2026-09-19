@@ -16,6 +16,24 @@ alter table warehouse_v7.migration_staging
  add constraint migration_staging_classification_check
  check (classification in ('unreviewed','valid','duplicate','orphan','conflict','deferred','imported','rejected'));
 
+create or replace function warehouse_v7.normalize_legacy_unit(p_unit text)
+returns text language sql immutable set search_path='' as $unit$
+ select case lower(btrim(coalesce(p_unit,'')))
+   when 'box' then 'BOX'
+   when 'carton' then 'BOX'
+   when 'piece' then 'EACH'
+   when 'each' then 'EACH'
+   when 'pail' then 'PAIL'
+   when 'bucket' then 'BUCKET'
+   when 'tube' then 'TUBE'
+   when 'roll' then 'ROLL'
+   when 'gal' then 'GAL'
+   when 'gallon' then 'GAL'
+   when '1/16_in' then '1/16_IN'
+   else null
+ end
+$unit$;
+
 create or replace function warehouse_v7.stage_legacy_record(
  p_tenant uuid,p_source_dataset text,p_source_record_id text,p_payload jsonb)
 returns uuid language plpgsql security invoker set search_path='' as $$
@@ -120,7 +138,7 @@ begin
  end if;
 
  pname:=nullif(btrim(st.source_payload->>'name'),'');
- punit:=nullif(btrim(st.source_payload->>'base_unit'),'');
+ punit:=warehouse_v7.normalize_legacy_unit(st.source_payload->>'base_unit');
  plifecycle:=coalesce(nullif(btrim(st.source_payload->>'lifecycle'),''),'active');
  if pname is null or punit is null then
   raise exception using errcode='22023',message='MIGRATION_PRODUCT_REQUIRED_FIELDS';
@@ -213,9 +231,12 @@ begin
  product_legacy:=nullif(btrim(st.source_payload->>'product_legacy_record_id'),'');
  location_code:=nullif(btrim(st.source_payload->>'location_code'),'');
  qty_text:=nullif(btrim(st.source_payload->>'quantity'),'');
- u:=nullif(btrim(st.source_payload->>'unit'),'');
- if product_legacy is null or location_code is null or qty_text is null or u is null then
+ u:=warehouse_v7.normalize_legacy_unit(st.source_payload->>'unit');
+ if product_legacy is null or location_code is null or qty_text is null then
   raise exception using errcode='22023',message='MIGRATION_STOCK_REQUIRED_FIELDS';
+ end if;
+ if u is null then
+  raise exception using errcode='22023',message='MIGRATION_STOCK_UNIT_INVALID';
  end if;
  if qty_text !~ '^[0-9]+([.][0-9]+)?$' then
   raise exception using errcode='22023',message='MIGRATION_STOCK_QUANTITY_INVALID';
