@@ -216,6 +216,15 @@ jobs:
             --tenant dddddddd-dddd-4ddd-8ddd-dddddddddddd \
             --actor eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
 
+
+      - name: Replay real V6 RETURN history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/return-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-return-shadow-report.json \
+            --tenant ffffffff-ffff-4fff-8fff-ffffffffffff \
+            --actor 11111111-2222-4333-8444-555555555555
+
       - name: Run real V6 snapshot through disposable V7 migration
         run: |
           set -euo pipefail
@@ -290,10 +299,11 @@ jobs:
             /tmp/v7-receive-shadow-report.json
             /tmp/v7-shipping-shadow-report.json
             /tmp/v7-transfer-shadow-report.json
+            /tmp/v7-return-shadow-report.json
           if-no-files-found: ignore
           retention-days: 7
 
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
