@@ -142,6 +142,8 @@ function sanitizeRow(row: any) {
       roll: p.roll ?? null,
       returnedChildRoll: p.returnedChildRoll ?? null,
       inventoryMode: p.inventoryMode ?? null,
+      supplier: p.supplier ?? null,
+      po: p.po ?? null,
       impactApplied: p.impactApplied ?? null,
       impactResult: p.impactResult ?? null,
       itemCount: Array.isArray(p.items) ? p.items.length : 0,
