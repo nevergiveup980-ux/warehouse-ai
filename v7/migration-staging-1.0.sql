@@ -162,7 +162,7 @@ end $$;
 create or replace function warehouse_v7.import_valid_product(
  p_tenant uuid,p_stage_id uuid,p_actor uuid)
 returns uuid language plpgsql security invoker set search_path='' as $$
-declare st warehouse_v7.migration_staging; pid uuid; pname text; punit text; plifecycle text;
+declare st warehouse_v7.migration_staging; pid uuid; pname text; punit text; pcoverage text; plifecycle text;
 begin
  perform warehouse_v7.assert_admin_identity(p_tenant,p_actor);
 
@@ -182,6 +182,7 @@ begin
 
  pname:=nullif(btrim(st.normalized_payload->>'name'),'');
  punit:=warehouse_v7.normalize_legacy_unit(st.normalized_payload->>'base_unit');
+ pcoverage:=nullif(btrim(st.normalized_payload->>'coverage_unit'),'');
  plifecycle:=coalesce(nullif(btrim(st.normalized_payload->>'lifecycle'),''),'active');
  if pname is null or punit is null then
   raise exception using errcode='22023',message='MIGRATION_PRODUCT_REQUIRED_FIELDS';
@@ -193,9 +194,9 @@ begin
   raise exception using errcode='23505',message='MIGRATION_CANONICAL_CONFLICT';
  end if;
 
- insert into warehouse_v7.product(tenant_id,legacy_record_id,sku,name,colour,base_unit,lifecycle)
+ insert into warehouse_v7.product(tenant_id,legacy_record_id,sku,name,colour,base_unit,coverage_unit,lifecycle)
  values(p_tenant,st.source_record_id,nullif(btrim(st.normalized_payload->>'sku'),''),
-        pname,nullif(btrim(st.normalized_payload->>'colour'),''),punit,plifecycle)
+        pname,nullif(btrim(st.normalized_payload->>'colour'),''),punit,pcoverage,plifecycle)
  returning id into pid;
 
  update warehouse_v7.migration_staging
