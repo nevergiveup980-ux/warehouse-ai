@@ -71,6 +71,7 @@ def piece():
 p1=piece()
 assert p1['status']=='committed' and int(p1['source_before_sixteenths'])==5520,p1
 assert int(p1['transferred_sixteenths'])==1200 and int(p1['source_remaining_sixteenths'])==4320,p1
+assert p1.get('advisory')=='REMNANT_WHOLE_ROLL_PREFERRED',p1
 pstate=json.loads(val(run(f"""
 select jsonb_build_object(
  'src_remain',(select remaining_sixteenths from warehouse_v7.carpet_roll where tenant_id='{T}' and id='{S}'),
