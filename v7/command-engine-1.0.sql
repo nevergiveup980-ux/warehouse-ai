@@ -1,7 +1,7 @@
 -- V7 Command Engine 1.0. Engineering draft; do not apply to production.
 create or replace function warehouse_v7.canonical_fingerprint(p_payload jsonb)
 returns text language sql immutable strict set search_path='' as $
-  select pg_catalog.md5(p_payload::text)
+  select pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p_payload::text,'UTF8')),'hex')
 $;
 
 create or replace function warehouse_v7.begin_command(
