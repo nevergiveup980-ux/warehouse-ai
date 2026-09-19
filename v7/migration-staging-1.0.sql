@@ -93,3 +93,45 @@ begin
  where tenant_id=p_tenant and id=p_stage_id;
  return pid;
 end $$;
+
+create or replace function warehouse_v7.import_valid_location(
+ p_tenant uuid,p_stage_id uuid,p_actor uuid)
+returns uuid language plpgsql security invoker set search_path='' as $$
+declare st warehouse_v7.migration_staging; lid uuid; lcode text; lkind text; llifecycle text;
+begin
+ perform warehouse_v7.assert_admin_identity(p_tenant,p_actor);
+
+ select * into st from warehouse_v7.migration_staging
+ where tenant_id=p_tenant and id=p_stage_id for update;
+ if not found then raise exception using errcode='P0002',message='MIGRATION_STAGE_NOT_FOUND'; end if;
+
+ if st.classification='imported' and st.imported_entity_type='location' and st.imported_entity_id is not null then
+  return st.imported_entity_id;
+ end if;
+ if st.classification<>'valid' then
+  raise exception using errcode='22023',message='MIGRATION_NOT_VALID';
+ end if;
+ if st.source_dataset<>'derived_location_v6' then
+  raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_LOCATION';
+ end if;
+
+ lcode:=nullif(btrim(st.source_payload->>'code'),'');
+ lkind:=coalesce(nullif(btrim(st.source_payload->>'kind'),''),'rack');
+ llifecycle:=coalesce(nullif(btrim(st.source_payload->>'lifecycle'),''),'active');
+ if lcode is null then raise exception using errcode='22023',message='MIGRATION_LOCATION_CODE_REQUIRED'; end if;
+ if llifecycle not in ('active','retired') then
+  raise exception using errcode='22023',message='MIGRATION_LOCATION_LIFECYCLE_INVALID';
+ end if;
+ if exists(select 1 from warehouse_v7.location l where l.tenant_id=p_tenant and l.code=lcode) then
+  raise exception using errcode='23505',message='MIGRATION_CANONICAL_CONFLICT';
+ end if;
+
+ insert into warehouse_v7.location(tenant_id,code,kind,lifecycle)
+ values(p_tenant,lcode,lkind,llifecycle) returning id into lid;
+
+ update warehouse_v7.migration_staging
+ set classification='imported',imported_entity_type='location',imported_entity_id=lid,
+     reviewed_by=p_actor,reviewed_at=now()
+ where tenant_id=p_tenant and id=p_stage_id;
+ return lid;
+end $$;
