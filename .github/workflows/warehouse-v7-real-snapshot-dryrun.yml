@@ -95,34 +95,47 @@ jobs:
 
       - name: Run real V6 snapshot through disposable V7 migration
         run: |
-          python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
+          python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report-1.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
 
-      - name: Verify real dry-run acceptance gates
+      - name: Replay the same real snapshot against the same disposable V7 database
+        run: |
+          python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report-2.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
+
+      - name: Verify real dry-run acceptance and replay gates
         run: |
           python3 - <<'PY'
           import json
-          r=json.load(open('/tmp/v7-real-dry-run-report.json'))
-          assert r['mode']=='DISPOSABLE_POSTGRES_DRY_RUN'
-          assert r['production_writes']==0
-          assert r['source_integrity']['postgres_jsonb_text_verified'] is True
-          assert r['reconciliation']['pass'] is True
-          assert r['reconciliation']['actual']['invalid_with_canonical_link']==0
-          print('REAL V6 -> disposable V7 reconciliation: PASS')
+          a=json.load(open('/tmp/v7-real-dry-run-report-1.json'))
+          b=json.load(open('/tmp/v7-real-dry-run-report-2.json'))
+          for r in (a,b):
+              assert r['mode']=='DISPOSABLE_POSTGRES_DRY_RUN'
+              assert r['production_writes']==0
+              assert r['source_integrity']['postgres_jsonb_text_verified'] is True
+              assert r['reconciliation']['pass'] is True
+              assert r['reconciliation']['actual']['invalid_with_canonical_link']==0
+          assert a['source_integrity']['snapshot_md5']==b['source_integrity']['snapshot_md5']
+          assert a['manifest_summary']==b['manifest_summary']
+          assert a['reconciliation']['expected']==b['reconciliation']['expected']
+          assert a['reconciliation']['actual']==b['reconciliation']['actual']
+          assert a['reconciliation']['checks']==b['reconciliation']['checks']
+          print('REAL V6 -> disposable V7 reconciliation + replay: PASS')
           print(json.dumps({
-            'source_integrity':r['source_integrity'],
-            'manifest_summary':r['manifest_summary'],
-            'reconciliation':r['reconciliation']
+            'source_integrity':a['source_integrity'],
+            'manifest_summary':a['manifest_summary'],
+            'reconciliation':a['reconciliation']
           },indent=2))
           PY
 
-      - name: Upload sanitized real dry-run report
+      - name: Upload sanitized real dry-run replay reports
         uses: actions/upload-artifact@v4
         with:
-          name: v7-real-snapshot-dry-run-report-alias-recovery
-          path: /tmp/v7-real-dry-run-report.json
+          name: v7-real-snapshot-dry-run-replay-report
+          path: |
+            /tmp/v7-real-dry-run-report-1.json
+            /tmp/v7-real-dry-run-report-2.json
           retention-days: 7
 
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f /tmp/v7-real-snapshot-envelope.json /tmp/v7-real-snapshot.json /tmp/v7-real-source-integrity.json /tmp/v7-real-manifest.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json
