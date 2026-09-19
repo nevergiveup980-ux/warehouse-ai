@@ -53,3 +53,5 @@ jobs:
         run: python3 tests/v7-db/append_only_ledger.py
       - name: Cross-tenant RLS attack
         run: python3 tests/v7-db/cross_tenant_rls.py
+      - name: Cross-tenant WRITE attack
+        run: python3 tests/v7-db/cross_tenant_write.py
