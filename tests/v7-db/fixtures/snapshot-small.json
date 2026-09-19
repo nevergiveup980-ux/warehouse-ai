@@ -218,5 +218,41 @@
       "originalLength": "0",
       "measure": "TM"
     }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "LEGACY-900",
+    "payload": {
+      "id": "LEGACY-900",
+      "legacyKey": "xlsx-row-900",
+      "migrationSource": "legacy.xlsx",
+      "status": "Active",
+      "sourceRoll": "CHC6",
+      "roll": "RC900",
+      "collection": "Series F",
+      "colour": "Silver",
+      "location": "13C",
+      "length": "6",
+      "originalLength": "6",
+      "measure": "TM"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "RC900",
+    "payload": {
+      "id": "LEGACY-900",
+      "legacyKey": "xlsx-row-900",
+      "migrationSource": "legacy.xlsx",
+      "status": "Active",
+      "sourceRoll": "CHC6",
+      "roll": "RC900",
+      "collection": "Series F",
+      "colour": "Silver",
+      "location": "13C",
+      "length": "6",
+      "originalLength": "6",
+      "measure": "TM"
+    }
   }
 ]
