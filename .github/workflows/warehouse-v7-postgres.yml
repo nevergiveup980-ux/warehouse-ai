@@ -57,6 +57,19 @@ jobs:
         run: python3 tests/v7-db/migration_valid_stock_import.py
       - name: Valid-only Carpet Roll import attack
         run: python3 tests/v7-db/migration_valid_carpet_import.py
+      - name: Disposable snapshot dry-run loader
+        run: |
+          node v7/snapshot-manifest-cli.mjs tests/v7-db/fixtures/snapshot-small.json > /tmp/v7-manifest.json
+          python3 v7/dry-run-loader.py /tmp/v7-manifest.json --report /tmp/v7-dry-run-1.json --tenant 11111111-1111-4111-8111-111111111111 --actor 22222222-2222-4222-8222-222222222222
+          python3 v7/dry-run-loader.py /tmp/v7-manifest.json --report /tmp/v7-dry-run-2.json --tenant 11111111-1111-4111-8111-111111111111 --actor 22222222-2222-4222-8222-222222222222
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-dry-run-1.json'))
+          b=json.load(open('/tmp/v7-dry-run-2.json'))
+          assert a['reconciliation']['pass'] and b['reconciliation']['pass']
+          assert a['reconciliation']['actual']==b['reconciliation']['actual']
+          print('V7 disposable snapshot dry-run + replay: PASS')
+          PY
       - name: Database smoke and integrity tests
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
       - name: Same UUID real concurrency attack
