@@ -10,7 +10,7 @@ for (const x of [
   "'supplier', payload->>'supplier'",
   "'po', payload->>'po'",
   'postgres_jsonb_text_verified',
-  'production_writes'
+  'READ_ONLY_V6_SNAPSHOT'
 ]) assert.ok(s.includes(x), x);
 
 assert.doesNotMatch(s,/insert\s+into\s+public\.warehouse_records|update\s+public\.warehouse_records|delete\s+from\s+public\.warehouse_records/i);
