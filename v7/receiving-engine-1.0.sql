@@ -5,6 +5,7 @@ create or replace function warehouse_v7.receive_stock(
 returns jsonb language plpgsql security invoker as $$
 declare c warehouse_v7.command; s warehouse_v7.stock_item; out_result jsonb;
 begin
+ perform warehouse_v7.assert_command_identity(p_tenant,p_actor);
  if p_quantity<=0 then raise exception using errcode='22023',message='INVALID_RECEIVE_QUANTITY'; end if;
  if nullif(trim(p_unit),'') is null then raise exception using errcode='22023',message='INVALID_UNIT'; end if;
 
