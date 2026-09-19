@@ -23,10 +23,7 @@ create policy tenant_member_update on warehouse_v7.order_record
   ) with check (
     warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin','operator'])
   );
-create policy tenant_member_delete on warehouse_v7.order_record
-  for delete using (
-    warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin','operator'])
-  );
+-- No DELETE policy: orders are archived, never hard-deleted by application roles.
 
 drop policy if exists tenant_member_select on warehouse_v7.order_source_evidence;
 create policy tenant_member_select on warehouse_v7.order_source_evidence
@@ -39,13 +36,4 @@ create policy tenant_member_insert on warehouse_v7.order_source_evidence
   for insert with check (
     warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin'])
   );
-create policy tenant_member_update on warehouse_v7.order_source_evidence
-  for update using (
-    warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin'])
-  ) with check (
-    warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin'])
-  );
-create policy tenant_member_delete on warehouse_v7.order_source_evidence
-  for delete using (
-    warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin'])
-  );
+-- Source evidence is append-only: no UPDATE or DELETE policy.
