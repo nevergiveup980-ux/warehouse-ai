@@ -41,11 +41,13 @@ Strong legacy physical-key precedence for automatic migration:
 1. nonblank `physicalRollId` -> `physical:<physicalRollId>`
 2. nonblank `sourceRoll + manufacturerRoll` -> `source_mfg:<sourceRoll>|<manufacturerRoll>`
 3. nonblank `roll + manufacturerRoll` -> `roll_mfg:<roll>|<manufacturerRoll>`
-4. otherwise: no automatic physical identity; classify DEFERRED until evidence is sufficient.
+4. otherwise: weak identity. Default is DEFERRED. A later forensic rule may promote only a separately derived alias-group candidate when two rows have exact business state, the same nonblank legacy payload id, the same nonblank spreadsheet legacy key, the same nonblank migration source, and that payload id has no divergent business state anywhere else. The original rows remain duplicate evidence.
 
 For the 469 rows whose legacy status is `Active`:
 - 137 rows currently have a strong key, representing 71 distinct strong physical identities.
-- 332 rows do not yet have a strong key and MUST NOT be guessed into canonical V7.
+- 332 rows do not have a manufacturer/physical strong key.
+- Of those 332, read-only provenance analysis found 152 strict alias-replay groups safe enough to represent as derived physical candidates; 143 currently pass the remaining Product/location/measure/bounds gates.
+- The remaining weak rows/groups stay DEFERRED/CONFLICT/ORPHAN rather than being guessed into canonical V7.
 - 62 strong-key duplicate groups account for 66 replay/duplicate extras.
 - 14 Active rows have no location.
 - 459 Active rows use canonical measure states FULL/CAL/TM; 10 use blank/CAL* and require normalization/review.
@@ -88,4 +90,4 @@ A real V6 snapshot dry run may begin only when all are true:
 7. Snapshot transformer classifies duplicate/orphan/conflict/deferred without destructive cleanup.
 8. The dry run executes outside production and produces reconciliation counts before any production V7 write.
 
-Production V6 remains untouched throughout the dry-run phase.
+The first full real-data dry run has now completed successfully outside production. Production V6 data and Production V7 schema/data remained untouched; the same rule continues for all follow-up rehearsals.
