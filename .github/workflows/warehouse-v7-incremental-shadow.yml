@@ -1,0 +1,153 @@
+name: Warehouse V7 Incremental Live Shadow
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [warehouse-v7-foundation]
+    paths:
+      - 'v7/incremental-shadow-runner.py'
+      - 'v7/*-shadow-replay.py'
+      - 'v7/*-engine-1.0.sql'
+      - '.github/workflows/warehouse-v7-incremental-shadow.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: warehouse-v7-incremental-live-shadow
+  cancel-in-progress: false
+
+jobs:
+  incremental-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+      INCREMENTAL_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-incremental-shadow-bridge
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch only rows newer than committed watermark
+        id: feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-incremental-shadow")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+
+          curl -fsS --retry 3             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Accept: application/json"             "$INCREMENTAL_URL"             -o /tmp/v7-incremental-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+
+          python3 - <<'PY'
+          import json,os
+          e=json.load(open('/tmp/v7-incremental-envelope.json'))
+          assert e.get('mode')=='READ_ONLY_V6_INCREMENTAL_SHADOW'
+          assert e.get('production_business_writes')==0
+          rows=e.get('rows')
+          assert isinstance(rows,list)
+          assert len(rows)==int(e.get('row_count',-1))
+          n=len(rows)
+          print('incremental rows:',n)
+          print('from watermark:',e.get('from_watermark'))
+          print('to watermark:',e.get('to_watermark'))
+          print('has more:',e.get('has_more'))
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write(f'row_count={n}\n')
+              f.write('has_changes='+('true' if n else 'false')+'\n')
+              f.write('has_more='+('true' if e.get('has_more') else 'false')+'\n')
+          PY
+
+      - name: Install disposable V7 shadow database
+        if: steps.feed.outputs.has_changes == 'true'
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
+
+      - name: Replay only incremental rows through V7 shadow engines
+        if: steps.feed.outputs.has_changes == 'true'
+        run: |
+          set -euo pipefail
+          python3 v7/incremental-shadow-runner.py             /tmp/v7-incremental-envelope.json             --report /tmp/v7-incremental-shadow-report.json
+
+      - name: Commit watermark only after complete shadow PASS
+        if: steps.feed.outputs.has_changes == 'true'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          e=json.load(open('/tmp/v7-incremental-envelope.json'))
+          r=json.load(open('/tmp/v7-incremental-shadow-report.json'))
+          assert r.get('verdict')=='SHADOW_PASS'
+          body={
+            'from_watermark':e['from_watermark'],
+            'to_watermark':e['to_watermark'],
+            'batch_fingerprint':e['batch_fingerprint'],
+            'row_count':e['row_count'],
+          }
+          json.dump(body,open('/tmp/v7-incremental-commit-request.json','w'),separators=(',',':'))
+          PY
+
+          OIDC_JSON="$(curl -fsS             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-incremental-shadow")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+
+          curl -fsS --retry 2 -X POST             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Content-Type: application/json"             --data-binary @/tmp/v7-incremental-commit-request.json             "$INCREMENTAL_URL"             -o /tmp/v7-incremental-commit-response.json
+          unset OIDC_TOKEN OIDC_JSON
+
+          python3 - <<'PY'
+          import json
+          c=json.load(open('/tmp/v7-incremental-commit-response.json'))
+          assert c.get('mode')=='INCREMENTAL_SHADOW_WATERMARK_COMMIT',c
+          assert c.get('production_business_writes')==0,c
+          assert c.get('shadow_control_writes')==1,c
+          print('incremental watermark committed:',c.get('committed_watermark'))
+          print('batch rows committed:',c.get('row_count'))
+          PY
+
+      - name: No new warehouse changes
+        if: steps.feed.outputs.has_changes != 'true'
+        run: echo "V7 incremental live shadow: NO_CHANGES"
+
+      - name: Upload sanitized incremental report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-incremental-live-shadow-report
+          path: |
+            /tmp/v7-incremental-shadow-report.json
+            /tmp/v7-incremental-commit-response.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Destroy transient incremental source files
+        if: always()
+        run: |
+          rm -rf /tmp/v7-incremental-shadow
+          rm -f             /tmp/v7-incremental-envelope.json             /tmp/v7-incremental-commit-request.json             /tmp/v7-incremental-shadow-report.json             /tmp/v7-incremental-commit-response.json
