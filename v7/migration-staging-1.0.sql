@@ -16,6 +16,27 @@ alter table warehouse_v7.migration_staging
  add constraint migration_staging_classification_check
  check (classification in ('unreviewed','valid','duplicate','orphan','conflict','deferred','imported','rejected'));
 
+create or replace function warehouse_v7.guard_migration_source_evidence()
+returns trigger language plpgsql set search_path='' as $guard$
+begin
+ if new.tenant_id is distinct from old.tenant_id
+    or new.id is distinct from old.id
+    or new.source_dataset is distinct from old.source_dataset
+    or new.source_record_id is distinct from old.source_record_id
+    or new.source_payload is distinct from old.source_payload
+    or new.source_fingerprint is distinct from old.source_fingerprint
+    or new.staged_at is distinct from old.staged_at then
+   raise exception using errcode='55000',message='MIGRATION_SOURCE_EVIDENCE_IMMUTABLE';
+ end if;
+ return new;
+end
+$guard$;
+
+drop trigger if exists migration_source_evidence_immutable on warehouse_v7.migration_staging;
+create trigger migration_source_evidence_immutable
+before update on warehouse_v7.migration_staging
+for each row execute function warehouse_v7.guard_migration_source_evidence();
+
 create or replace function warehouse_v7.normalize_legacy_unit(p_unit text)
 returns text language sql immutable set search_path='' as $unit$
  select case lower(btrim(coalesce(p_unit,'')))
