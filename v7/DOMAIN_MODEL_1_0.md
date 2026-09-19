@@ -39,7 +39,7 @@ ADJUST -> narrowly scoped inventory entity with reason and authorization
 
 ## Unit model
 Carpet linear measure is stored as integer sixteenths-of-an-inch (1/16 in) to avoid floating point loss while preserving future fractional measurements. UI converts feet/inches/fractions at boundaries.
-Non-carpet quantity uses decimal quantity + explicit unit code; conversions require a registered conversion rule. No implicit BOX/ROLL/SY/GAL conversion.
+Non-carpet quantity uses decimal quantity + explicit unit code. `Product.base_unit` is the canonical physical stock-counting unit; `Product.coverage_unit` is separate display/coverage metadata and never authorizes quantity conversion. Conversions require a registered conversion rule. No implicit BOX/ROLL/EACH/PAIL/SY/GAL conversion.
 
 ## Location model
 Warehouse locations are stable entities, not free-text labels. Historical labels may be retained as provenance. Moves require from/to location identities where applicable.
