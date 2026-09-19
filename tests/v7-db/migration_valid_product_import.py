@@ -12,7 +12,7 @@ def stage(rid,payload):
  assert r.returncode==0,r.stderr
  return r.stdout.strip()
 
-good=stage('PRD-GOOD','{"name":"Good Product","base_unit":"BOX","sku":"GP-1"}')
+good=stage('PRD-GOOD','{"name":"Good Product","base_unit":"BOX","coverage_unit":"SF / Box","sku":"GP-1"}')
 dup=stage('PRD-DUP','{"name":"Dup Product","base_unit":"BOX"}')
 orph=stage('PRD-ORPH','{"name":"Orphan Product","base_unit":"BOX"}')
 conf=stage('PRD-CONF','{"name":"Conflict Product","base_unit":"BOX"}')
@@ -42,6 +42,8 @@ assert r.returncode!=0 and 'MIGRATION_PRODUCT_REQUIRED_FIELDS' in r.stderr,r.std
 
 count=run(f"select count(*) from warehouse_v7.product where tenant_id='{T}';")
 assert count.stdout.strip()=='1',count.stdout
+unit_state=run(f"select base_unit||'|'||coalesce(coverage_unit,'') from warehouse_v7.product where tenant_id='{T}' and id='{pid}';")
+assert value(unit_state)=='BOX|SF / Box',unit_state.stdout
 link=run(f"select classification||'|'||imported_entity_type||'|'||imported_entity_id from warehouse_v7.migration_staging where tenant_id='{T}' and id='{good}';")
 assert link.stdout.strip()==f'imported|product|{pid}',link.stdout
 print('V7 valid-only Product import attack: PASS')
