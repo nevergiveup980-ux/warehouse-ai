@@ -1,0 +1,125 @@
+name: Warehouse V7 Real Snapshot Dry Run
+on:
+  push:
+    branches: [warehouse-v7-foundation]
+    paths:
+      - 'v7/**'
+      - 'tests/v7-db/**'
+      - '.github/workflows/warehouse-v7-real-snapshot-dryrun.yml'
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  real-snapshot-dry-run:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+      SNAPSHOT_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-snapshot-bridge
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch production V6 snapshot through GitHub OIDC bridge
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 -H "Authorization: Bearer $OIDC_TOKEN" -H "Accept: application/json" "$SNAPSHOT_URL" -o /tmp/v7-real-snapshot-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-real-snapshot-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          json.dump(rows,open('/tmp/v7-real-snapshot.json','w'),separators=(',',':'))
+          json.dump(integ,open('/tmp/v7-real-source-integrity.json','w'),indent=2)
+          print('secure snapshot received:',len(rows))
+          PY
+
+      - name: Build and verify real migration manifest
+        id: manifest
+        run: |
+          set -euo pipefail
+          node v7/snapshot-manifest-cli.mjs /tmp/v7-real-snapshot.json > /tmp/v7-real-manifest.json
+          python3 - <<'PY'
+          import json,os
+          m=json.load(open('/tmp/v7-real-manifest.json'))
+          edge=json.load(open('/tmp/v7-real-source-integrity.json'))
+          got=m['source_integrity']
+          assert got['snapshot_md5']==edge['snapshot_md5']
+          assert got['total_live_rows']==edge['total_live_rows']
+          edge_ds={x['dataset_key']:x for x in edge['datasets']}
+          for k,v in got['datasets'].items():
+              assert int(v['live_rows'])==int(edge_ds[k]['live_rows'])
+              assert v['content_md5']==edge_ds[k]['content_md5']
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('snapshot_md5='+got['snapshot_md5']+'\n')
+          print('source fingerprint verified:',got['snapshot_md5'])
+          print('classification summary:',json.dumps(m['summary'],sort_keys=True))
+          PY
+
+      - name: Install disposable V7 database
+        run: |
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+
+      - name: Run real V6 snapshot through disposable V7 migration
+        run: |
+          python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
+
+      - name: Verify real dry-run acceptance gates
+        run: |
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-real-dry-run-report.json'))
+          assert r['mode']=='DISPOSABLE_POSTGRES_DRY_RUN'
+          assert r['production_writes']==0
+          assert r['source_integrity']['postgres_jsonb_text_verified'] is True
+          assert r['reconciliation']['pass'] is True
+          assert r['reconciliation']['actual']['invalid_with_canonical_link']==0
+          print('REAL V6 -> disposable V7 reconciliation: PASS')
+          print(json.dumps({
+            'source_integrity':r['source_integrity'],
+            'manifest_summary':r['manifest_summary'],
+            'reconciliation':r['reconciliation']
+          },indent=2))
+          PY
+
+      - name: Upload sanitized real dry-run report
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-real-snapshot-dry-run-report-alias-recovery
+          path: /tmp/v7-real-dry-run-report.json
+          retention-days: 7
+
+      - name: Destroy transient warehouse snapshot files
+        if: always()
+        run: |
+          rm -f /tmp/v7-real-snapshot-envelope.json /tmp/v7-real-snapshot.json /tmp/v7-real-source-integrity.json /tmp/v7-real-manifest.json
