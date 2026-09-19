@@ -117,7 +117,7 @@ def main():
     if computed!=str(batch.get("batch_fingerprint") or "").lower():
         raise RuntimeError("INCREMENTAL_BATCH_FINGERPRINT_MISMATCH")
 
-    groups={"cut":[],"receive":[],"shipping":[],"transfer":[],"return":[],"carpet":[]}
+    groups={"cut":[],"receive":[],"shipping":[],"transfer":[],"return":[],"supplier_return":[],"carpet":[]}
     deferred=[]
 
     for row in rows:
@@ -193,7 +193,26 @@ def main():
             continue
 
         if typ=="Return to Supplier":
-            deferred.append({"record_id":rid,"dataset_key":ds,"reason":"RETURN_TO_SUPPLIER_ENGINE_PENDING"})
+            supplier=str(p.get("supplier") or "").strip()
+            po=str(p.get("po") or "").strip()
+            inv_id=str(p.get("inventoryRecordId") or "").strip()
+            location=str(p.get("location") or "").strip()
+            if (
+                qty is not None and qty>0 and known_unit(unit_raw)
+                and supplier and inv_id and location
+                and SHIP_RE.search(impact)
+            ):
+                groups["supplier_return"].append(row)
+            elif "work record only" in impact.lower() and not inv_id and not location:
+                deferred.append({
+                    "record_id":rid,"dataset_key":ds,
+                    "reason":"RETURN_TO_SUPPLIER_LEGACY_WORK_ONLY_NO_INVENTORY_EVIDENCE"
+                })
+            else:
+                deferred.append({
+                    "record_id":rid,"dataset_key":ds,
+                    "reason":"RETURN_TO_SUPPLIER_INCOMPLETE_INVENTORY_EVIDENCE"
+                })
             continue
 
         deferred.append({"record_id":rid,"dataset_key":ds,"reason":"UNROUTED_OPERATION"})
@@ -206,6 +225,7 @@ def main():
         ("shipping","READ_ONLY_V6_OPERATION_SHADOW","v7/shipping-shadow-replay.py","33000000-0000-4000-8000-000000000001","33000000-0000-4000-8000-000000000002"),
         ("transfer","READ_ONLY_V6_OPERATION_SHADOW","v7/transfer-shadow-replay.py","34000000-0000-4000-8000-000000000001","34000000-0000-4000-8000-000000000002"),
         ("return","READ_ONLY_V6_OPERATION_SHADOW","v7/return-shadow-replay.py","35000000-0000-4000-8000-000000000001","35000000-0000-4000-8000-000000000002"),
+        ("supplier_return","READ_ONLY_V6_OPERATION_SHADOW","v7/supplier-return-shadow-replay.py","37000000-0000-4000-8000-000000000001","37000000-0000-4000-8000-000000000002"),
         ("carpet","READ_ONLY_V6_OPERATION_SHADOW","v7/carpet-lifecycle-shadow-replay.py","36000000-0000-4000-8000-000000000001","36000000-0000-4000-8000-000000000002"),
     ]
 
