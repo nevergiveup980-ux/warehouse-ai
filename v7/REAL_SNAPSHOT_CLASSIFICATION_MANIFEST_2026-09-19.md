@@ -46,11 +46,16 @@ A conflicting source keeps every observed label in migration evidence. No label 
 
 ## Location transform
 
-95 distinct nonblank location references are currently observed across live Inventory + Active Carpet.
-`PHYSICAL COUNT REQUIRED` is an exception marker, not a canonical physical location; it is never created as a V7 Location.
-Therefore current exact-label Location candidates: 94.
+The first real snapshot rehearsal produced 97 canonical Location identities.
 
-No spelling/alias cleanup is destructive during snapshot transformation. Labels such as historical or unusual location names stay traceable until explicit review.
+Breakdown:
+- 94 locations are referenced by live Inventory or Active Carpet after excluding the exception marker `PHYSICAL COUNT REQUIRED`.
+- 3 additional identities are historical-reference locations used only by non-Active Carpet: `13B` (Used Up), `RAM Archive` (Split to RAM), and `Store` (At Store).
+- Historical reference locations are preserved so old events/entities remain resolvable; they do not create opening inventory by themselves.
+
+Location kind normalization is explicit for known non-rack concepts: Receiving -> `receiving`, Receiving / Put-away Pending -> `receiving_staging`, Store -> `store`, Store samples -> `sample_store`, RAM Archive -> `archive`; other labels remain `rack`.
+
+No spelling/alias cleanup is destructive during snapshot transformation. Labels such as `Corner` and typo-looking `Cornet` remain distinct until explicit review.
 
 ## Inventory opening-stock classification
 
@@ -85,7 +90,7 @@ Physical identity precedence:
 1. `physicalRollId` -> `physical:<id>`
 2. `sourceRoll + manufacturerRoll` -> `source_mfg:<source>|<mfg>`
 3. `roll + manufacturerRoll` -> `roll_mfg:<roll>|<mfg>`
-4. otherwise -> weak identity -> DEFERRED
+4. otherwise -> weak identity. It stays DEFERRED unless it qualifies for the strict legacy-alias replay rule below.
 
 `roll_number` is a display/business label and is **not unique**.
 
@@ -107,9 +112,22 @@ Rules:
 8. positive measure, remaining <= original, and FULL consistency are required before VALID.
 9. RC2253 remains DEFERRED until physical verification; no migration rule may guess its measure.
 
+### Strict legacy-alias replay recovery
+
+A read-only forensic pass over the 332 Active rows without a strong physical key found a highly specific V6 alias pattern:
+- 165 exact business-state pairs plus 2 singleton business states.
+- All 165 pairs share one legacy payload id inside each pair.
+- 153 pairs also share the same nonblank spreadsheet legacy key and migration source.
+- After additionally rejecting any payload id that appears with divergent business state elsewhere, 152 groups qualify as strong replay evidence.
+- Of those 152 groups, 143 currently pass Product, location, measure and bounds gates.
+
+For a qualifying pair V7 does **not** choose or delete a source-row winner. Both original V6 rows remain staged as duplicate evidence. A separate derived record `CARPET_ALIAS:<legacy payload id>` represents the physical candidate and receives physical key `legacy_alias:<legacy payload id>`.
+
+Any missing provenance, divergent state, conflicting source Product, missing location, or bad measure keeps the group out of automatic canonical import.
+
 ## Dry-run safety rule
 
-The first real dry run may consume the production snapshot read-only, but it runs outside Production V7.
+The first real dry run completed successfully on 2026-09-19 against a disposable PostgreSQL database with zero Production V7 writes. Subsequent rehearsals must follow the same read-only source / disposable target rule.
 
 It must produce:
 - full per-record classification manifest,
