@@ -79,6 +79,8 @@ jobs:
             /tmp/v7-dry-run-1.json
             /tmp/v7-dry-run-2.json
           retention-days: 7
+      - name: RECEIVE create/update event-version regression
+        run: python3 tests/v7-db/receiving_event_version.py
       - name: Database smoke and integrity tests
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
       - name: Same UUID real concurrency attack
