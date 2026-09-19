@@ -90,6 +90,31 @@ jobs:
           print('classification summary:',json.dumps(m['summary'],sort_keys=True))
           PY
 
+
+      - name: Fetch sanitized V6 CUT shadow feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=cut-shadow" \
+            -o /tmp/v7-cut-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-cut-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_CUT_SHADOW'
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('sanitized CUT shadow rows:',len(rows))
+          print('CUT shadow source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
       - name: Install disposable V7 database
         run: |
           set -euo pipefail
@@ -104,6 +129,15 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+
+
+      - name: Replay real V6 CUT history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/cut-shadow-replay.py /tmp/v7-cut-shadow-envelope.json \
+            --report /tmp/v7-cut-shadow-report.json \
+            --tenant 77777777-7777-4777-8777-777777777777 \
+            --actor 88888888-8888-4888-8888-888888888888
 
       - name: Run real V6 snapshot through disposable V7 migration
         run: |
@@ -175,10 +209,11 @@ jobs:
             /tmp/v7-real-dry-run-report-1.json
             /tmp/v7-real-dry-run-report-2.json
             /tmp/v7-controlled-cutover-preflight-report.json
+            /tmp/v7-cut-shadow-report.json
           if-no-files-found: ignore
           retention-days: 7
 
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
