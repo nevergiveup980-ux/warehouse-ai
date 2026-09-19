@@ -7,6 +7,7 @@ begin
  if to_regprocedure('warehouse_v7.cut_carpet_roll(uuid,uuid,uuid,bigint,bigint,jsonb,uuid,text)') is null then raise exception 'CUT function missing'; end if;
  if to_regprocedure('warehouse_v7.receive_stock(uuid,uuid,uuid,uuid,numeric,text,bigint,uuid,jsonb,uuid,text)') is null then raise exception 'RECEIVE function missing'; end if;
  if to_regprocedure('warehouse_v7.transfer_stock(uuid,uuid,uuid,bigint,uuid,jsonb,uuid,text)') is null then raise exception 'TRANSFER function missing'; end if;
+ if to_regprocedure('warehouse_v7.transfer_stock_quantity(uuid,uuid,uuid,bigint,uuid,bigint,numeric,uuid,jsonb,uuid,text)') is null then raise exception 'TRANSFER QUANTITY function missing'; end if;
  if to_regprocedure('warehouse_v7.ship_stock(uuid,uuid,uuid,bigint,numeric,jsonb,uuid,text)') is null then raise exception 'SHIP function missing'; end if;
  if to_regprocedure('warehouse_v7.return_stock(uuid,uuid,uuid,bigint,numeric,text,uuid,uuid,jsonb,uuid,text)') is null then raise exception 'RETURN function missing'; end if;
 end $$;
