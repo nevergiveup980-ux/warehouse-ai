@@ -18,9 +18,12 @@ Inventory's latest observed live-row update was 2026-09-18T16:42:16Z. Snapshot c
 
 - 179 live rows have quantity > 0; 10 have quantity = 0.
 - Lifecycle values include ACTIVE, USED_UP, and missing legacy lifecycle.
-- 183/189 live rows resolve `masterId` to a live Product Master identity; 6 do not.
-- Current exact-display duplicate scan finds 39 groups / 70 extra rows.
+- 183/189 rows resolve `masterId` to a live Product Master record; the six unlinked rows reference PRD-0036 / PRD-0037 and are zero-quantity/deferred under the opening-balance gate.
 - Legacy units currently observed: Box, Carton, Each, Pail, Piece, Roll.
+- Product `coverageUnit` is not the same concept as physical stock unit. V7 now stores `base_unit` and `coverage_unit` separately.
+- Read-only evidence resolves all 68 Product physical stock units under the conservative policy; 175 positive Inventory rows match the resolved stock unit and four remain secondary-unit evidence requiring an explicit conversion/packaging rule.
+- Inventory duplicate/alias analysis is identity-aware: repeated business tuples are not enough to select a winner, and legacy payload IDs with divergent business state are conflicts.
+- The verified real rehearsal produced 52 direct valid Inventory rows plus 30 strict derived alias candidates = 82 canonical Stock Items.
 - No display-field duplicate group is allowed to auto-delete or auto-import blindly. Source identity/provenance remains authoritative.
 
 ## Carpet preflight — critical identity finding
@@ -90,4 +93,4 @@ A real V6 snapshot dry run may begin only when all are true:
 7. Snapshot transformer classifies duplicate/orphan/conflict/deferred without destructive cleanup.
 8. The dry run executes outside production and produces reconciliation counts before any production V7 write.
 
-The first full real-data dry run has now completed successfully outside production. Production V6 data and Production V7 schema/data remained untouched; the same rule continues for all follow-up rehearsals.
+Multiple full real-data dry runs have now completed successfully outside production. The latest verified identity/unit rehearsal produced 309 Products, 97 Locations, 82 Stock Items and 152 Carpet Rolls with 234 opening Commands/Movements/Events and zero invalid canonical links. Production V6 data and Production V7 schema/data remained untouched; the same rule continues for all follow-up rehearsals.
