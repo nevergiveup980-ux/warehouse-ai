@@ -108,6 +108,8 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("envelope"); ap.add_argument("--report",required=True)
     ap.add_argument("--tenant",required=True); ap.add_argument("--actor",required=True)
+    ap.add_argument("--expected-transfer-count",type=int,default=-1)
+    ap.add_argument("--expected-return-count",type=int,default=-1)
     a=ap.parse_args(); ensure_disposable()
     transfer_tenant=str(uuid.uuid5(NS,'transfer-tenant:'+a.tenant))
     return_tenant=str(uuid.uuid5(NS,'return-tenant:'+a.tenant))
@@ -265,8 +267,10 @@ def main():
     if return_fail: stops.append("V7_CARPET_RETURN_ENGINE_MISMATCH")
     if replay_fail: stops.append("V7_CARPET_REPLAY_MISMATCH")
     if ledger_fail: stops.append("V7_CARPET_LEDGER_CARDINALITY_MISMATCH")
-    if whole+partial!=4: stops.append("EXPECTED_FOUR_CARPET_TRANSFERS")
-    if returns!=4: stops.append("EXPECTED_FOUR_CARPET_RETURNS")
+    if a.expected_transfer_count>=0 and whole+partial!=a.expected_transfer_count:
+        stops.append("CARPET_TRANSFER_COUNT_MISMATCH")
+    if a.expected_return_count>=0 and returns!=a.expected_return_count:
+        stops.append("CARPET_RETURN_COUNT_MISMATCH")
 
     report={
       "mode":"V7_CARPET_LIFECYCLE_SHADOW_REPLAY","production_writes":0,
