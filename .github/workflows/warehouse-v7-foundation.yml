@@ -20,6 +20,7 @@ jobs:
       - run: node tests/v7-return-engine.mjs
       - run: node tests/v7-core-lifecycle-attack.mjs
       - run: node tests/v7-snapshot-transformer.mjs
+      - run: node tests/v7-snapshot-envelope.mjs
       - run: node tests/v7-inventory-alias-transformer.mjs
       - run: node tests/v7-product-unit-policy.mjs
       - name: Ensure V7 cannot touch V6 sync/cache architecture
