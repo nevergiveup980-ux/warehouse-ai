@@ -18,7 +18,7 @@ begin
  if p_source_dataset is null or btrim(p_source_dataset)='' or p_source_record_id is null or btrim(p_source_record_id)='' then
   raise exception using errcode='22023',message='MIGRATION_SOURCE_ID_REQUIRED';
  end if;
- fp:=encode(digest(convert_to(coalesce(p_payload,'{}'::jsonb)::text,'UTF8'),'sha256'),'hex');
+ fp:=md5(coalesce(p_payload,'{}'::jsonb)::text);
  insert into warehouse_v7.migration_staging(tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint)
  values(p_tenant,p_source_dataset,p_source_record_id,coalesce(p_payload,'{}'::jsonb),fp)
  on conflict(tenant_id,source_dataset,source_record_id) do nothing
