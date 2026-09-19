@@ -64,11 +64,98 @@ Deno.serve(async (req: Request) => {
     if (!dbUrl) return deny(500, "DB_URL_MISSING");
 
     const scope = new URL(req.url).searchParams.get("scope") || "core";
-    if (!["core", "cut-shadow", "receive-shadow", "operation-shadow"].includes(scope)) return deny(400, "SCOPE_DENIED");
+    if (!["core", "cut-shadow", "receive-shadow", "operation-shadow", "order-shadow"].includes(scope)) return deny(400, "SCOPE_DENIED");
 
     const sql = postgres(dbUrl, { prepare: false, max: 1, idle_timeout: 5 });
     try {
 
+
+      if (scope === "order-shadow") {
+        const result = await sql`
+          with src as (
+            select
+              dataset_key,
+              record_id,
+              updated_at,
+              payload,
+              md5(dataset_key||':'||record_id||':'||payload::text) as source_row_md5,
+              case
+                when dataset_key='runlu_orders_v20' then jsonb_build_object(
+                  'id',payload->>'id',
+                  'type',payload->>'type',
+                  'status',payload->>'status',
+                  'unit',payload->>'unit',
+                  'quantity',payload->>'quantity',
+                  'location',payload->>'location',
+                  'poNumber',payload->>'poNumber',
+                  'soNumber',payload->>'soNumber',
+                  'recoveryKey',payload->>'recoveryKey',
+                  'customer',payload->>'customer',
+                  'product',payload->>'product',
+                  'date',payload->>'date',
+                  'created',payload->>'created'
+                )
+                else jsonb_build_object(
+                  'id',payload->>'id',
+                  'po',payload->>'po',
+                  'status',payload->>'status',
+                  'unit',payload->>'unit',
+                  'quantity',payload->>'quantity',
+                  'location',payload->>'location',
+                  'recoveryKey',payload->>'recoveryKey',
+                  'customer',payload->>'customer',
+                  'product',payload->>'product',
+                  'supplier',payload->>'supplier',
+                  'createdAt',payload->>'createdAt',
+                  'updatedAt',payload->>'updatedAt',
+                  'pickedUpAt',payload->>'pickedUpAt',
+                  'receivedAt',payload->>'receivedAt'
+                )
+              end as shadow_payload
+            from public.warehouse_records
+            where user_id = ${WAREHOUSE_OWNER}::uuid
+              and dataset_key in ('runlu_orders_v20','runlu_special_orders_v51')
+              and deleted_at is null
+          ), per_dataset as (
+            select dataset_key,
+                   count(*)::bigint live_rows,
+                   min(updated_at) min_updated_at,
+                   max(updated_at) max_updated_at,
+                   md5(string_agg(source_row_md5,E'\\n' order by record_id)) content_md5
+            from src group by dataset_key
+          ), all_rows as (
+            select count(*)::bigint live_rows,
+                   md5(string_agg(source_row_md5,E'\\n' order by dataset_key,record_id)) snapshot_md5
+            from src
+          )
+          select
+            (select jsonb_agg(jsonb_build_object(
+              'dataset_key',dataset_key,
+              'record_id',record_id,
+              'payload',shadow_payload,
+              'updated_at',updated_at,
+              'source_row_md5',source_row_md5
+            ) order by updated_at,dataset_key,record_id) from src) rows,
+            (select snapshot_md5 from all_rows) snapshot_md5,
+            (select live_rows from all_rows) total_live_rows,
+            (select jsonb_agg(per_dataset order by dataset_key) from per_dataset) datasets,
+            now() exported_at
+        `;
+        const row = result[0];
+        if (!row || !Array.isArray(row.rows)) return deny(500, "ORDER_SHADOW_QUERY_EMPTY");
+        return ok({
+          mode: "READ_ONLY_V6_ORDER_SHADOW",
+          rows: row.rows,
+          source_integrity: {
+            algorithm: "postgres-jsonb-row-md5-chain-v1",
+            snapshot_md5: row.snapshot_md5,
+            total_live_rows: Number(row.total_live_rows),
+            postgres_jsonb_text_verified: true,
+            datasets: row.datasets,
+            exported_at: row.exported_at,
+          },
+        });
+      }
 
       if (scope === "operation-shadow") {
         const result = await sql`
