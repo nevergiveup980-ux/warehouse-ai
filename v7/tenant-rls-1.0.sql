@@ -14,17 +14,17 @@ returns uuid language sql stable as $$
 $$;
 
 create or replace function warehouse_v7.is_tenant_member(p_tenant uuid)
-returns boolean language sql stable security definer set search_path='' as $
+returns boolean language sql stable security definer set search_path='' as $fn$
  select exists(select 1 from warehouse_v7.tenant_member m
    where m.tenant_id=p_tenant and m.user_id=warehouse_v7.current_user_id() and m.lifecycle='active')
-$;
+$fn$;
 
 create or replace function warehouse_v7.has_tenant_role(p_tenant uuid,p_roles text[])
-returns boolean language sql stable security definer set search_path='' as $
+returns boolean language sql stable security definer set search_path='' as $fn$
  select exists(select 1 from warehouse_v7.tenant_member m
    where m.tenant_id=p_tenant and m.user_id=warehouse_v7.current_user_id()
      and m.lifecycle='active' and m.role=any(p_roles))
-$;
+$fn$;
 
 do $$
 declare t text;
