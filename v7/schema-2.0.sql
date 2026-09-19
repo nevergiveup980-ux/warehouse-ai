@@ -63,6 +63,7 @@ create table warehouse_v7.inventory_movement (
  quantity numeric(18,6) not null, unit text not null, from_location_id uuid, to_location_id uuid,
  created_at timestamptz not null default now(), primary key(tenant_id,id),
  check(product_id is not null or stock_item_id is not null or carpet_roll_id is not null),
+ check(not (stock_item_id is not null and carpet_roll_id is not null)),
  foreign key(tenant_id,command_id) references warehouse_v7.command(tenant_id,id) on delete restrict,
  foreign key(tenant_id,product_id) references warehouse_v7.product(tenant_id,id) on delete restrict,
  foreign key(tenant_id,stock_item_id) references warehouse_v7.stock_item(tenant_id,id) on delete restrict,
@@ -71,6 +72,18 @@ create table warehouse_v7.inventory_movement (
  foreign key(tenant_id,to_location_id) references warehouse_v7.location(tenant_id,id) on delete restrict,
  unique(tenant_id,command_id,movement_type,stock_item_id,carpet_roll_id)
 );
+
+create unique index if not exists inventory_movement_stock_cause_uq
+ on warehouse_v7.inventory_movement(tenant_id,command_id,movement_type,stock_item_id)
+ where stock_item_id is not null and carpet_roll_id is null;
+
+create unique index if not exists inventory_movement_roll_cause_uq
+ on warehouse_v7.inventory_movement(tenant_id,command_id,movement_type,carpet_roll_id)
+ where carpet_roll_id is not null and stock_item_id is null;
+
+create unique index if not exists inventory_movement_product_only_cause_uq
+ on warehouse_v7.inventory_movement(tenant_id,command_id,movement_type,product_id)
+ where product_id is not null and stock_item_id is null and carpet_roll_id is null;
 
 create table warehouse_v7.migration_staging (
  tenant_id uuid not null, id uuid not null default gen_random_uuid(),
