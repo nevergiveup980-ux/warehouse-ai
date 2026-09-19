@@ -1,0 +1,222 @@
+[
+  {
+    "dataset_key": "runlu_product_master_v21",
+    "record_id": "PRD1",
+    "payload": {
+      "name": "Floor A",
+      "coverageUnit": "SF / Box"
+    }
+  },
+  {
+    "dataset_key": "runlu_product_master_v21",
+    "record_id": "PRD2",
+    "payload": {
+      "name": "Pad Roll",
+      "coverageUnit": "Roll"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I1",
+    "payload": {
+      "masterId": "PRD1",
+      "poNumber": "PO1",
+      "location": "A",
+      "quantity": "10",
+      "unit": "Box"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I2",
+    "payload": {
+      "masterId": "PRD1",
+      "poNumber": "PO1",
+      "location": "A",
+      "quantity": "10",
+      "unit": "Carton"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I3",
+    "payload": {
+      "masterId": "PRD1",
+      "poNumber": "PO2",
+      "location": "A",
+      "quantity": "1",
+      "unit": "Piece"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I4",
+    "payload": {
+      "masterId": "PRD1",
+      "poNumber": "PO3",
+      "location": "A",
+      "quantity": "0",
+      "unit": "Box"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I5",
+    "payload": {
+      "masterId": "MISSING",
+      "poNumber": "PO4",
+      "location": "A",
+      "quantity": "2",
+      "unit": "Box"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I6",
+    "payload": {
+      "masterId": "PRD2",
+      "poNumber": "PO5",
+      "location": "B",
+      "quantity": "3",
+      "unit": "Roll"
+    }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "I7",
+    "payload": {
+      "masterId": "PRD1",
+      "poNumber": "PO6",
+      "location": "PHYSICAL COUNT REQUIRED",
+      "quantity": "2",
+      "unit": "Box"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C1",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC1",
+      "manufacturerRoll": "100",
+      "roll": "CHC1",
+      "collection": "Classic",
+      "colour": "Blue",
+      "location": "13C",
+      "length": "10",
+      "originalLength": "10",
+      "measure": "FULL"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C2",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC1",
+      "manufacturerRoll": "100",
+      "roll": "CHC1",
+      "collection": "Classic",
+      "colour": "Blue",
+      "location": "13C",
+      "length": "10",
+      "originalLength": "10",
+      "measure": "FULL"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C3",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC1",
+      "manufacturerRoll": "101",
+      "roll": "CHC1",
+      "collection": "Classic",
+      "colour": "Blue",
+      "location": "13C",
+      "length": "8",
+      "originalLength": "10",
+      "measure": "CAL"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C4",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC2",
+      "manufacturerRoll": "200",
+      "roll": "CHC2",
+      "collection": "Series A",
+      "colour": "Red",
+      "location": "13C",
+      "length": "10",
+      "originalLength": "10",
+      "measure": "FULL"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C5",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC2",
+      "manufacturerRoll": "201",
+      "roll": "CHC2",
+      "collection": "Series B",
+      "colour": "Red",
+      "location": "13C",
+      "length": "10",
+      "originalLength": "10",
+      "measure": "FULL"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C6",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC3",
+      "roll": "CHC3",
+      "collection": "Series C",
+      "colour": "Grey",
+      "location": "13C",
+      "length": "5",
+      "originalLength": "10",
+      "measure": "TM"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C7",
+    "payload": {
+      "status": "Active",
+      "sourceRoll": "CHC4",
+      "manufacturerRoll": "400",
+      "roll": "CHC4",
+      "collection": "Series D",
+      "colour": "Tan",
+      "location": "",
+      "length": "5",
+      "originalLength": "10",
+      "measure": "CAL"
+    }
+  },
+  {
+    "dataset_key": "runlu_carpet_inventory_v52",
+    "record_id": "C8",
+    "payload": {
+      "status": "Pending",
+      "sourceRoll": "CHC5",
+      "manufacturerRoll": "500",
+      "roll": "CHC5",
+      "collection": "Series E",
+      "colour": "Black",
+      "location": "13C",
+      "length": "0",
+      "originalLength": "0",
+      "measure": "TM"
+    }
+  }
+]
