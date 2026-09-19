@@ -133,7 +133,8 @@ jobs:
 
       - name: No new warehouse changes
         if: steps.feed.outputs.has_changes != 'true'
-        run: echo "V7 incremental live shadow: NO_CHANGES"
+        run: |
+          echo "V7 incremental live shadow: NO_CHANGES"
 
       - name: Upload sanitized incremental report
         if: always()
