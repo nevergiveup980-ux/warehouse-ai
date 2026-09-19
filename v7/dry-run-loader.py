@@ -139,12 +139,20 @@ def main():
     ap.add_argument("--report",default="/tmp/v7-dry-run-report.json")
     ap.add_argument("--tenant")
     ap.add_argument("--actor")
+    ap.add_argument("--expected-source-md5")
     args=ap.parse_args()
     ensure_disposable_db()
     tenant=args.tenant or str(uuid.uuid4())
     actor=args.actor or str(uuid.uuid4())
     with open(args.manifest,encoding="utf-8") as fh:
         manifest=json.load(fh)
+    source_integrity=manifest.get("source_integrity") or {}
+    if args.expected_source_md5:
+        actual_md5=source_integrity.get("snapshot_md5")
+        if actual_md5!=args.expected_source_md5:
+            raise RuntimeError(f"SNAPSHOT_FINGERPRINT_MISMATCH:expected={args.expected_source_md5}:actual={actual_md5}")
+        if not source_integrity.get("postgres_jsonb_text_verified"):
+            raise RuntimeError("SNAPSHOT_FINGERPRINT_NOT_POSTGRES_VERIFIED")
     ensure_admin(tenant,actor)
 
     processed={}
@@ -158,6 +166,7 @@ def main():
       "mode":"DISPOSABLE_POSTGRES_DRY_RUN",
       "production_writes":0,
       "tenant":tenant,
+      "source_integrity":source_integrity,
       "manifest_summary":manifest["summary"],
       "processed":processed,
       "reconciliation":reconcile(tenant,manifest)
