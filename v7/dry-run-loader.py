@@ -10,6 +10,7 @@ a reconciliation report.
 This script intentionally refuses to run against any other database name.
 """
 import argparse, json, os, subprocess, sys, uuid
+from decimal import Decimal
 
 DB = os.environ.get("PGDATABASE", "warehouse_v7_test")
 CONN = f"host={os.environ.get('PGHOST','localhost')} port={os.environ.get('PGPORT','5432')} dbname={DB} user={os.environ.get('PGUSER','postgres')} password={os.environ.get('PGPASSWORD','postgres')}"
@@ -107,11 +108,23 @@ def sql_json(sql):
     return json.loads(value(r))
 
 def reconcile(tenant, manifest):
+    valid_stock=[x for k in ("inventory","derived_inventory_items") for x in manifest.get(k,[]) if x["classification"]=="valid"]
+    valid_carpet=[x for k in ("carpet","derived_carpet_rolls") for x in manifest.get(k,[]) if x["classification"]=="valid"]
+
+    stock_totals={}
+    for x in valid_stock:
+        t=x.get("transformed") or {}
+        u=str(t.get("unit") or "")
+        stock_totals[u]=stock_totals.get(u,Decimal("0"))+Decimal(str(t.get("quantity") or 0))
+    expected_stock_by_unit={k:format(v,"f") for k,v in sorted(stock_totals.items())}
+
+    expected_carpet_remaining=sum(int((x.get("transformed") or {}).get("remaining_sixteenths") or 0) for x in valid_carpet)
+
     expected={
       "products":sum(1 for x in manifest["products"] if x["classification"]=="valid")+sum(1 for x in manifest["derived_carpet_products"] if x["classification"]=="valid"),
       "locations":sum(1 for x in manifest["locations"] if x["classification"]=="valid"),
-      "stock_items":sum(1 for x in manifest["inventory"] if x["classification"]=="valid")+sum(1 for x in manifest.get("derived_inventory_items",[]) if x["classification"]=="valid"),
-      "carpet_rolls":sum(1 for x in manifest["carpet"] if x["classification"]=="valid")+sum(1 for x in manifest.get("derived_carpet_rolls",[]) if x["classification"]=="valid")
+      "stock_items":len(valid_stock),
+      "carpet_rolls":len(valid_carpet)
     }
     actual=sql_json(f"""
       select
@@ -123,17 +136,37 @@ def reconcile(tenant, manifest):
         (select count(*) from warehouse_v7.inventory_movement where tenant_id={q(tenant)}::uuid) movements,
         (select count(*) from warehouse_v7.event where tenant_id={q(tenant)}::uuid) events,
         (select count(*) from warehouse_v7.migration_staging where tenant_id={q(tenant)}::uuid and classification='imported') imported_staging,
-        (select count(*) from warehouse_v7.migration_staging where tenant_id={q(tenant)}::uuid and classification<>'imported' and imported_entity_id is not null) invalid_with_canonical_link
+        (select count(*) from warehouse_v7.migration_staging where tenant_id={q(tenant)}::uuid and classification<>'imported' and imported_entity_id is not null) invalid_with_canonical_link,
+        (select coalesce(jsonb_object_agg(unit,total),'{{}}'::jsonb) from
+          (select unit,sum(quantity)::text total from warehouse_v7.stock_item where tenant_id={q(tenant)}::uuid group by unit) q) stock_quantity_by_unit,
+        (select coalesce(jsonb_object_agg(unit,total),'{{}}'::jsonb) from
+          (select unit,sum(quantity)::text total from warehouse_v7.inventory_movement where tenant_id={q(tenant)}::uuid and movement_type='OPENING_IMPORT' group by unit) q) opening_stock_movement_by_unit,
+        (select coalesce(sum(remaining_sixteenths),0) from warehouse_v7.carpet_roll where tenant_id={q(tenant)}::uuid) carpet_remaining_sixteenths,
+        (select coalesce(sum(quantity),0) from warehouse_v7.inventory_movement where tenant_id={q(tenant)}::uuid and movement_type='OPENING_ROLL_IMPORT') opening_carpet_movement_sixteenths
     """)
     expected_opening=expected["stock_items"]+expected["carpet_rolls"]
+    actual_stock_by_unit={k:format(Decimal(str(v)),"f") for k,v in sorted((actual.get("stock_quantity_by_unit") or {}).items())}
+    actual_stock_movements={k:format(Decimal(str(v)),"f") for k,v in sorted((actual.get("opening_stock_movement_by_unit") or {}).items())}
     checks={
       "canonical_counts_match":all(actual[k]==expected[k] for k in ("products","locations","stock_items","carpet_rolls")),
       "opening_commands_match":actual["committed_commands"]==expected_opening,
       "opening_movements_match":actual["movements"]==expected_opening,
       "opening_events_match":actual["events"]==expected_opening,
-      "invalid_rows_have_no_canonical_link":actual["invalid_with_canonical_link"]==0
+      "invalid_rows_have_no_canonical_link":actual["invalid_with_canonical_link"]==0,
+      "stock_quantity_by_unit_match":actual_stock_by_unit==expected_stock_by_unit,
+      "opening_stock_movement_quantity_match":actual_stock_movements==expected_stock_by_unit,
+      "carpet_remaining_measure_match":int(actual["carpet_remaining_sixteenths"])==expected_carpet_remaining,
+      "opening_carpet_movement_measure_match":int(Decimal(str(actual["opening_carpet_movement_sixteenths"])))==expected_carpet_remaining
     }
-    return {"expected":expected,"expected_opening_ledger_rows":expected_opening,"actual":actual,"checks":checks,"pass":all(checks.values())}
+    return {
+      "expected":expected,
+      "expected_opening_ledger_rows":expected_opening,
+      "expected_stock_quantity_by_unit":expected_stock_by_unit,
+      "expected_carpet_remaining_sixteenths":expected_carpet_remaining,
+      "actual":actual,
+      "checks":checks,
+      "pass":all(checks.values())
+    }
 
 def main():
     ap=argparse.ArgumentParser()
