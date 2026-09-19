@@ -35,7 +35,7 @@ create table warehouse_v7.carpet_roll (
  measure_status text not null check(measure_status in ('FULL','CAL','TM')),
  version bigint not null default 1 check(version>0), lifecycle text not null default 'active',
  legacy_record_id text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
- primary key(tenant_id,id), unique(tenant_id,roll_number),
+ primary key(tenant_id,id), unique(tenant_id,roll_number), unique(tenant_id,legacy_record_id),
  foreign key(tenant_id,product_id) references warehouse_v7.product(tenant_id,id) on delete restrict,
  foreign key(tenant_id,location_id) references warehouse_v7.location(tenant_id,id) on delete restrict
 );
