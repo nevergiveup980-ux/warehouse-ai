@@ -10,7 +10,7 @@ create table warehouse_v7.location (
 
 create table warehouse_v7.product (
  tenant_id uuid not null, id uuid not null default gen_random_uuid(), legacy_record_id text,
- sku text, name text not null, colour text, base_unit text not null,
+ sku text, name text not null, colour text, base_unit text not null, coverage_unit text,
  version bigint not null default 1 check(version>0), lifecycle text not null default 'active',
  created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
  primary key(tenant_id,id), unique(tenant_id,legacy_record_id)
