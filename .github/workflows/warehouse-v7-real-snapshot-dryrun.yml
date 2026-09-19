@@ -179,6 +179,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/supplier-return-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
 
@@ -227,6 +228,15 @@ jobs:
             --tenant ffffffff-ffff-4fff-8fff-ffffffffffff \
             --actor 11111111-2222-4333-8444-555555555555
 
+
+
+      - name: Replay real V6 SUPPLIER RETURN history through V7 shadow audit
+        run: |
+          set -euo pipefail
+          python3 v7/supplier-return-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-supplier-return-shadow-report.json \
+            --tenant 12121212-1212-4212-8212-121212121212 \
+            --actor 34343434-3434-4434-8434-343434343434
 
       - name: Replay real V6 CARPET transfer and return history through V7 shadow engines
         run: |
