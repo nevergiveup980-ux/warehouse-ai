@@ -10,8 +10,12 @@ for (const x of [
   'refs/heads/main',
   'ALLOWED_WORKFLOW_REFS',
   'READ_ONLY_V6_OPERATION_SHADOW',
+  'READ_ONLY_V6_ORDER_SHADOW',
   "'supplier', payload->>'supplier'",
   "'po', payload->>'po'",
+  "'recoveryKey',payload->>'recoveryKey'",
+  "'soNumber',payload->>'soNumber'",
+  "'pickedUpAt',payload->>'pickedUpAt'",
   'postgres_jsonb_text_verified',
   'READ_ONLY_V6_SNAPSHOT'
 ]) assert.ok(s.includes(x), x);
