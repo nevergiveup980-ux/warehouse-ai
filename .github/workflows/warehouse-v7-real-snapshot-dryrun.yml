@@ -227,6 +227,15 @@ jobs:
             --tenant ffffffff-ffff-4fff-8fff-ffffffffffff \
             --actor 11111111-2222-4333-8444-555555555555
 
+
+      - name: Replay real V6 CARPET transfer and return history through V7 shadow engines
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-lifecycle-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-carpet-lifecycle-shadow-report.json \
+            --tenant 22222222-3333-4444-8555-666666666666 \
+            --actor 77777777-8888-4999-8aaa-bbbbbbbbbbbb
+
       - name: Run real V6 snapshot through disposable V7 migration
         run: |
           set -euo pipefail
