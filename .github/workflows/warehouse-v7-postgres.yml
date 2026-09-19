@@ -81,6 +81,8 @@ jobs:
           retention-days: 7
       - name: RECEIVE create/update event-version regression
         run: python3 tests/v7-db/receiving_event_version.py
+      - name: Quantity-aware stock transfer regression
+        run: python3 tests/v7-db/transfer_quantity_regression.py
       - name: Database smoke and integrity tests
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
       - name: Same UUID real concurrency attack
