@@ -5,7 +5,7 @@
 3. Same command UUID + different fingerprint is rejected.
 4. Entity version must match expected_version for concurrency-sensitive writes.
 5. Roll remaining length cannot be negative or exceed original length.
-6. Active roll_number is unique per tenant; legacy duplicates enter staging, not production.
+6. Carpet physical identity is tenant-unique via `physical_key`; `roll_number` is a repeatable business/display label and is never database identity.
 7. CUT can deduct a physical roll at most once per command.
 8. Every committed stock change has exactly one causal command and one or more movements.
 9. Movements and events are append-only.
