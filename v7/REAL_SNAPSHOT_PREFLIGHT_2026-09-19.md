@@ -66,9 +66,9 @@ The existing Product Master does not directly identify broadloom carpet rows by 
 A safer derived product identity is the carpet source code:
 - `sourceRoll` is present on 490/530 live carpet rows.
 - A deterministic roll-prefix fallback gives a source code for the remainder; no live row is left without a derived source code in the current snapshot.
-- 244 derived source codes exist.
-- 242 source codes have one consistent collection/colour label pair.
-- 2 source codes have label variants and must be CONFLICT/DEFERRED until reviewed.
+- 243 nonblank derived source codes exist in the current snapshot.
+- 241 source codes have one consistent collection/colour label set suitable for automatic derived-Product candidacy.
+- 2 source codes (CHC022 and CHC023) have material label variants and must be CONFLICT until reviewed.
 
 Planned canonical derived legacy ID:
 `CARPET_SOURCE:<normalized source code>`
