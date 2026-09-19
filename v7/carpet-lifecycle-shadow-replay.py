@@ -109,6 +109,8 @@ def main():
     ap.add_argument("envelope"); ap.add_argument("--report",required=True)
     ap.add_argument("--tenant",required=True); ap.add_argument("--actor",required=True)
     a=ap.parse_args(); ensure_disposable()
+    transfer_tenant=str(uuid.uuid5(NS,'transfer-tenant:'+a.tenant))
+    return_tenant=str(uuid.uuid5(NS,'return-tenant:'+a.tenant))
     env=json.loads(Path(a.envelope).read_text())
     if env.get("mode")!="READ_ONLY_V6_OPERATION_SHADOW": raise RuntimeError("OPERATION_SHADOW_MODE_INVALID")
     rows=env.get("rows"); integ=env.get("source_integrity") or {}
@@ -133,7 +135,7 @@ def main():
             impact=str(p.get("impactResult") or "")
             src_code=str(p.get("location") or "WAREHOUSE").strip() or "WAREHOUSE"
             dst_code=str(p.get("toLocation") or "STORE").strip() or "STORE"
-            product,src_loc,dst_loc=common(a.tenant,a.actor,"transfer-"+rid,src_code,dst_code)
+            product,src_loc,dst_loc=common(transfer_tenant,a.actor,"transfer-"+rid,src_code,dst_code)
             source_id=str(uuid.uuid5(NS,"source:"+rid))
             command=str(uuid.uuid5(NS,"command:"+rid))
             m=PARTIAL_RE.search(impact)
@@ -145,19 +147,19 @@ def main():
                 if parsed_source!=roll_number or before-qty!=after:
                     evidence_fail.append(rid); continue
                 child_id=str(uuid.uuid5(NS,"child:"+rid))
-                seed_roll(a.tenant,source_id,roll_number,product,src_loc,before,"TM")
+                seed_roll(transfer_tenant,source_id,roll_number,product,src_loc,before,"TM")
                 def call():
                     return json.loads(value(run(f"""
                       set request.jwt.claim.sub={q(a.actor)};
                       select warehouse_v7.transfer_carpet_piece(
-                        {q(a.tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,1,
+                        {q(transfer_tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,1,
                         {q(child_id)}::uuid,{q(child_number)},{qty},{q(dst_loc)}::uuid,
                         jsonb_build_object('shadow_mode',true,'source_record_id',{q(rid)}),
                         {q(a.actor)}::uuid,'V7_CARPET_TRANSFER_SHADOW'
                       )::text;
                     """)))
-                first=call(); s1=transfer_state(a.tenant,command,source_id,child_id)
-                second=call(); s2=transfer_state(a.tenant,command,source_id,child_id)
+                first=call(); s1=transfer_state(transfer_tenant,command,source_id,child_id)
+                second=call(); s2=transfer_state(transfer_tenant,command,source_id,child_id)
                 ch=s1.get("child") or {}
                 if (first.get("status")!="committed"
                     or int(first.get("source_before_sixteenths",-1))!=before
@@ -174,19 +176,19 @@ def main():
                     ledger_fail.append(rid)
             else:
                 whole+=1
-                seed_roll(a.tenant,source_id,roll_number,product,src_loc,qty,"TM")
+                seed_roll(transfer_tenant,source_id,roll_number,product,src_loc,qty,"TM")
                 def call():
                     return json.loads(value(run(f"""
                       set request.jwt.claim.sub={q(a.actor)};
                       select warehouse_v7.transfer_carpet_roll(
-                        {q(a.tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,1,
+                        {q(transfer_tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,1,
                         {q(dst_loc)}::uuid,
                         jsonb_build_object('shadow_mode',true,'source_record_id',{q(rid)}),
                         {q(a.actor)}::uuid,'V7_CARPET_TRANSFER_SHADOW'
                       )::text;
                     """)))
-                first=call(); s1=transfer_state(a.tenant,command,source_id)
-                second=call(); s2=transfer_state(a.tenant,command,source_id)
+                first=call(); s1=transfer_state(transfer_tenant,command,source_id)
+                second=call(); s2=transfer_state(transfer_tenant,command,source_id)
                 if (first.get("status")!="committed"
                     or int(first.get("remaining_sixteenths",-1))!=qty
                     or int(s1.get("source_remaining",-1))!=qty
@@ -209,25 +211,25 @@ def main():
                 evidence_fail.append(rid); continue
 
             loc_code=str(p.get("location") or "RETURN").strip() or "RETURN"
-            product,loc,_=common(a.tenant,a.actor,"return-"+rid,loc_code)
+            product,loc,_=common(return_tenant,a.actor,"return-"+rid,loc_code)
             source_id=str(uuid.uuid5(NS,"return-source:"+rid))
             child_id=str(uuid.uuid5(NS,"return-child:"+rid))
             out_cmd=str(uuid.uuid5(NS,"return-out:"+rid))
             command=str(uuid.uuid5(NS,"return-command:"+rid))
             source_remain=max(qty*2,qty+192)
-            seed_roll(a.tenant,source_id,source_number,product,loc,source_remain,"CAL")
+            seed_roll(return_tenant,source_id,source_number,product,loc,source_remain,"CAL")
             run(f"""
               insert into warehouse_v7.command(
                 tenant_id,id,command_type,entity_type,entity_id,payload,payload_fingerprint,status,actor_id,device_id
               ) values(
-                {q(a.tenant)}::uuid,{q(out_cmd)}::uuid,'CARPET_OUT_FIXTURE','carpet_roll',{q(source_id)}::uuid,
+                {q(return_tenant)}::uuid,{q(out_cmd)}::uuid,'CARPET_OUT_FIXTURE','carpet_roll',{q(source_id)}::uuid,
                 jsonb_build_object('shadow_fixture',true),'fixture','committed',
                 {q(a.actor)}::uuid,'V7_CARPET_RETURN_FIXTURE'
               );
               insert into warehouse_v7.inventory_movement(
                 tenant_id,command_id,product_id,carpet_roll_id,movement_type,quantity,unit,from_location_id
               ) values(
-                {q(a.tenant)}::uuid,{q(out_cmd)}::uuid,{q(product)}::uuid,{q(source_id)}::uuid,
+                {q(return_tenant)}::uuid,{q(out_cmd)}::uuid,{q(product)}::uuid,{q(source_id)}::uuid,
                 'CARPET_OUT',{qty},'1/16_IN',{q(loc)}::uuid
               );
             """)
@@ -235,14 +237,14 @@ def main():
                 return json.loads(value(run(f"""
                   set request.jwt.claim.sub={q(a.actor)};
                   select warehouse_v7.return_carpet_piece(
-                    {q(a.tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,
+                    {q(transfer_tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,
                     {q(child_id)}::uuid,{q(child_number)},{qty},{q(loc)}::uuid,{q(out_cmd)}::uuid,
                     jsonb_build_object('shadow_mode',true,'source_record_id',{q(rid)}),
                     {q(a.actor)}::uuid,'V7_CARPET_RETURN_SHADOW'
                   )::text;
                 """)))
-            first=call(); s1=transfer_state(a.tenant,command,source_id,child_id)
-            second=call(); s2=transfer_state(a.tenant,command,source_id,child_id)
+            first=call(); s1=transfer_state(transfer_tenant,command,source_id,child_id)
+            second=call(); s2=transfer_state(transfer_tenant,command,source_id,child_id)
             ch=s1.get("child") or {}
             if (first.get("status")!="committed"
                 or int(first.get("returned_sixteenths",-1))!=qty
