@@ -8,8 +8,8 @@ if(!input){
   console.error('usage: node v7/snapshot-manifest-cli.mjs <snapshot.json>');
   process.exit(2);
 }
-const rows=JSON.parse(fs.readFileSync(input,'utf8'));
-if(!Array.isArray(rows)) throw new Error('snapshot must be a JSON array');
+const inputData=JSON.parse(fs.readFileSync(input,'utf8'));
+const rows=snapshotRows(inputData);
 
 const liveRows=rows.filter(r=>!r.deleted_at);
 const relevant=liveRows.filter(r=>['runlu_product_master_v21','runlu_inventory_records_v21','runlu_carpet_inventory_v52'].includes(r.dataset_key));
@@ -52,4 +52,5 @@ const source_integrity=rowMd5Verified ? {
 
 const manifest=classifySnapshot(rows);
 manifest.source_integrity=source_integrity;
+if(!Array.isArray(inputData)) manifest.snapshot_envelope_meta=inputData.meta;
 process.stdout.write(JSON.stringify(manifest,null,2)+'\n');
