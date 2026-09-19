@@ -25,15 +25,26 @@ good=stage('runlu_inventory_records_v21','INV-GOOD','{"product_legacy_record_id"
 missing_product=stage('runlu_inventory_records_v21','INV-NOPROD','{"product_legacy_record_id":"PRD-MISSING","location_code":"8B","quantity":4,"unit":"BOX"}')
 missing_location=stage('runlu_inventory_records_v21','INV-NOLOC','{"product_legacy_record_id":"PRD-STOCK","location_code":"NO-SUCH","quantity":4,"unit":"BOX"}')
 bad_qty=stage('runlu_inventory_records_v21','INV-BADQ','{"product_legacy_record_id":"PRD-STOCK","location_code":"8B","quantity":0,"unit":"BOX"}')
+carton=stage('runlu_inventory_records_v21','INV-CARTON','{"product_legacy_record_id":"PRD-STOCK","location_code":"8B","quantity":3,"unit":"Carton"}')
+unknown_unit=stage('runlu_inventory_records_v21','INV-BADUNIT','{"product_legacy_record_id":"PRD-STOCK","location_code":"8B","quantity":2,"unit":"Bag"}')
 defer=stage('runlu_inventory_records_v21','INV-DEFER','{"product_legacy_record_id":"PRD-STOCK","location_code":"8B","quantity":2,"unit":"BOX"}')
 operator_try=stage('runlu_inventory_records_v21','INV-OP','{"product_legacy_record_id":"PRD-STOCK","location_code":"8B","quantity":2,"unit":"BOX"}')
-for i,k in [(good,'valid'),(missing_product,'valid'),(missing_location,'valid'),(bad_qty,'valid'),(defer,'deferred'),(operator_try,'valid')]: classify(i,k)
+for i,k in [(good,'valid'),(carton,'valid'),(unknown_unit,'valid'),(missing_product,'valid'),(missing_location,'valid'),(bad_qty,'valid'),(defer,'deferred'),(operator_try,'valid')]: classify(i,k)
 
 r=run(f"set request.jwt.claim.sub='{AD}';select warehouse_v7.import_valid_stock_item('{T}','{good}','{AD}');")
 assert r.returncode==0,r.stderr
 sid=value(r)
 r2=run(f"set request.jwt.claim.sub='{AD}';select warehouse_v7.import_valid_stock_item('{T}','{good}','{AD}');")
 assert r2.returncode==0 and value(r2)==sid,(r2.stdout,r2.stderr)
+
+r=run(f"set request.jwt.claim.sub='{AD}';select warehouse_v7.import_valid_stock_item('{T}','{carton}','{AD}');")
+assert r.returncode==0,r.stderr
+carton_sid=value(r)
+carton_state=run(f"select quantity||'|'||unit from warehouse_v7.stock_item where tenant_id='{T}' and id='{carton_sid}';")
+assert value(carton_state)=='3.000000|BOX',carton_state.stdout
+
+r=run(f"set request.jwt.claim.sub='{AD}';select warehouse_v7.import_valid_stock_item('{T}','{unknown_unit}','{AD}');")
+assert r.returncode!=0 and 'MIGRATION_STOCK_UNIT_INVALID' in r.stderr,r.stderr
 
 r=run(f"set request.jwt.claim.sub='{AD}';select warehouse_v7.import_valid_stock_item('{T}','{missing_product}','{AD}');")
 assert r.returncode!=0 and 'MIGRATION_PRODUCT_LINK_NOT_FOUND' in r.stderr,r.stderr
@@ -53,7 +64,7 @@ counts=run(f"""select
  (select count(*) from warehouse_v7.command where tenant_id='{T}' and id='{good}' and status='committed')||'|'||
  (select count(*) from warehouse_v7.inventory_movement where tenant_id='{T}' and command_id='{good}' and movement_type='OPENING_IMPORT')||'|'||
  (select count(*) from warehouse_v7.event where tenant_id='{T}' and command_id='{good}' and event_type='MIGRATED_OPENING_STOCK');""")
-assert value(counts)=='1|1|1|1',counts.stdout
+assert value(counts)=='2|1|1|1',counts.stdout
 link=run(f"select classification||'|'||imported_entity_type||'|'||imported_entity_id from warehouse_v7.migration_staging where tenant_id='{T}' and id='{good}';")
 assert value(link)==f'imported|stock_item|{sid}',link.stdout
 print('V7 valid-only Stock Item import + opening ledger attack: PASS')
