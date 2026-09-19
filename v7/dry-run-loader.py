@@ -84,7 +84,7 @@ def import_valid(tenant, sid, item, actor):
         fn="import_valid_location"
     elif dataset=="runlu_inventory_records_v21":
         fn="import_valid_stock_item"
-    elif dataset=="runlu_carpet_inventory_v52":
+    elif dataset in ("runlu_carpet_inventory_v52","derived_carpet_roll_v6"):
         fn="import_valid_carpet_roll"
     else:
         raise RuntimeError(f"NO_IMPORT_FUNCTION:{dataset}")
@@ -111,7 +111,7 @@ def reconcile(tenant, manifest):
       "products":sum(1 for x in manifest["products"] if x["classification"]=="valid")+sum(1 for x in manifest["derived_carpet_products"] if x["classification"]=="valid"),
       "locations":sum(1 for x in manifest["locations"] if x["classification"]=="valid"),
       "stock_items":sum(1 for x in manifest["inventory"] if x["classification"]=="valid"),
-      "carpet_rolls":sum(1 for x in manifest["carpet"] if x["classification"]=="valid")
+      "carpet_rolls":sum(1 for x in manifest["carpet"] if x["classification"]=="valid")+sum(1 for x in manifest.get("derived_carpet_rolls",[]) if x["classification"]=="valid")
     }
     actual=sql_json(f"""
       select
@@ -163,6 +163,7 @@ def main():
     processed["locations"]=process_group(tenant,actor,manifest["locations"])
     processed["inventory"]=process_group(tenant,actor,manifest["inventory"])
     processed["carpet"]=process_group(tenant,actor,manifest["carpet"])
+    processed["derived_carpet_rolls"]=process_group(tenant,actor,manifest.get("derived_carpet_rolls",[]))
 
     report={
       "mode":"DISPOSABLE_POSTGRES_DRY_RUN",
