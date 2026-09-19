@@ -107,6 +107,10 @@ def sql_json(sql):
     r=run("select row_to_json(x)::text from ("+sql+") x;")
     return json.loads(value(r))
 
+def decimal_text(v):
+    d=Decimal(str(v))
+    return format(d.normalize(),"f") if d else "0"
+
 def reconcile(tenant, manifest):
     valid_stock=[x for k in ("inventory","derived_inventory_items") for x in manifest.get(k,[]) if x["classification"]=="valid"]
     valid_carpet=[x for k in ("carpet","derived_carpet_rolls") for x in manifest.get(k,[]) if x["classification"]=="valid"]
@@ -116,7 +120,7 @@ def reconcile(tenant, manifest):
         t=x.get("transformed") or {}
         u=str(t.get("unit") or "")
         stock_totals[u]=stock_totals.get(u,Decimal("0"))+Decimal(str(t.get("quantity") or 0))
-    expected_stock_by_unit={k:format(v,"f") for k,v in sorted(stock_totals.items())}
+    expected_stock_by_unit={k:decimal_text(v) for k,v in sorted(stock_totals.items())}
 
     expected_carpet_remaining=sum(int((x.get("transformed") or {}).get("remaining_sixteenths") or 0) for x in valid_carpet)
 
@@ -145,8 +149,8 @@ def reconcile(tenant, manifest):
         (select coalesce(sum(quantity),0) from warehouse_v7.inventory_movement where tenant_id={q(tenant)}::uuid and movement_type='OPENING_ROLL_IMPORT') opening_carpet_movement_sixteenths
     """)
     expected_opening=expected["stock_items"]+expected["carpet_rolls"]
-    actual_stock_by_unit={k:format(Decimal(str(v)),"f") for k,v in sorted((actual.get("stock_quantity_by_unit") or {}).items())}
-    actual_stock_movements={k:format(Decimal(str(v)),"f") for k,v in sorted((actual.get("opening_stock_movement_by_unit") or {}).items())}
+    actual_stock_by_unit={k:decimal_text(v) for k,v in sorted((actual.get("stock_quantity_by_unit") or {}).items())}
+    actual_stock_movements={k:decimal_text(v) for k,v in sorted((actual.get("opening_stock_movement_by_unit") or {}).items())}
     checks={
       "canonical_counts_match":all(actual[k]==expected[k] for k in ("products","locations","stock_items","carpet_rolls")),
       "opening_commands_match":actual["committed_commands"]==expected_opening,
