@@ -237,14 +237,14 @@ def main():
                 return json.loads(value(run(f"""
                   set request.jwt.claim.sub={q(a.actor)};
                   select warehouse_v7.return_carpet_piece(
-                    {q(transfer_tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,
+                    {q(return_tenant)}::uuid,{q(command)}::uuid,{q(source_id)}::uuid,
                     {q(child_id)}::uuid,{q(child_number)},{qty},{q(loc)}::uuid,{q(out_cmd)}::uuid,
                     jsonb_build_object('shadow_mode',true,'source_record_id',{q(rid)}),
                     {q(a.actor)}::uuid,'V7_CARPET_RETURN_SHADOW'
                   )::text;
                 """)))
-            first=call(); s1=transfer_state(transfer_tenant,command,source_id,child_id)
-            second=call(); s2=transfer_state(transfer_tenant,command,source_id,child_id)
+            first=call(); s1=transfer_state(return_tenant,command,source_id,child_id)
+            second=call(); s2=transfer_state(return_tenant,command,source_id,child_id)
             ch=s1.get("child") or {}
             if (first.get("status")!="committed"
                 or int(first.get("returned_sixteenths",-1))!=qty
