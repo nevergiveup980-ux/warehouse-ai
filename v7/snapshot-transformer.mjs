@@ -86,15 +86,83 @@ export function classifySnapshot(rows){
 
   const rawInv=inventory.map(r=>{
     const p=r.payload||{}, qty=Number(p.quantity), unit=normalizeLegacyUnit(p.unit), product=productById.get(key(p.masterId));
-    const loc=key(p.location);
-    return {r,p,qty,unit,product,loc};
+    const loc=key(p.location), lot=key(p.lotNumber), payloadId=key(p.id);
+    const businessSig=JSON.stringify({
+      masterId:key(p.masterId),poNumber:key(p.poNumber),location:loc,unit,
+      quantity:Number.isFinite(qty)?qty:null,lotNumber:lot,notes:key(p.notes),
+      locationType:key(p.locationType),pailSize:key(p.pailSize)
+    });
+    return {r,p,qty,unit,product,loc,lot,payloadId,businessSig};
   });
-  const dupCount=new Map();
+
+  // A repeated legacy payload id with different business state is identity divergence,
+  // not evidence for two separate current stock items. Keep every such row quarantined.
+  const inventoryIdStates=new Map();
+  for(const x of rawInv){
+    if(!x.payloadId) continue;
+    const s=inventoryIdStates.get(x.payloadId)||new Set();
+    s.add(x.businessSig);inventoryIdStates.set(x.payloadId,s);
+  }
+
+  // Duplicate grouping is deliberately conservative and includes lot number.
+  // No source row is ever selected as the canonical winner.
+  const inventoryDuplicateGroups=new Map();
   for(const x of rawInv){
     if(!(x.qty>0)||!x.product||x.product.classification!=='valid'||!x.unit||x.unit!==x.product.transformed.base_unit||!x.loc||x.loc==='PHYSICAL COUNT REQUIRED') continue;
-    const k=[key(x.p.masterId),key(x.p.poNumber),x.loc,x.unit,String(x.qty)].join('|');
-    dupCount.set(k,(dupCount.get(k)||0)+1);
+    const k=[key(x.p.masterId),key(x.p.poNumber),x.loc,x.unit,String(x.qty),x.lot].join('|');
+    const g=inventoryDuplicateGroups.get(k)||[];g.push(x);inventoryDuplicateGroups.set(k,g);
   }
+
+  // Strict legacy alias recovery: one derived Stock Item may represent a duplicate
+  // business group only when there is exactly one explicit non-self alias edge:
+  // wrapper.payload.id -> peer record_id. The wrapper must be its own inventoryId,
+  // ACTIVE, zero-transaction, byte-equivalent in normalized business state, and the
+  // target legacy id must have no divergent business state anywhere else.
+  const safeInventoryAliasByRecord=new Map();
+  const derivedInventoryItems=[];
+  for(const members of inventoryDuplicateGroups.values()){
+    if(members.length<2) continue;
+    const safeEdges=[];
+    for(const src of members){
+      if(!src.payloadId) continue;
+      const target=members.find(x=>String(x.r.record_id)!==String(src.r.record_id)&&String(x.r.record_id)===src.payloadId);
+      if(!target) continue;
+      const wrapperIdentity=key(src.p.inventoryId)===String(src.r.record_id);
+      const activeWrapper=key(src.p.lifecycleStatus).toUpperCase()==='ACTIVE';
+      const zeroTx=Number(src.p.transactionCount??0)===0;
+      const targetSelfId=target.payloadId===String(target.r.record_id);
+      const targetStable=(inventoryIdStates.get(target.payloadId)?.size||0)===1;
+      if(src.businessSig===target.businessSig&&wrapperIdentity&&activeWrapper&&zeroTx&&targetSelfId&&targetStable){
+        safeEdges.push({src,target});
+      }
+    }
+    if(safeEdges.length!==1) continue;
+
+    const {src,target}=safeEdges[0];
+    const aliasId=target.payloadId;
+    const recordId='INVENTORY_ALIAS:'+aliasId;
+    const memberIds=members.map(x=>String(x.r.record_id)).sort();
+    derivedInventoryItems.push({
+      dataset:'derived_inventory_item_v6',
+      record_id:recordId,
+      source_payload:{
+        payload_id:aliasId,
+        alias_source_record_id:String(src.r.record_id),
+        alias_target_record_id:String(target.r.record_id),
+        member_record_ids:memberIds,
+        business_signature:target.businessSig
+      },
+      classification:'valid',
+      reason:'INVENTORY_LEGACY_ALIAS_GROUP_READY',
+      transformed:{
+        product_legacy_record_id:key(target.p.masterId),location_code:target.loc,
+        quantity:target.qty,unit:target.unit,po_number:key(target.p.poNumber)||null,
+        lot_number:target.lot||null
+      }
+    });
+    for(const x of members) safeInventoryAliasByRecord.set(String(x.r.record_id),recordId);
+  }
+
   const inventoryManifest=rawInv.map(x=>{
     let classification='valid',reason='INVENTORY_READY';
     if(!(x.qty>0)){classification='deferred';reason='NONPOSITIVE_OPENING_QUANTITY';}
@@ -103,13 +171,19 @@ export function classifySnapshot(rows){
     else if(!x.unit){classification='conflict';reason='UNKNOWN_UNIT';}
     else if(x.unit!==x.product.transformed.base_unit){classification='conflict';reason='UNIT_MISMATCH_PRODUCT_BASE';}
     else if(!x.loc||x.loc==='PHYSICAL COUNT REQUIRED'){classification='deferred';reason='LOCATION_REQUIRES_REVIEW';}
+    else if(x.payloadId&&(inventoryIdStates.get(x.payloadId)?.size||0)>1){classification='conflict';reason='INVENTORY_ID_STATE_DIVERGENCE';}
     else{
-      const k=[key(x.p.masterId),key(x.p.poNumber),x.loc,x.unit,String(x.qty)].join('|');
-      if((dupCount.get(k)||0)>1){classification='duplicate';reason='DUPLICATE_BUSINESS_TUPLE_REVIEW';}
+      const k=[key(x.p.masterId),key(x.p.poNumber),x.loc,x.unit,String(x.qty),x.lot].join('|');
+      const g=inventoryDuplicateGroups.get(k)||[];
+      if(g.length>1){
+        classification='duplicate';
+        reason=safeInventoryAliasByRecord.has(String(x.r.record_id))?'INVENTORY_LEGACY_ALIAS_REPLAY':'DUPLICATE_BUSINESS_TUPLE_REVIEW';
+      }
     }
     return {dataset:x.r.dataset_key,record_id:x.r.record_id,source_payload:x.p,classification,reason,
+      derived_group_id:safeInventoryAliasByRecord.get(String(x.r.record_id))||null,
       transformed:{product_legacy_record_id:key(x.p.masterId),location_code:x.loc||null,quantity:x.qty,unit:x.unit,
-        po_number:key(x.p.poNumber)||null,lot_number:key(x.p.lotNumber)||null}};
+        po_number:key(x.p.poNumber)||null,lot_number:x.lot||null}};
   });
 
   const sourceGroups=new Map();
@@ -229,6 +303,7 @@ export function classifySnapshot(rows){
     derived_carpet_products:derivedProducts,
     locations,
     inventory:inventoryManifest,
+    derived_inventory_items:derivedInventoryItems,
     carpet:carpetManifest,
     derived_carpet_rolls:derivedCarpetRolls,
     summary:{
@@ -236,6 +311,7 @@ export function classifySnapshot(rows){
       derived_carpet_products:counts(derivedProducts),
       locations:counts(locations),
       inventory:counts(inventoryManifest),
+      derived_inventory_items:counts(derivedInventoryItems),
       carpet:counts(carpetManifest),
       derived_carpet_rolls:counts(derivedCarpetRolls)
     }
