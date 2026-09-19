@@ -19,18 +19,22 @@ Legacy warehouse data lives in `public.warehouse_records`; `dataset_key` identif
 
 ## Product Master transform
 
-Legacy `coverageUnit` is the canonical source for opening Product base unit:
-- SF / Box -> BOX
-- Box -> BOX
-- Roll -> ROLL
-- Gallon -> GAL
-- Pail -> PAIL
+V7 separates two meanings that V6 mixed together:
+- `base_unit` = physical stock-counting unit.
+- `coverage_unit` = coverage/display metadata and never authorizes quantity conversion.
+
+Base-unit resolution is evidence-first:
+1. one positive live Inventory unit -> use that unit;
+2. multiple observed units -> legacy coverage may break the tie only when its mapped unit is one of the observed units;
+3. no live Inventory for known rolled Underlay / Spill Blocker -> ROLL;
+4. otherwise a recognized legacy coverage unit is a fallback;
+5. unresolved evidence -> CONFLICT.
 
 Current read-only classification:
 - VALID: 68
 - CONFLICT: 0
 
-Inventory unit history is evidence, not permission to silently rewrite Product base unit.
+This correctly keeps examples such as PAIL-counted adhesive separate from GAL coverage semantics and preserves secondary EACH/Piece evidence without silently converting it.
 
 ## Derived Broadloom Product transform
 
@@ -66,23 +70,27 @@ Unit normalization at the boundary:
 - Roll -> ROLL
 - other unknown units -> CONFLICT
 
-Conservative current classification of 189 live V6 inventory rows:
-- VALID: 52
-- DUPLICATE quarantine: 112
-- CONFLICT: 15
+Verified real-snapshot classification of 189 live V6 Inventory rows after identity and stock-unit hardening:
+- VALID direct rows: 52
+- DUPLICATE quarantine: 105
+- CONFLICT: 22
 - DEFERRED: 10
-- ORPHAN: 0
+- ORPHAN imported opening rows: 0
+- DERIVED INVENTORY alias candidates: 30 VALID
 
 Rules:
 1. quantity <= 0 -> DEFERRED; it does not create opening balance.
-2. missing Product -> ORPHAN.
+2. missing/uncanonical Product -> ORPHAN/CONFLICT depending on the earlier gate.
 3. unknown unit -> CONFLICT.
-4. inventory unit != Product canonical base unit -> CONFLICT.
+4. inventory unit != Product physical `base_unit` -> CONFLICT; no implicit conversion.
 5. `PHYSICAL COUNT REQUIRED` / missing physical location -> DEFERRED.
-6. repeated business tuple (Product + PO + Location + normalized unit + quantity) -> all members stay DUPLICATE quarantine; the transformer does **not** select a winner.
-7. only the remainder becomes VALID opening-stock candidates.
+6. duplicate grouping includes Product + PO + Location + normalized unit + quantity + lot.
+7. a repeated legacy payload `id` with different business states -> `INVENTORY_ID_STATE_DIVERGENCE` CONFLICT; a stale state is never allowed to masquerade as a second current stock item.
+8. duplicate source rows never elect a winner.
+9. a separate derived record `INVENTORY_ALIAS:<legacy payload id>` is created only when one explicit wrapper-to-peer alias edge is proven by matching business state, wrapper identity, ACTIVE lifecycle, zero transaction count, self-identifying target and no divergent target state.
+10. only direct VALID rows plus VALID derived alias records become opening Stock Items.
 
-The 15 current unit conflicts are intentionally not auto-converted. Examples include Piece/EACH against BOX-based products and PAIL against products whose legacy coverage unit says GAL.
+The successful real rehearsal imported 52 direct Stock Items + 30 derived alias Stock Items = **82 canonical opening Stock Items**. The original duplicate/replay rows remain staged as evidence.
 
 ## Carpet opening-roll classification
 
@@ -137,4 +145,13 @@ It must produce:
 - opening movement/event counts,
 - zero production writes.
 
-Only after that report reconciles do we consider a controlled Production V7 migration.
+The latest verified real rehearsal after Inventory alias recovery and Product stock-unit separation reconciled:
+- canonical Products: 309
+- canonical Locations: 97
+- canonical Stock Items: 82
+- canonical Carpet Rolls: 152
+- opening Commands / Movements / Events: 234 each
+- invalid rows with canonical links: 0
+- Production writes: 0
+
+Only after quantity-level and identity-level reconciliation also remain green do we consider a controlled Production V7 migration.
