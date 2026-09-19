@@ -39,6 +39,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
       - name: Database smoke and integrity tests
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
       - name: Same UUID real concurrency attack
@@ -55,3 +56,5 @@ jobs:
         run: python3 tests/v7-db/cross_tenant_rls.py
       - name: Cross-tenant WRITE attack
         run: python3 tests/v7-db/cross_tenant_write.py
+      - name: Command identity spoof attack
+        run: python3 tests/v7-db/command_identity_spoof.py
