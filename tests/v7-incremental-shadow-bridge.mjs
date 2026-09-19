@@ -6,6 +6,9 @@ const s=fs.readFileSync('v7/incremental-shadow-bridge.ts','utf8');
 for (const x of [
   'warehouse-v7-incremental-shadow.yml',
   'warehouse-v7-incremental-shadow',
+  'refs/heads/warehouse-v7-foundation',
+  'refs/heads/main',
+  'ALLOWED_WORKFLOW_REFS',
   'warehouse_v7_shadow.watermark',
   'production_business_writes: 0',
   'updated_at::text as updated_at_text',
