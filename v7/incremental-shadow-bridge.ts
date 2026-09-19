@@ -77,7 +77,7 @@ function feedAfterWatermark(sql: any, limit: number) {
       and r.user_id=${WAREHOUSE_OWNER}::uuid
       and r.deleted_at is null
       and (
-        r.dataset_key in ('runlu_receiving_v50','runlu_cutting_log_v52')
+        r.dataset_key in ('runlu_receiving_v50','runlu_cutting_log_v52','runlu_orders_v20','runlu_special_orders_v51')
         or (
           r.dataset_key='runlu_operations_log_v52'
           and r.payload->>'type' in (
@@ -127,6 +127,39 @@ function sanitizeRow(row: any) {
       numberOfCuts: p.numberOfCuts ?? null,
       date: p.date ?? null,
       time: p.time ?? null,
+    };
+  } else if (row.dataset_key === "runlu_orders_v20") {
+    payload = {
+      id: p.id ?? null,
+      type: p.type ?? null,
+      status: p.status ?? null,
+      unit: p.unit ?? null,
+      quantity: p.quantity ?? null,
+      location: p.location ?? null,
+      poNumber: p.poNumber ?? null,
+      soNumber: p.soNumber ?? null,
+      recoveryKey: p.recoveryKey ?? null,
+      customer: p.customer ?? null,
+      product: p.product ?? null,
+      date: p.date ?? null,
+      created: p.created ?? null,
+    };
+  } else if (row.dataset_key === "runlu_special_orders_v51") {
+    payload = {
+      id: p.id ?? null,
+      po: p.po ?? null,
+      status: p.status ?? null,
+      unit: p.unit ?? null,
+      quantity: p.quantity ?? null,
+      location: p.location ?? null,
+      recoveryKey: p.recoveryKey ?? null,
+      customer: p.customer ?? null,
+      product: p.product ?? null,
+      supplier: p.supplier ?? null,
+      createdAt: p.createdAt ?? null,
+      updatedAt: p.updatedAt ?? null,
+      pickedUpAt: p.pickedUpAt ?? null,
+      receivedAt: p.receivedAt ?? null,
     };
   } else {
     payload = {
@@ -280,7 +313,7 @@ Deno.serve(async (req: Request) => {
           where r.user_id=${WAREHOUSE_OWNER}::uuid
             and r.deleted_at is null
             and (
-              r.dataset_key in ('runlu_receiving_v50','runlu_cutting_log_v52')
+              r.dataset_key in ('runlu_receiving_v50','runlu_cutting_log_v52','runlu_orders_v20','runlu_special_orders_v51')
               or (
                 r.dataset_key='runlu_operations_log_v52'
                 and r.payload->>'type' in (
