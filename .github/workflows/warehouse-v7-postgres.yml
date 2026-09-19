@@ -47,6 +47,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/migration_classification_attack.sql
       - name: Valid-only Product import attack
         run: python3 tests/v7-db/migration_valid_product_import.py
+      - name: Valid-only Location import attack
+        run: python3 tests/v7-db/migration_valid_location_import.py
       - name: Database smoke and integrity tests
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
       - name: Same UUID real concurrency attack
