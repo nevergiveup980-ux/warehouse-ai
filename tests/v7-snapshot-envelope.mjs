@@ -1,5 +1,8 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
 import {liveDatasetDigest,verifySnapshotEnvelope,snapshotRows} from '../v7/snapshot-envelope.mjs';
 
 const rows=JSON.parse(fs.readFileSync('tests/v7-db/fixtures/snapshot-small.json','utf8'));
@@ -30,5 +33,13 @@ assert.throws(()=>verifySnapshotEnvelope(missing),/SNAPSHOT_LIVE_COUNT_MISMATCH:
 const wrongMode=structuredClone(envelope);
 wrongMode.meta.mode='PRODUCTION_WRITE';
 assert.throws(()=>verifySnapshotEnvelope(wrongMode),/SNAPSHOT_MODE_INVALID/);
+
+const tmp=path.join(os.tmpdir(),'v7-snapshot-envelope-test.json');
+fs.writeFileSync(tmp,JSON.stringify(envelope));
+const out=JSON.parse(execFileSync(process.execPath,['v7/snapshot-manifest-cli.mjs',tmp],{encoding:'utf8'}));
+assert.equal(out.snapshot_envelope_meta.mode,'READ_ONLY_V6_SNAPSHOT');
+assert.equal(out.snapshot_envelope_meta.datasets.length,3);
+assert.equal(out.source_integrity.total_live_rows,rows.length);
+fs.unlinkSync(tmp);
 
 console.log('V7 snapshot envelope integrity contract: PASS');
