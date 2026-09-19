@@ -54,7 +54,10 @@ begin
    'colour',nullif(btrim(coalesce(p_colour,'')),''),
    'base_unit','1/16_IN',
    'lifecycle','active');
- fp:=md5(payload::text);
+ fp:=md5(jsonb_build_object(
+   'source_code',upper(btrim(p_source_code)),
+   'name_key',lower(btrim(coalesce(p_collection,''))),
+   'colour_key',lower(btrim(coalesce(p_colour,''))))::text);
 
  insert into warehouse_v7.migration_staging(
    tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint,evidence)
