@@ -75,12 +75,34 @@ export function classifySnapshot(rows){
   const inventory=live(rows,'runlu_inventory_records_v21');
   const carpets=live(rows,'runlu_carpet_inventory_v52');
 
+  // Product.base_unit is the physical stock-counting unit, not the coverage/pricing unit.
+  // Prefer unanimous positive live Inventory evidence. Coverage is only a tie-breaker/fallback,
+  // and known rolled underlay categories stay ROLL when no live stock exists.
+  const productUnitEvidence=new Map();
+  for(const r of inventory){
+    const p=r.payload||{}, mid=key(p.masterId), qty=Number(p.quantity), u=normalizeLegacyUnit(p.unit);
+    if(!mid||!(qty>0)||!u) continue;
+    const s=productUnitEvidence.get(mid)||new Set();s.add(u);productUnitEvidence.set(mid,s);
+  }
+
   const productManifest=products.map(r=>{
-    const p=r.payload||{}, base_unit=productBaseUnit(p.coverageUnit);
+    const p=r.payload||{}, observed=[...(productUnitEvidence.get(String(r.record_id))||new Set())].sort();
+    const coverageMapped=productBaseUnit(p.coverageUnit), category=lower(p.category);
+    let base_unit=null,unit_resolution=null;
+    if(observed.length===1){base_unit=observed[0];unit_resolution='inventory_consensus';}
+    else if(observed.length>1&&coverageMapped&&observed.includes(coverageMapped)){
+      base_unit=coverageMapped;unit_resolution='coverage_tiebreak';
+    } else if(observed.length===0&&['underlay','spill blocker'].includes(category)){
+      base_unit='ROLL';unit_resolution='category_roll_rule';
+    } else if(observed.length===0&&coverageMapped){
+      base_unit=coverageMapped;unit_resolution='coverage_fallback';
+    }
     const ok=!!key(p.name)&&!!base_unit;
     return {dataset:r.dataset_key,record_id:r.record_id,source_payload:p,classification:ok?'valid':'conflict',
-      reason:ok?'PRODUCT_READY':'PRODUCT_REQUIRED_FIELDS_OR_UNIT',
-      transformed:{name:key(p.name),sku:key(p.sku)||null,colour:key(p.color)||null,base_unit,lifecycle:'active'}};
+      reason:ok?'PRODUCT_READY':'PRODUCT_STOCK_UNIT_UNRESOLVED',
+      evidence:{observed_stock_units:observed,coverage_unit:key(p.coverageUnit)||null,unit_resolution},
+      transformed:{name:key(p.name),sku:key(p.sku)||null,colour:key(p.color)||null,base_unit,
+        coverage_unit:key(p.coverageUnit)||null,unit_resolution,lifecycle:'active'}};
   });
   const productById=new Map(productManifest.map(x=>[x.record_id,x]));
 
