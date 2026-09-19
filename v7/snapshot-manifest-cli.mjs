@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import {classifySnapshot} from './snapshot-transformer.mjs';
+import {snapshotRows} from './snapshot-envelope.mjs';
 
 const input=process.argv[2];
 if(!input){
