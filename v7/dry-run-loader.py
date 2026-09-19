@@ -82,7 +82,7 @@ def import_valid(tenant, sid, item, actor):
         fn="import_valid_product"
     elif dataset=="derived_location_v6":
         fn="import_valid_location"
-    elif dataset=="runlu_inventory_records_v21":
+    elif dataset in ("runlu_inventory_records_v21","derived_inventory_item_v6"):
         fn="import_valid_stock_item"
     elif dataset in ("runlu_carpet_inventory_v52","derived_carpet_roll_v6"):
         fn="import_valid_carpet_roll"
@@ -110,7 +110,7 @@ def reconcile(tenant, manifest):
     expected={
       "products":sum(1 for x in manifest["products"] if x["classification"]=="valid")+sum(1 for x in manifest["derived_carpet_products"] if x["classification"]=="valid"),
       "locations":sum(1 for x in manifest["locations"] if x["classification"]=="valid"),
-      "stock_items":sum(1 for x in manifest["inventory"] if x["classification"]=="valid"),
+      "stock_items":sum(1 for x in manifest["inventory"] if x["classification"]=="valid")+sum(1 for x in manifest.get("derived_inventory_items",[]) if x["classification"]=="valid"),
       "carpet_rolls":sum(1 for x in manifest["carpet"] if x["classification"]=="valid")+sum(1 for x in manifest.get("derived_carpet_rolls",[]) if x["classification"]=="valid")
     }
     actual=sql_json(f"""
@@ -162,6 +162,7 @@ def main():
     processed["derived_carpet_products"]=process_group(tenant,actor,manifest["derived_carpet_products"],derived=True)
     processed["locations"]=process_group(tenant,actor,manifest["locations"])
     processed["inventory"]=process_group(tenant,actor,manifest["inventory"])
+    processed["derived_inventory_items"]=process_group(tenant,actor,manifest.get("derived_inventory_items",[]))
     processed["carpet"]=process_group(tenant,actor,manifest["carpet"])
     processed["derived_carpet_rolls"]=process_group(tenant,actor,manifest.get("derived_carpet_rolls",[]))
 
