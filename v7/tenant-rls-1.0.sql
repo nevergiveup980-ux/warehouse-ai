@@ -14,10 +14,17 @@ returns uuid language sql stable as $$
 $$;
 
 create or replace function warehouse_v7.is_tenant_member(p_tenant uuid)
-returns boolean language sql stable security definer set search_path='' as $$
+returns boolean language sql stable security definer set search_path='' as $
  select exists(select 1 from warehouse_v7.tenant_member m
    where m.tenant_id=p_tenant and m.user_id=warehouse_v7.current_user_id() and m.lifecycle='active')
-$$;
+$;
+
+create or replace function warehouse_v7.has_tenant_role(p_tenant uuid,p_roles text[])
+returns boolean language sql stable security definer set search_path='' as $
+ select exists(select 1 from warehouse_v7.tenant_member m
+   where m.tenant_id=p_tenant and m.user_id=warehouse_v7.current_user_id()
+     and m.lifecycle='active' and m.role=any(p_roles))
+$;
 
 do $$
 declare t text;
@@ -35,17 +42,25 @@ drop policy if exists own_membership_select on warehouse_v7.tenant_member;
 create policy own_membership_select on warehouse_v7.tenant_member for select
  using(user_id=warehouse_v7.current_user_id());
 
--- Write policies: active tenant members may mutate only rows in their own tenant.
--- Ledger tables remain append-only by trigger; lifecycle engines add finer role checks later.
+-- Role-aware write policies. Viewer is read-only.
+-- Master/config + migration require owner/admin; operational records allow operator.
 do $$
 declare t text;
 begin
- foreach t in array array['location','product','stock_item','carpet_roll','command','event','inventory_movement','migration_staging'] loop
+ foreach t in array array['stock_item','carpet_roll','command','event','inventory_movement'] loop
    execute format('drop policy if exists tenant_member_insert on warehouse_v7.%I',t);
    execute format('drop policy if exists tenant_member_update on warehouse_v7.%I',t);
    execute format('drop policy if exists tenant_member_delete on warehouse_v7.%I',t);
-   execute format('create policy tenant_member_insert on warehouse_v7.%I for insert with check (warehouse_v7.is_tenant_member(tenant_id))',t);
-   execute format('create policy tenant_member_update on warehouse_v7.%I for update using (warehouse_v7.is_tenant_member(tenant_id)) with check (warehouse_v7.is_tenant_member(tenant_id))',t);
-   execute format('create policy tenant_member_delete on warehouse_v7.%I for delete using (warehouse_v7.is_tenant_member(tenant_id))',t);
+   execute format('create policy tenant_member_insert on warehouse_v7.%I for insert with check (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'',''operator'']))',t);
+   execute format('create policy tenant_member_update on warehouse_v7.%I for update using (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'',''operator''])) with check (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'',''operator'']))',t);
+   execute format('create policy tenant_member_delete on warehouse_v7.%I for delete using (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'',''operator'']))',t);
+ end loop;
+ foreach t in array array['location','product','migration_staging'] loop
+   execute format('drop policy if exists tenant_member_insert on warehouse_v7.%I',t);
+   execute format('drop policy if exists tenant_member_update on warehouse_v7.%I',t);
+   execute format('drop policy if exists tenant_member_delete on warehouse_v7.%I',t);
+   execute format('create policy tenant_member_insert on warehouse_v7.%I for insert with check (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'']))',t);
+   execute format('create policy tenant_member_update on warehouse_v7.%I for update using (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin''])) with check (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'']))',t);
+   execute format('create policy tenant_member_delete on warehouse_v7.%I for delete using (warehouse_v7.has_tenant_role(tenant_id,ARRAY[''owner'',''admin'']))',t);
  end loop;
 end $$;
