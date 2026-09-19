@@ -2,7 +2,7 @@ import json,os,subprocess,uuid
 
 D='host=localhost port=5432 dbname=warehouse_v7_test user=postgres password=postgres'
 E=os.environ.copy(); E['PGPASSWORD']='postgres'
-T,A,O,C1,C2,C3=[str(uuid.uuid4()) for _ in range(6)]
+T,A,O,C1,C2,C3,C4=[str(uuid.uuid4()) for _ in range(7)]
 
 def run(sql,ok=True):
     r=subprocess.run(['psql',D,'-v','ON_ERROR_STOP=1','-Atc',sql],text=True,capture_output=True,env=E)
@@ -70,6 +70,10 @@ assert state2['version']==2 and state2['events']==1,state2
 # Fulfillment cannot move backward.
 bad=transition(C2,2,'in_progress','ready_for_pickup')
 assert bad['status']=='rejected' and bad['code']=='INVALID_ORDER_FULFILLMENT_TRANSITION',bad
+
+# A fresh command cannot create a meaningless same-state event/version bump.
+noop=transition(C4,2,'in_progress','picked_up')
+assert noop['status']=='rejected' and noop['code']=='ORDER_NO_STATE_CHANGE',noop
 
 # Complete after pickup.
 done=transition(C3,2,'completed','completed')
