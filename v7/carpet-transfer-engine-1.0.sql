@@ -202,7 +202,8 @@ begin
      'before_sixteenths',src.remaining_sixteenths,
      'transferred_sixteenths',p_transfer_sixteenths,
      'after_sixteenths',source_after,
-     'from_location_id',src.location_id,'to_location_id',p_to_location
+     'from_location_id',src.location_id,'to_location_id',p_to_location,
+     'advisory',case when src.source_roll is not null then 'REMNANT_WHOLE_ROLL_PREFERRED' else null end
    )
  );
  insert into warehouse_v7.event(
@@ -225,7 +226,8 @@ begin
    'source_before_sixteenths',src.remaining_sixteenths,
    'transferred_sixteenths',p_transfer_sixteenths,
    'source_remaining_sixteenths',source_after,
-   'source_new_version',src.version+1,'child_version',1
+   'source_new_version',src.version+1,'child_version',1,
+   'advisory',case when src.source_roll is not null then 'REMNANT_WHOLE_ROLL_PREFERRED' else null end
  );
  perform warehouse_v7.commit_command(p_tenant,p_command,out_result);
  return out_result;
