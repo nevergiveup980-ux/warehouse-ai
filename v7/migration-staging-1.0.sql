@@ -3,6 +3,8 @@ alter table warehouse_v7.migration_staging
  add column if not exists reviewed_by uuid,
  add column if not exists reviewed_at timestamptz,
  add column if not exists source_fingerprint text,
+ add column if not exists normalized_payload jsonb not null default '{}'::jsonb,
+ add column if not exists normalized_fingerprint text,
  add column if not exists evidence jsonb not null default '[]'::jsonb;
 
 alter table warehouse_v7.migration_staging
@@ -25,6 +27,8 @@ begin
     or new.source_record_id is distinct from old.source_record_id
     or new.source_payload is distinct from old.source_payload
     or new.source_fingerprint is distinct from old.source_fingerprint
+    or new.normalized_payload is distinct from old.normalized_payload
+    or new.normalized_fingerprint is distinct from old.normalized_fingerprint
     or new.staged_at is distinct from old.staged_at then
    raise exception using errcode='55000',message='MIGRATION_SOURCE_EVIDENCE_IMMUTABLE';
  end if;
@@ -56,27 +60,44 @@ returns text language sql immutable set search_path='' as $unit$
 $unit$;
 
 create or replace function warehouse_v7.stage_legacy_record(
- p_tenant uuid,p_source_dataset text,p_source_record_id text,p_payload jsonb)
-returns uuid language plpgsql security invoker set search_path='' as $$
-declare sid uuid; fp text;
+ p_tenant uuid,p_source_dataset text,p_source_record_id text,p_source_payload jsonb,p_normalized_payload jsonb)
+returns uuid language plpgsql security invoker set search_path='' as $stage$
+declare sid uuid; fp text; nfp text;
 begin
  if p_source_dataset is null or btrim(p_source_dataset)='' or p_source_record_id is null or btrim(p_source_record_id)='' then
   raise exception using errcode='22023',message='MIGRATION_SOURCE_ID_REQUIRED';
  end if;
- fp:=md5(coalesce(p_payload,'{}'::jsonb)::text);
- insert into warehouse_v7.migration_staging(tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint)
- values(p_tenant,p_source_dataset,p_source_record_id,coalesce(p_payload,'{}'::jsonb),fp)
+ fp:=md5(coalesce(p_source_payload,'{}'::jsonb)::text);
+ nfp:=md5(coalesce(p_normalized_payload,'{}'::jsonb)::text);
+ insert into warehouse_v7.migration_staging(
+   tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint,
+   normalized_payload,normalized_fingerprint)
+ values(
+   p_tenant,p_source_dataset,p_source_record_id,coalesce(p_source_payload,'{}'::jsonb),fp,
+   coalesce(p_normalized_payload,'{}'::jsonb),nfp)
  on conflict(tenant_id,source_dataset,source_record_id) do nothing
  returning id into sid;
  if sid is null then
   select id into sid from warehouse_v7.migration_staging
    where tenant_id=p_tenant and source_dataset=p_source_dataset and source_record_id=p_source_record_id;
-  if exists(select 1 from warehouse_v7.migration_staging where tenant_id=p_tenant and id=sid and source_fingerprint<>fp) then
+  if exists(select 1 from warehouse_v7.migration_staging
+            where tenant_id=p_tenant and id=sid and source_fingerprint<>fp) then
    raise exception using errcode='23505',message='MIGRATION_SOURCE_CHANGED';
+  end if;
+  if exists(select 1 from warehouse_v7.migration_staging
+            where tenant_id=p_tenant and id=sid and normalized_fingerprint<>nfp) then
+   raise exception using errcode='23505',message='MIGRATION_NORMALIZATION_CHANGED';
   end if;
  end if;
  return sid;
-end $$;
+end
+$stage$;
+
+create or replace function warehouse_v7.stage_legacy_record(
+ p_tenant uuid,p_source_dataset text,p_source_record_id text,p_payload jsonb)
+returns uuid language sql security invoker set search_path='' as $stage4$
+ select warehouse_v7.stage_legacy_record($1,$2,$3,$4,$4)
+$stage4$;
 
 create or replace function warehouse_v7.stage_derived_carpet_product(
  p_tenant uuid,p_source_code text,p_collection text,p_colour text)
@@ -99,8 +120,9 @@ begin
    'colour_key',lower(btrim(coalesce(p_colour,''))))::text);
 
  insert into warehouse_v7.migration_staging(
-   tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint,evidence)
- values(p_tenant,'derived_carpet_product_v6',source_id,payload,fp,jsonb_build_array(payload))
+   tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint,
+   normalized_payload,normalized_fingerprint,evidence)
+ values(p_tenant,'derived_carpet_product_v6',source_id,payload,fp,payload,md5(payload::text),jsonb_build_array(payload))
  on conflict(tenant_id,source_dataset,source_record_id) do nothing
  returning id into sid;
 
@@ -158,9 +180,9 @@ begin
   raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_PRODUCT';
  end if;
 
- pname:=nullif(btrim(st.source_payload->>'name'),'');
- punit:=warehouse_v7.normalize_legacy_unit(st.source_payload->>'base_unit');
- plifecycle:=coalesce(nullif(btrim(st.source_payload->>'lifecycle'),''),'active');
+ pname:=nullif(btrim(st.normalized_payload->>'name'),'');
+ punit:=warehouse_v7.normalize_legacy_unit(st.normalized_payload->>'base_unit');
+ plifecycle:=coalesce(nullif(btrim(st.normalized_payload->>'lifecycle'),''),'active');
  if pname is null or punit is null then
   raise exception using errcode='22023',message='MIGRATION_PRODUCT_REQUIRED_FIELDS';
  end if;
@@ -172,8 +194,8 @@ begin
  end if;
 
  insert into warehouse_v7.product(tenant_id,legacy_record_id,sku,name,colour,base_unit,lifecycle)
- values(p_tenant,st.source_record_id,nullif(btrim(st.source_payload->>'sku'),''),
-        pname,nullif(btrim(st.source_payload->>'colour'),''),punit,plifecycle)
+ values(p_tenant,st.source_record_id,nullif(btrim(st.normalized_payload->>'sku'),''),
+        pname,nullif(btrim(st.normalized_payload->>'colour'),''),punit,plifecycle)
  returning id into pid;
 
  update warehouse_v7.migration_staging
@@ -204,9 +226,9 @@ begin
   raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_LOCATION';
  end if;
 
- lcode:=nullif(btrim(st.source_payload->>'code'),'');
- lkind:=coalesce(nullif(btrim(st.source_payload->>'kind'),''),'rack');
- llifecycle:=coalesce(nullif(btrim(st.source_payload->>'lifecycle'),''),'active');
+ lcode:=nullif(btrim(st.normalized_payload->>'code'),'');
+ lkind:=coalesce(nullif(btrim(st.normalized_payload->>'kind'),''),'rack');
+ llifecycle:=coalesce(nullif(btrim(st.normalized_payload->>'lifecycle'),''),'active');
  if lcode is null then raise exception using errcode='22023',message='MIGRATION_LOCATION_CODE_REQUIRED'; end if;
  if llifecycle not in ('active','retired') then
   raise exception using errcode='22023',message='MIGRATION_LOCATION_LIFECYCLE_INVALID';
@@ -249,10 +271,10 @@ begin
   raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_STOCK';
  end if;
 
- product_legacy:=nullif(btrim(st.source_payload->>'product_legacy_record_id'),'');
- location_code:=nullif(btrim(st.source_payload->>'location_code'),'');
- qty_text:=nullif(btrim(st.source_payload->>'quantity'),'');
- u:=warehouse_v7.normalize_legacy_unit(st.source_payload->>'unit');
+ product_legacy:=nullif(btrim(st.normalized_payload->>'product_legacy_record_id'),'');
+ location_code:=nullif(btrim(st.normalized_payload->>'location_code'),'');
+ qty_text:=nullif(btrim(st.normalized_payload->>'quantity'),'');
+ u:=warehouse_v7.normalize_legacy_unit(st.normalized_payload->>'unit');
  if product_legacy is null or location_code is null or qty_text is null then
   raise exception using errcode='22023',message='MIGRATION_STOCK_REQUIRED_FIELDS';
  end if;
@@ -333,15 +355,15 @@ begin
   raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_CARPET';
  end if;
 
- product_legacy:=nullif(btrim(st.source_payload->>'product_legacy_record_id'),'');
- location_code:=nullif(btrim(st.source_payload->>'location_code'),'');
- roll_no:=nullif(btrim(st.source_payload->>'roll_number'),'');
- physical_key_text:=nullif(btrim(st.source_payload->>'physical_key'),'');
- manufacturer_roll_text:=nullif(btrim(st.source_payload->>'manufacturer_roll'),'');
- source_roll_text:=nullif(btrim(st.source_payload->>'source_roll'),'');
- status_text:=upper(nullif(btrim(st.source_payload->>'measure_status'),''));
- original_text:=nullif(btrim(st.source_payload->>'original_sixteenths'),'');
- remaining_text:=nullif(btrim(st.source_payload->>'remaining_sixteenths'),'');
+ product_legacy:=nullif(btrim(st.normalized_payload->>'product_legacy_record_id'),'');
+ location_code:=nullif(btrim(st.normalized_payload->>'location_code'),'');
+ roll_no:=nullif(btrim(st.normalized_payload->>'roll_number'),'');
+ physical_key_text:=nullif(btrim(st.normalized_payload->>'physical_key'),'');
+ manufacturer_roll_text:=nullif(btrim(st.normalized_payload->>'manufacturer_roll'),'');
+ source_roll_text:=nullif(btrim(st.normalized_payload->>'source_roll'),'');
+ status_text:=upper(nullif(btrim(st.normalized_payload->>'measure_status'),''));
+ original_text:=nullif(btrim(st.normalized_payload->>'original_sixteenths'),'');
+ remaining_text:=nullif(btrim(st.normalized_payload->>'remaining_sixteenths'),'');
 
  if product_legacy is null or location_code is null or roll_no is null or status_text is null
     or original_text is null or remaining_text is null then
