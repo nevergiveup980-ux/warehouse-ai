@@ -2,7 +2,13 @@
 alter table warehouse_v7.migration_staging
  add column if not exists reviewed_by uuid,
  add column if not exists reviewed_at timestamptz,
- add column if not exists source_fingerprint text;
+ add column if not exists source_fingerprint text,
+ add column if not exists evidence jsonb not null default '[]'::jsonb;
+
+alter table warehouse_v7.migration_staging
+ drop constraint if exists migration_staging_evidence_array_check;
+alter table warehouse_v7.migration_staging
+ add constraint migration_staging_evidence_array_check check (jsonb_typeof(evidence)='array');
 
 alter table warehouse_v7.migration_staging
  drop constraint if exists migration_staging_classification_check;
@@ -32,6 +38,47 @@ begin
  end if;
  return sid;
 end $$;
+
+create or replace function warehouse_v7.stage_derived_carpet_product(
+ p_tenant uuid,p_source_code text,p_collection text,p_colour text)
+returns uuid language plpgsql security invoker set search_path='' as $
+declare sid uuid; source_id text; payload jsonb; fp text; existing_fp text;
+begin
+ if nullif(btrim(p_source_code),'') is null then
+  raise exception using errcode='22023',message='CARPET_SOURCE_CODE_REQUIRED';
+ end if;
+ source_id:='CARPET_SOURCE:'||upper(btrim(p_source_code));
+ payload:=jsonb_build_object(
+   'source_code',upper(btrim(p_source_code)),
+   'name',nullif(btrim(coalesce(p_collection,'')),''),
+   'colour',nullif(btrim(coalesce(p_colour,'')),''),
+   'base_unit','1/16_IN',
+   'lifecycle','active');
+ fp:=md5(payload::text);
+
+ insert into warehouse_v7.migration_staging(
+   tenant_id,source_dataset,source_record_id,source_payload,source_fingerprint,evidence)
+ values(p_tenant,'derived_carpet_product_v6',source_id,payload,fp,jsonb_build_array(payload))
+ on conflict(tenant_id,source_dataset,source_record_id) do nothing
+ returning id into sid;
+
+ if sid is not null then return sid; end if;
+
+ select id,source_fingerprint into sid,existing_fp
+ from warehouse_v7.migration_staging
+ where tenant_id=p_tenant and source_dataset='derived_carpet_product_v6' and source_record_id=source_id
+ for update;
+
+ if existing_fp<>fp then
+  update warehouse_v7.migration_staging
+  set classification='conflict',
+      exception_reason='CARPET_SOURCE_LABEL_VARIANT',
+      evidence=case when evidence @> jsonb_build_array(payload) then evidence
+                    else evidence||jsonb_build_array(payload) end
+  where tenant_id=p_tenant and id=sid and classification<>'imported';
+ end if;
+ return sid;
+end $;
 
 create or replace function warehouse_v7.classify_legacy_record(
  p_tenant uuid,p_stage_id uuid,p_classification text,p_reason text,p_actor uuid)
@@ -65,7 +112,7 @@ begin
  if st.classification<>'valid' then
   raise exception using errcode='22023',message='MIGRATION_NOT_VALID';
  end if;
- if st.source_dataset<>'runlu_product_master_v21' then
+ if st.source_dataset not in ('runlu_product_master_v21','derived_carpet_product_v6') then
   raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_PRODUCT';
  end if;
 
