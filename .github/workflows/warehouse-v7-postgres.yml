@@ -45,6 +45,8 @@ jobs:
         run: python3 tests/v7-db/migration_staging_attack.py
       - name: Migration classification isolation attack
         run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/migration_classification_attack.sql
+      - name: Migration source evidence immutability attack
+        run: python3 tests/v7-db/migration_source_immutability.py
       - name: Derived Carpet Product staging attack
         run: python3 tests/v7-db/migration_derived_carpet_product.py
       - name: Valid-only Product import attack
