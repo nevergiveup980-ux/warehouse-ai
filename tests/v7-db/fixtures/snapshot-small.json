@@ -254,5 +254,40 @@
       "originalLength": "6",
       "measure": "TM"
     }
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "IA-LEG",
+    "payload": {
+      "id": "IA-LEG",
+      "masterId": "PRD1",
+      "poNumber": "PO-ALIAS",
+      "location": "A",
+      "quantity": "6",
+      "unit": "Carton",
+      "lotNumber": "AL1",
+      "notes": "alias",
+      "locationType": "Rack"
+    },
+    "deleted_at": null
+  },
+  {
+    "dataset_key": "runlu_inventory_records_v21",
+    "record_id": "IA-WRAP",
+    "payload": {
+      "id": "IA-LEG",
+      "inventoryId": "IA-WRAP",
+      "lifecycleStatus": "ACTIVE",
+      "transactionCount": 0,
+      "masterId": "PRD1",
+      "poNumber": "PO-ALIAS",
+      "location": "A",
+      "quantity": "6",
+      "unit": "Box",
+      "lotNumber": "AL1",
+      "notes": "alias",
+      "locationType": "Rack"
+    },
+    "deleted_at": null
   }
 ]
