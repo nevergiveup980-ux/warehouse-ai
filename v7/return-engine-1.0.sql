@@ -6,6 +6,7 @@ create or replace function warehouse_v7.return_stock(
 returns jsonb language plpgsql security invoker as $$
 declare c warehouse_v7.command; s warehouse_v7.stock_item; shipped numeric; returned numeric; out_result jsonb;
 begin
+ perform warehouse_v7.assert_command_identity(p_tenant,p_actor);
  if p_quantity<=0 then raise exception using errcode='22023',message='INVALID_RETURN_QUANTITY'; end if;
 
  c:=warehouse_v7.begin_command(p_tenant,p_command,'RETURN','stock_item',p_stock_item,p_expected_version,
