@@ -1,14 +1,22 @@
 name: Warehouse V7 Real Snapshot Dry Run
 on:
+  workflow_dispatch:
+    inputs:
+      expected_snapshot_md5:
+        description: Optional approved V6 snapshot MD5 lock for controlled-cutover preflight
+        required: false
+        type: string
   push:
     branches: [warehouse-v7-foundation]
     paths:
       - 'v7/**'
       - 'tests/v7-db/**'
       - '.github/workflows/warehouse-v7-real-snapshot-dryrun.yml'
+
 permissions:
   contents: read
   id-token: write
+
 concurrency:
   group: warehouse-v7-real-snapshot-dryrun-${{ github.ref }}
   cancel-in-progress: true
@@ -34,6 +42,8 @@ jobs:
       PGUSER: postgres
       PGDATABASE: warehouse_v7_test
       SNAPSHOT_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-snapshot-bridge
+      EXPECTED_SNAPSHOT_MD5: ${{ github.event.inputs.expected_snapshot_md5 || '' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -42,7 +52,7 @@ jobs:
           set -euo pipefail
           OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
           OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
-          curl -fsS --retry 3 -H "Authorization: Bearer $OIDC_TOKEN" -H "Accept: application/json" "$SNAPSHOT_URL" -o /tmp/v7-real-snapshot-envelope.json
+          curl -fsS --retry 3             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Accept: application/json"             "$SNAPSHOT_URL"             -o /tmp/v7-real-snapshot-envelope.json
           unset OIDC_TOKEN OIDC_JSON
           python3 - <<'PY'
           import json
@@ -55,6 +65,7 @@ jobs:
           json.dump(rows,open('/tmp/v7-real-snapshot.json','w'),separators=(',',':'))
           json.dump(integ,open('/tmp/v7-real-source-integrity.json','w'),indent=2)
           print('secure snapshot received:',len(rows))
+          print('source start fingerprint:',integ.get('snapshot_md5'))
           PY
 
       - name: Build and verify real migration manifest
@@ -81,6 +92,7 @@ jobs:
 
       - name: Install disposable V7 database
         run: |
+          set -euo pipefail
           psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
@@ -95,10 +107,12 @@ jobs:
 
       - name: Run real V6 snapshot through disposable V7 migration
         run: |
+          set -euo pipefail
           python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report-1.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
 
       - name: Replay the same real snapshot against the same disposable V7 database
         run: |
+          set -euo pipefail
           python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report-2.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
 
       - name: Verify real dry-run acceptance and replay gates
@@ -126,16 +140,45 @@ jobs:
           },indent=2))
           PY
 
-      - name: Upload sanitized real dry-run replay reports
+      - name: Capture V6 source again for cutover drift detection
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preflight]')
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Accept: application/json"             "$SNAPSHOT_URL"             -o /tmp/v7-preflight-end-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-preflight-end-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          json.dump(integ,open('/tmp/v7-preflight-end-integrity.json','w'),indent=2)
+          print('source end fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Evaluate controlled-cutover automatic stop conditions
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preflight]')
+        run: |
+          set -euo pipefail
+          python3 v7/cutover-preflight.py             --start-integrity /tmp/v7-real-source-integrity.json             --end-integrity /tmp/v7-preflight-end-integrity.json             --dry-run-1 /tmp/v7-real-dry-run-report-1.json             --dry-run-2 /tmp/v7-real-dry-run-report-2.json             --report /tmp/v7-controlled-cutover-preflight-report.json             --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5"
+
+      - name: Upload sanitized real dry-run and preflight reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v7-real-snapshot-dry-run-replay-report
           path: |
             /tmp/v7-real-dry-run-report-1.json
             /tmp/v7-real-dry-run-report-2.json
+            /tmp/v7-controlled-cutover-preflight-report.json
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
