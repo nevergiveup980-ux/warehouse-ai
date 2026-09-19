@@ -118,8 +118,18 @@ jobs:
           OIDC_JSON="$(curl -fsS             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-incremental-shadow")"
           OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
 
-          curl -fsS --retry 2 -X POST             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Content-Type: application/json"             --data-binary @/tmp/v7-incremental-commit-request.json             "$INCREMENTAL_URL"             -o /tmp/v7-incremental-commit-response.json
+          HTTP_CODE="$(curl -sS --retry 2 -X POST \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/v7-incremental-commit-request.json \
+            "$INCREMENTAL_URL" \
+            -o /tmp/v7-incremental-commit-response.json \
+            -w '%{http_code}')"
           unset OIDC_TOKEN OIDC_JSON
+          echo "watermark commit HTTP: $HTTP_CODE"
+          cat /tmp/v7-incremental-commit-response.json
+          echo
+          test "$HTTP_CODE" = "200"
 
           python3 - <<'PY'
           import json
