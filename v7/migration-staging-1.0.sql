@@ -41,7 +41,7 @@ end $$;
 
 create or replace function warehouse_v7.stage_derived_carpet_product(
  p_tenant uuid,p_source_code text,p_collection text,p_colour text)
-returns uuid language plpgsql security invoker set search_path='' as $
+returns uuid language plpgsql security invoker set search_path='' as $derived$
 declare sid uuid; source_id text; payload jsonb; fp text; existing_fp text;
 begin
  if nullif(btrim(p_source_code),'') is null then
@@ -81,7 +81,7 @@ begin
   where tenant_id=p_tenant and id=sid and classification<>'imported';
  end if;
  return sid;
-end $;
+end $derived$;
 
 create or replace function warehouse_v7.classify_legacy_record(
  p_tenant uuid,p_stage_id uuid,p_classification text,p_reason text,p_actor uuid)
