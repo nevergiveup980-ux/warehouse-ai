@@ -14,6 +14,9 @@ for (const x of [
   'ORDER_TRANSITIONED',
   'INVALID_ORDER_LIFECYCLE_TRANSITION',
   'INVALID_ORDER_FULFILLMENT_TRANSITION',
+  'ORDER_NO_STATE_CHANGE',
+  'ORDER_SOURCE_EVIDENCE_APPEND_ONLY',
+  'ORDER_RECORD_DELETE_FORBIDDEN_USE_ARCHIVE',
   'STALE_VERSION'
 ]) assert.ok(s.includes(x),x);
 
@@ -25,6 +28,8 @@ for (const state of [
 
 assert.match(s,/unique\(tenant_id,order_kind,source_identity_key\)/);
 assert.match(s,/for update/);
+assert.match(s,/order_source_evidence_append_only/);
+assert.match(s,/order_record_no_delete/);
 assert.equal((s.match(/insert into warehouse_v7\.event/g)||[]).length,1);
 assert.doesNotMatch(s,/localStorage|cloud_master|global_pause/i);
 
