@@ -58,3 +58,5 @@ jobs:
         run: python3 tests/v7-db/cross_tenant_write.py
       - name: Command identity spoof attack
         run: python3 tests/v7-db/command_identity_spoof.py
+      - name: Admin role boundary attack
+        run: python3 tests/v7-db/admin_role_boundary.py
