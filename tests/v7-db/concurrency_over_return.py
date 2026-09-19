@@ -8,7 +8,7 @@ insert into warehouse_v7.command(tenant_id,id,command_type,entity_type,entity_id
 insert into warehouse_v7.inventory_movement(tenant_id,command_id,product_id,stock_item_id,movement_type,quantity,unit,from_location_id) values('{T}','{SHIP}','{P}','{S}','SHIP',10,'BOX','{L}');"""
 subprocess.check_call(['psql',D,'-v','ON_ERROR_STOP=1','-c',setup],env=E)
 cmds=[str(uuid.uuid4()),str(uuid.uuid4())]
-def q(c): return f\"set request.jwt.claim.sub='{A}'; select warehouse_v7.return_stock('{T}','{c}','{S}',1,6,'BOX','{L}','{SHIP}','{{\"attack\":\"over-return\"}}','{A}','DEV');"
+def q(c): return f"set request.jwt.claim.sub='{A}'; select warehouse_v7.return_stock('{T}','{c}','{S}',1,6,'BOX','{L}','{SHIP}','{{\"attack\":\"over-return\"}}','{A}','DEV');"
 ps=[subprocess.Popen(['psql',D,'-v','ON_ERROR_STOP=1','-Atc',q(c)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env=E) for c in cmds]
 out=[p.communicate(timeout=20) for p in ps]
 assert all(p.returncode==0 for p in ps),out
