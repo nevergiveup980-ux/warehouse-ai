@@ -17,6 +17,8 @@ for (const x of [
   'string_agg(x,chr(10) order by ord)',
   'WATERMARK_CAS_MISMATCH',
   'BATCH_REVALIDATION_FINGERPRINT_MISMATCH',
+  'supplier: p.supplier ?? null',
+  'po: p.po ?? null',
   'INCREMENTAL_SHADOW_WATERMARK_COMMIT'
 ]) assert.ok(s.includes(x), x);
 
