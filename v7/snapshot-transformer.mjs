@@ -31,10 +31,44 @@ export function feetToSixteenths(v){
   const n=Number(v);
   return Number.isFinite(n)&&n>=0 ? Math.round(n*12*16) : null;
 }
+export function locationKind(code=''){
+  const k=String(code).trim().toLowerCase();
+  if(k==='receiving') return 'receiving';
+  if(k==='receiving / put-away pending') return 'receiving_staging';
+  if(k==='store') return 'store';
+  if(k==='store samples') return 'sample_store';
+  if(k==='ram archive') return 'archive';
+  return 'rack';
+}
+
 const key=(x)=>String(x??'').trim();
 const lower=(x)=>key(x).toLowerCase();
 const live=(rows,dataset)=>rows.filter(r=>r.dataset_key===dataset&&!r.deleted_at);
 const counts=(items)=>items.reduce((a,x)=>{a[x.classification]=(a[x.classification]||0)+1;return a;},{});
+const VOLATILE_CARPET_KEYS=new Set(['id','createdAt','updatedAt','reviewNote','legacyKey','migrationSource','sourceStatus']);
+
+function stableValue(v){
+  if(Array.isArray(v)) return v.map(stableValue);
+  if(v&&typeof v==='object'){
+    const out={};
+    for(const k of Object.keys(v).sort()) if(!VOLATILE_CARPET_KEYS.has(k)) out[k]=stableValue(v[k]);
+    return out;
+  }
+  return v;
+}
+function weakReplaySignature(p={}){
+  return JSON.stringify(stableValue(p));
+}
+function carpetMeasureValidity(p={},measure=''){
+  const original=feetToSixteenths(p.originalLength), remaining=feetToSixteenths(p.length);
+  if(original===null||remaining===null||original<=0||remaining<=0||remaining>original) return {original,remaining,ok:false,reason:'CARPET_MEASURE_INVALID'};
+  if(measure==='FULL'&&remaining!==original) return {original,remaining,ok:false,reason:'CARPET_FULL_MISMATCH'};
+  return {original,remaining,ok:true,reason:null};
+}
+function sameNonblank(items,field){
+  const vals=new Set(items.map(x=>key(x.p[field])).filter(Boolean));
+  return vals.size===1?[...vals][0]:null;
+}
 
 export function classifySnapshot(rows){
   const products=live(rows,'runlu_product_master_v21');
@@ -57,7 +91,7 @@ export function classifySnapshot(rows){
   });
   const dupCount=new Map();
   for(const x of rawInv){
-    if(!(x.qty>0)||!x.product||x.product.classification!=='valid'||!x.unit||x.unit!==x.product.transformed.base_unit||!x.loc) continue;
+    if(!(x.qty>0)||!x.product||x.product.classification!=='valid'||!x.unit||x.unit!==x.product.transformed.base_unit||!x.loc||x.loc==='PHYSICAL COUNT REQUIRED') continue;
     const k=[key(x.p.masterId),key(x.p.poNumber),x.loc,x.unit,String(x.qty)].join('|');
     dupCount.set(k,(dupCount.get(k)||0)+1);
   }
@@ -99,42 +133,111 @@ export function classifySnapshot(rows){
   });
   const derivedBySource=new Map(derivedProducts.map(x=>[x.transformed.source_code,x]));
 
-  const activeStrong=carpets.filter(r=>(r.payload||{}).status==='Active').map(r=>({r,p:r.payload||{},physical:carpetPhysicalKey(r.payload||{}),source:carpetSourceCode(r.payload||{})}));
+  const active=carpets.filter(r=>(r.payload||{}).status==='Active').map(r=>({
+    r,p:r.payload||{},physical:carpetPhysicalKey(r.payload||{}),source:carpetSourceCode(r.payload||{})
+  }));
   const physicalGroups=new Map();
-  for(const x of activeStrong){
+  for(const x of active){
     if(!x.physical) continue;
     const sig=JSON.stringify({location:key(x.p.location),length:key(x.p.length),originalLength:key(x.p.originalLength),measure:key(x.p.measure),status:key(x.p.status),manufacturerRoll:key(x.p.manufacturerRoll),sourceRoll:key(x.p.sourceRoll)});
     const g=physicalGroups.get(x.physical)||{sigs:new Set(),n:0};g.n++;g.sigs.add(sig);physicalGroups.set(x.physical,g);
   }
+
+  // Legacy replay alias detection is deliberately stricter than ordinary duplicate detection.
+  // It creates a derived physical candidate only when two weak rows are byte-equivalent in
+  // business state AND share the same nonblank legacy payload id, spreadsheet key and source.
+  // A legacy payload id that appears with more than one business state is never auto-grouped.
+  const weak=active.filter(x=>!x.physical);
+  const weakBySig=new Map(), idSigs=new Map();
+  for(const x of weak){
+    const sig=weakReplaySignature(x.p);
+    const g=weakBySig.get(sig)||[];g.push(x);weakBySig.set(sig,g);
+    const pid=key(x.p.id);
+    if(pid){const s=idSigs.get(pid)||new Set();s.add(sig);idSigs.set(pid,s);}
+  }
+  const safeReplayByRecord=new Map();
+  const derivedCarpetRolls=[];
+  for(const [sig,members] of weakBySig){
+    if(members.length!==2) continue;
+    const payloadId=sameNonblank(members,'id');
+    const legacyKey=sameNonblank(members,'legacyKey');
+    const migrationSource=sameNonblank(members,'migrationSource');
+    if(!payloadId||!legacyKey||!migrationSource||(idSigs.get(payloadId)?.size||0)!==1) continue;
+
+    const p=members[0].p, source=members[0].source, loc=key(p.location), measure=key(p.measure).toUpperCase();
+    const sourceProduct=derivedBySource.get(source);
+    const mv=carpetMeasureValidity(p,measure);
+    let classification='valid',reason='CARPET_LEGACY_ALIAS_GROUP_READY';
+    if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
+    else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
+    else if(!['FULL','CAL','TM'].includes(measure)){classification='deferred';reason='CARPET_MEASURE_REVIEW';}
+    else if(!mv.ok){classification='conflict';reason=mv.reason;}
+
+    const recordId='CARPET_ALIAS:'+payloadId;
+    const memberIds=members.map(x=>String(x.r.record_id)).sort();
+    const physical='legacy_alias:'+payloadId;
+    derivedCarpetRolls.push({
+      dataset:'derived_carpet_roll_v6',
+      record_id:recordId,
+      source_payload:{
+        payload_id:payloadId,legacy_key:legacyKey,migration_source:migrationSource,
+        member_record_ids:memberIds,replay_signature:sig
+      },
+      classification,reason,
+      transformed:{
+        product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(p.roll),
+        physical_key:physical,manufacturer_roll:key(p.manufacturerRoll)||null,source_roll:key(p.sourceRoll)||source||null,
+        original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure
+      }
+    });
+    for(const x of members) safeReplayByRecord.set(String(x.r.record_id),recordId);
+  }
+
   const carpetManifest=carpets.map(r=>{
     const p=r.payload||{}, source=carpetSourceCode(p), physical=carpetPhysicalKey(p), status=key(p.status), measure=key(p.measure).toUpperCase(), loc=key(p.location);
     const sourceProduct=derivedBySource.get(source), group=physical?physicalGroups.get(physical):null;
+    const aliasGroup=safeReplayByRecord.get(String(r.record_id));
     let classification='valid',reason='CARPET_READY';
     if(status!=='Active'){classification='deferred';reason='NON_ACTIVE_LEGACY_STATUS';}
+    else if(aliasGroup){classification='duplicate';reason='CARPET_LEGACY_ALIAS_REPLAY';}
     else if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
     else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
     else if(!['FULL','CAL','TM'].includes(measure)){classification='deferred';reason='CARPET_MEASURE_REVIEW';}
     else if(!physical){classification='deferred';reason='CARPET_PHYSICAL_IDENTITY_WEAK';}
     else if(group&&group.sigs.size>1){classification='conflict';reason='CARPET_PHYSICAL_STATE_DIVERGENCE';}
     else if(group&&group.n>1){classification='duplicate';reason='CARPET_PHYSICAL_REPLAY';}
-    const original=feetToSixteenths(p.originalLength), remaining=feetToSixteenths(p.length);
-    if(classification==='valid'&&(original===null||remaining===null||original<=0||remaining<=0||remaining>original)){
-      classification='conflict';reason='CARPET_MEASURE_INVALID';
-    }
-    if(classification==='valid'&&measure==='FULL'&&remaining!==original){
-      classification='conflict';reason='CARPET_FULL_MISMATCH';
-    }
+    const mv=carpetMeasureValidity(p,measure);
+    if(classification==='valid'&&!mv.ok){classification='conflict';reason=mv.reason;}
     return {dataset:r.dataset_key,record_id:r.record_id,source_payload:p,classification,reason,
+      derived_group_id:aliasGroup||null,
       transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(p.roll),
         physical_key:physical,manufacturer_roll:key(p.manufacturerRoll)||null,source_roll:key(p.sourceRoll)||source||null,
-        original_sixteenths:original,remaining_sixteenths:remaining,measure_status:measure}};
+        original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure}};
   });
 
   const locationCodes=new Set();
   for(const x of inventoryManifest) if(x.transformed.location_code&&x.transformed.location_code!=='PHYSICAL COUNT REQUIRED') locationCodes.add(x.transformed.location_code);
   for(const x of carpetManifest) if(x.transformed.location_code) locationCodes.add(x.transformed.location_code);
-  const locations=[...locationCodes].sort().map(code=>({dataset:'derived_location_v6',record_id:'LOC:'+code,source_payload:{observed_code:code},classification:'valid',reason:'LOCATION_REFERENCE_OBSERVED',transformed:{code,kind:code==='Receiving'?'receiving':'rack',lifecycle:'active'}}));
+  const locations=[...locationCodes].sort().map(code=>({
+    dataset:'derived_location_v6',record_id:'LOC:'+code,source_payload:{observed_code:code},
+    classification:'valid',reason:'LOCATION_REFERENCE_OBSERVED',
+    transformed:{code,kind:locationKind(code),lifecycle:'active'}
+  }));
 
-  return {products:productManifest,derived_carpet_products:derivedProducts,locations,inventory:inventoryManifest,carpet:carpetManifest,
-    summary:{products:counts(productManifest),derived_carpet_products:counts(derivedProducts),locations:counts(locations),inventory:counts(inventoryManifest),carpet:counts(carpetManifest)}};
+  return {
+    products:productManifest,
+    derived_carpet_products:derivedProducts,
+    locations,
+    inventory:inventoryManifest,
+    carpet:carpetManifest,
+    derived_carpet_rolls:derivedCarpetRolls,
+    summary:{
+      products:counts(productManifest),
+      derived_carpet_products:counts(derivedProducts),
+      locations:counts(locations),
+      inventory:counts(inventoryManifest),
+      carpet:counts(carpetManifest),
+      derived_carpet_rolls:counts(derivedCarpetRolls)
+    }
+  };
 }
