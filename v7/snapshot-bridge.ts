@@ -3,8 +3,16 @@ import postgres from "npm:postgres@3.4.7";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.10.0";
 
 const EXPECTED_REPOSITORY = "nevergiveup980-ux/warehouse-ai";
-const EXPECTED_REF = "refs/heads/warehouse-v7-foundation";
-const EXPECTED_WORKFLOW_SUFFIX = "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/warehouse-v7-foundation";
+const ALLOWED_WORKFLOW_REFS = new Map([
+  [
+    "refs/heads/warehouse-v7-foundation",
+    "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/warehouse-v7-foundation",
+  ],
+  [
+    "refs/heads/main",
+    "/.github/workflows/warehouse-v7-real-snapshot-dryrun.yml@refs/heads/main",
+  ],
+]);
 const EXPECTED_AUDIENCE = "warehouse-v7-snapshot";
 const WAREHOUSE_OWNER = "b360c5a0-1736-4e17-b82c-22ea720603c1";
 const JWKS = createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"));
@@ -42,11 +50,14 @@ Deno.serve(async (req: Request) => {
       audience: EXPECTED_AUDIENCE,
     });
     if (payload.repository !== EXPECTED_REPOSITORY) return deny(403, "REPOSITORY_DENIED");
-    if (payload.ref !== EXPECTED_REF) return deny(403, "REF_DENIED");
     if (payload.actor !== "nevergiveup980-ux") return deny(403, "ACTOR_DENIED");
+    const expectedWorkflowSuffix = typeof payload.ref === "string"
+      ? ALLOWED_WORKFLOW_REFS.get(payload.ref)
+      : undefined;
+    if (!expectedWorkflowSuffix) return deny(403, "REF_DENIED");
     if (
       typeof payload.workflow_ref !== "string" ||
-      !payload.workflow_ref.endsWith(EXPECTED_WORKFLOW_SUFFIX)
+      !payload.workflow_ref.endsWith(expectedWorkflowSuffix)
     ) return deny(403, "WORKFLOW_DENIED");
 
     const dbUrl = Deno.env.get("SUPABASE_DB_URL");
