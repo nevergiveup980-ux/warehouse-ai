@@ -165,6 +165,30 @@ jobs:
           print('operation shadow source fingerprint:',integ.get('snapshot_md5'))
           PY
 
+      - name: Fetch sanitized V6 ORDER shadow feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=order-shadow" \
+            -o /tmp/v7-order-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-order-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_ORDER_SHADOW'
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('sanitized ORDER shadow rows:',len(rows))
+          print('ORDER shadow source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
       - name: Install disposable V7 database
         run: |
           set -euo pipefail
@@ -180,6 +204,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/supplier-return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-rls-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
 
@@ -229,6 +255,12 @@ jobs:
             --actor 11111111-2222-4333-8444-555555555555
 
 
+
+      - name: Audit real V6 ORDER identity, dedup, and lifecycle evidence
+        run: |
+          set -euo pipefail
+          python3 v7/order-source-audit.py /tmp/v7-order-shadow-envelope.json \
+            --report /tmp/v7-order-source-audit-report.json
 
       - name: Replay real V6 SUPPLIER RETURN history through V7 shadow audit
         run: |
@@ -324,6 +356,7 @@ jobs:
             /tmp/v7-transfer-shadow-report.json
             /tmp/v7-return-shadow-report.json
             /tmp/v7-supplier-return-shadow-report.json
+            /tmp/v7-order-source-audit-report.json
             /tmp/v7-carpet-lifecycle-shadow-report.json
           if-no-files-found: ignore
           retention-days: 7
@@ -331,4 +364,4 @@ jobs:
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
