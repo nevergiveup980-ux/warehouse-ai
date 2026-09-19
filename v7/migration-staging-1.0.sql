@@ -135,3 +135,82 @@ begin
  where tenant_id=p_tenant and id=p_stage_id;
  return lid;
 end $$;
+
+create or replace function warehouse_v7.import_valid_stock_item(
+ p_tenant uuid,p_stage_id uuid,p_actor uuid)
+returns uuid language plpgsql security invoker set search_path='' as $$
+declare
+ st warehouse_v7.migration_staging;
+ sid uuid; pid uuid; lid uuid; cmd warehouse_v7.command;
+ product_legacy text; location_code text; qty_text text; u text; q numeric;
+begin
+ perform warehouse_v7.assert_admin_identity(p_tenant,p_actor);
+
+ select * into st from warehouse_v7.migration_staging
+ where tenant_id=p_tenant and id=p_stage_id for update;
+ if not found then raise exception using errcode='P0002',message='MIGRATION_STAGE_NOT_FOUND'; end if;
+
+ if st.classification='imported' and st.imported_entity_type='stock_item' and st.imported_entity_id is not null then
+  return st.imported_entity_id;
+ end if;
+ if st.classification<>'valid' then
+  raise exception using errcode='22023',message='MIGRATION_NOT_VALID';
+ end if;
+ if st.source_dataset<>'runlu_inventory_records_v21' then
+  raise exception using errcode='22023',message='MIGRATION_WRONG_DATASET_FOR_STOCK';
+ end if;
+
+ product_legacy:=nullif(btrim(st.source_payload->>'product_legacy_record_id'),'');
+ location_code:=nullif(btrim(st.source_payload->>'location_code'),'');
+ qty_text:=nullif(btrim(st.source_payload->>'quantity'),'');
+ u:=nullif(btrim(st.source_payload->>'unit'),'');
+ if product_legacy is null or location_code is null or qty_text is null or u is null then
+  raise exception using errcode='22023',message='MIGRATION_STOCK_REQUIRED_FIELDS';
+ end if;
+ if qty_text !~ '^[0-9]+([.][0-9]+)?$' then
+  raise exception using errcode='22023',message='MIGRATION_STOCK_QUANTITY_INVALID';
+ end if;
+ q:=qty_text::numeric;
+ if q<=0 then raise exception using errcode='22023',message='MIGRATION_STOCK_QUANTITY_INVALID'; end if;
+
+ select p.id into pid from warehouse_v7.product p
+ where p.tenant_id=p_tenant and p.legacy_record_id=product_legacy and p.lifecycle='active';
+ if pid is null then raise exception using errcode='23503',message='MIGRATION_PRODUCT_LINK_NOT_FOUND'; end if;
+
+ select l.id into lid from warehouse_v7.location l
+ where l.tenant_id=p_tenant and l.code=location_code and l.lifecycle='active';
+ if lid is null then raise exception using errcode='23503',message='MIGRATION_LOCATION_LINK_NOT_FOUND'; end if;
+
+ if exists(select 1 from warehouse_v7.stock_item s where s.tenant_id=p_tenant and s.legacy_record_id=st.source_record_id) then
+  raise exception using errcode='23505',message='MIGRATION_CANONICAL_CONFLICT';
+ end if;
+
+ insert into warehouse_v7.stock_item(tenant_id,product_id,location_id,quantity,unit,version,lifecycle,legacy_record_id)
+ values(p_tenant,pid,lid,q,u,1,'active',st.source_record_id)
+ returning id into sid;
+
+ cmd:=warehouse_v7.begin_command(
+   p_tenant,st.id,'MIGRATION_OPENING_STOCK','stock_item',sid,0,
+   jsonb_build_object('source_dataset',st.source_dataset,'source_record_id',st.source_record_id,
+                      'quantity',q,'unit',u,'location_code',location_code,'product_legacy_record_id',product_legacy),
+   p_actor,'MIGRATION');
+
+ insert into warehouse_v7.inventory_movement(
+   tenant_id,command_id,product_id,stock_item_id,movement_type,quantity,unit,to_location_id)
+ values(p_tenant,st.id,pid,sid,'OPENING_IMPORT',q,u,lid);
+
+ insert into warehouse_v7.event(
+   tenant_id,command_id,entity_type,entity_id,event_type,entity_version,payload)
+ values(p_tenant,st.id,'stock_item',sid,'MIGRATED_OPENING_STOCK',1,
+   jsonb_build_object('source_dataset',st.source_dataset,'source_record_id',st.source_record_id,
+                      'quantity',q,'unit',u,'location_id',lid,'product_id',pid));
+
+ perform warehouse_v7.commit_command(
+   p_tenant,st.id,jsonb_build_object('status','committed','stock_item_id',sid,'opening_quantity',q,'unit',u));
+
+ update warehouse_v7.migration_staging
+ set classification='imported',imported_entity_type='stock_item',imported_entity_id=sid,
+     reviewed_by=p_actor,reviewed_at=now()
+ where tenant_id=p_tenant and id=p_stage_id;
+ return sid;
+end $$;
