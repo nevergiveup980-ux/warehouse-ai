@@ -32,3 +32,18 @@ begin
  end if;
  return sid;
 end $$;
+
+create or replace function warehouse_v7.classify_legacy_record(
+ p_tenant uuid,p_stage_id uuid,p_classification text,p_reason text,p_actor uuid)
+returns void language plpgsql security invoker set search_path='' as $$
+begin
+ perform warehouse_v7.assert_admin_identity(p_tenant,p_actor);
+ if p_classification not in ('valid','duplicate','orphan','conflict','deferred','rejected') then
+  raise exception using errcode='22023',message='MIGRATION_CLASSIFICATION_INVALID';
+ end if;
+ update warehouse_v7.migration_staging
+ set classification=p_classification,exception_reason=nullif(btrim(coalesce(p_reason,'')),''),
+     reviewed_by=p_actor,reviewed_at=now()
+ where tenant_id=p_tenant and id=p_stage_id and classification<>'imported';
+ if not found then raise exception using errcode='P0002',message='MIGRATION_STAGE_NOT_REVIEWABLE'; end if;
+end $$;
