@@ -23,7 +23,8 @@ create table warehouse_v7.stock_item (
  lifecycle text not null default 'active', legacy_record_id text,
  primary key(tenant_id,id),
  foreign key(tenant_id,product_id) references warehouse_v7.product(tenant_id,id) on delete restrict,
- foreign key(tenant_id,location_id) references warehouse_v7.location(tenant_id,id) on delete restrict
+ foreign key(tenant_id,location_id) references warehouse_v7.location(tenant_id,id) on delete restrict,
+ unique(tenant_id,legacy_record_id)
 );
 
 create table warehouse_v7.carpet_roll (
