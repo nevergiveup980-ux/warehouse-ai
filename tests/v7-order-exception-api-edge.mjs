@@ -14,6 +14,11 @@ for (const x of [
   'COMMAND_ID_REQUIRED',
   'EXPECTED_VERSION_REQUIRED',
   'ORDER_EXCEPTION_REVIEW_ROLE_REQUIRED',
+  'PRODUCTION_DATABASE_FORBIDDEN',
+  'PROJECT_DATABASE_MISMATCH',
+  'projectRefFromDbUrl',
+  'postgres.',
+  'new Response(null',
   'V7_ORDER_EXCEPTION_WORKBENCH'
 ]) assert.ok(s.includes(x),x);
 
@@ -23,3 +28,6 @@ assert.ok(s.includes('SUPABASE_PUBLISHABLE_KEYS'));
 assert.ok(s.includes('SUPABASE_DB_URL'));
 
 console.log('V7 order exception API edge contract: PASS');
+
+assert.ok(s.includes('decodeURIComponent(parsed.username || "")'));
+assert.ok(s.includes('if (status === 204)'));
