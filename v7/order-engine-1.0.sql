@@ -50,7 +50,7 @@ create table if not exists warehouse_v7.order_source_evidence (
   source_updated_at timestamptz,
   staged_at timestamptz not null default now(),
   primary key(tenant_id,id),
-  unique(tenant_id,source_dataset,source_record_id),
+  unique(tenant_id,source_dataset,source_record_id,source_fingerprint),
   foreign key(tenant_id,order_id)
     references warehouse_v7.order_record(tenant_id,id)
     on delete restrict
