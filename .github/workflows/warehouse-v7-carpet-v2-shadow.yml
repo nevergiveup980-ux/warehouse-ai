@@ -1,0 +1,162 @@
+name: Warehouse V7 Carpet Identity V2 Shadow
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [warehouse-v7-foundation]
+    paths:
+      - 'v7/carpet-identity-v2*'
+      - 'v7/cloud-carpet-record-contract-v2*'
+      - 'v7/carpet-operational-v2-rehearsal.py'
+      - 'v7/schema-2.0.sql'
+      - 'v7/command-engine-1.0.sql'
+      - 'v7/ledger-guards-1.0.sql'
+      - 'v7/tenant-rls-1.0.sql'
+      - 'v7/command-auth-1.0.sql'
+      - 'v7/migration-staging-1.0.sql'
+      - 'tests/v7-carpet-identity-v2.mjs'
+      - 'tests/v7-cloud-carpet-record-contract-v2.mjs'
+      - 'tests/v7-carpet-operational-v2-rehearsal.mjs'
+      - '.github/workflows/warehouse-v7-carpet-v2-shadow.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: warehouse-v7-carpet-v2-shadow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  carpet-v2-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+      SNAPSHOT_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-snapshot-bridge
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch production V6 snapshot read-only
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL" -o /tmp/v7-carpet-v2-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-carpet-v2-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('postgres_jsonb_text_verified') is True
+          json.dump(rows,open('/tmp/v7-carpet-v2-snapshot.json','w'),separators=(',',':'))
+          print('read-only snapshot rows:',len(rows))
+          print('snapshot md5:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Reconcile company carpet identity V2
+        run: |
+          set -euo pipefail
+          node v7/carpet-identity-v2-cli.mjs /tmp/v7-carpet-v2-snapshot.json \
+            --report /tmp/v7-carpet-identity-v2-report.json
+          node v7/cloud-carpet-record-contract-v2-cli.mjs /tmp/v7-carpet-v2-snapshot.json \
+            --identity-report /tmp/v7-carpet-identity-v2-report.json \
+            --report /tmp/v7-cloud-carpet-record-contract-v2-report.json
+
+      - name: Install minimal disposable V7 operational database
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+
+      - name: Rehearse canonical Carpet V2 opening inventory
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-operational-v2-rehearsal.py \
+            /tmp/v7-carpet-v2-snapshot.json /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 78787878-7878-4787-8787-787878787878 \
+            --actor 89898989-8989-4898-8989-898989898989 \
+            --report /tmp/v7-carpet-operational-v2-rehearsal-1.json
+          python3 v7/carpet-operational-v2-rehearsal.py \
+            /tmp/v7-carpet-v2-snapshot.json /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 78787878-7878-4787-8787-787878787878 \
+            --actor 89898989-8989-4898-8989-898989898989 \
+            --report /tmp/v7-carpet-operational-v2-rehearsal-2.json
+
+      - name: Verify Carpet V2 operational gates
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          i=json.load(open('/tmp/v7-carpet-identity-v2-report.json'))
+          c=json.load(open('/tmp/v7-cloud-carpet-record-contract-v2-report.json'))
+          a=json.load(open('/tmp/v7-carpet-operational-v2-rehearsal-1.json'))
+          b=json.load(open('/tmp/v7-carpet-operational-v2-rehearsal-2.json'))
+          assert i['production_writes']==0
+          assert c['production_writes']==0 and c['identity_v2_reconciliation_pass'] is True
+          for r in (a,b):
+              assert r['production_writes']==0 and r['database']=='warehouse_v7_test' and r['pass'] is True
+              assert r['ordinary_duplicate_roll_groups']==0
+          assert a['fingerprint']==b['fingerprint']
+          assert a['readiness']==b['readiness']
+          assert a['after']==b['after']
+          assert b['new_rows']=={'products':0,'locations':0,'carpet_rolls':0,'commands':0,'movements':0,'events':0}
+          assert a['readiness']['ready_physical_instances'] + a['readiness']['deferred_physical_instances'] == i['counts']['accepted_physical_instances']
+          print('V7 CARPET IDENTITY V2 SHADOW GATE: PASS')
+          print(json.dumps({
+            'identity_counts':i['counts'],
+            'readiness':a['readiness'],
+            'canonical_after':a['after'],
+            'shared_roll_instances':a['shared_roll_instances'],
+            'deferred':a['deferred']
+          },indent=2))
+          PY
+
+      - name: Upload Carpet V2 shadow reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-carpet-identity-v2-shadow-report
+          path: |
+            /tmp/v7-carpet-identity-v2-report.json
+            /tmp/v7-cloud-carpet-record-contract-v2-report.json
+            /tmp/v7-carpet-operational-v2-rehearsal-1.json
+            /tmp/v7-carpet-operational-v2-rehearsal-2.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Destroy transient carpet snapshot
+        if: always()
+        run: |
+          rm -f \
+            /tmp/v7-carpet-v2-envelope.json \
+            /tmp/v7-carpet-v2-snapshot.json \
+            /tmp/v7-carpet-identity-v2-report.json \
+            /tmp/v7-cloud-carpet-record-contract-v2-report.json \
+            /tmp/v7-carpet-operational-v2-rehearsal-1.json \
+            /tmp/v7-carpet-operational-v2-rehearsal-2.json
