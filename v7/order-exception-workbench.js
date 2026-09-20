@@ -6,6 +6,7 @@
 
   const state = {
     api: null,
+    auth: null,
     mode: 'disconnected',
     status: 'open',
     data: null,
@@ -205,6 +206,10 @@
       badge.textContent = 'ENGINEERING DEMO';
       badge.className = 'mode-badge demo';
       setBanner('Engineering preview: demo records only. No production order or inventory data is shown or changed.', 'warn');
+    } else if (state.mode === 'signin') {
+      badge.textContent = 'ENGINEERING SIGN-IN';
+      badge.className = 'mode-badge demo';
+      setBanner('Connected target is an isolated V7 engineering project. Sign in to load exception cases.', 'info');
     } else if (state.mode === 'connected') {
       badge.textContent = 'AUTHENTICATED V7';
       badge.className = 'mode-badge live';
@@ -225,6 +230,28 @@
       renderSummary();
       renderCards();
       return;
+    }
+
+    if (
+      !window.RUNLU_V7_ORDER_EXCEPTION_API &&
+      window.RUNLU_V7_ENGINEERING_AUTH_CONFIG &&
+      typeof window.createRunluV7EngineeringWorkbenchAuth === 'function'
+    ) {
+      try {
+        state.auth = window.createRunluV7EngineeringWorkbenchAuth(
+          window.RUNLU_V7_ENGINEERING_AUTH_CONFIG
+        );
+        state.mode = 'signin';
+        state.data = {summary:{total:0},cases:[]};
+        $('#authCard').classList.remove('hidden');
+        $('#signOutBtn').classList.add('hidden');
+        renderMode();
+        renderSummary();
+        renderCards();
+        return;
+      } catch (err) {
+        setBanner('Engineering authentication configuration is invalid: ' + (err?.message || String(err)), 'danger');
+      }
     }
 
     if (
@@ -253,6 +280,8 @@
 
     state.api = api;
     state.mode = 'connected';
+    $('#authCard').classList.add('hidden');
+    $('#signOutBtn').classList.toggle('hidden', !state.auth);
     renderMode();
     await refresh();
   }
@@ -413,6 +442,51 @@
       $('#resolveBtn').disabled = false;
     }
   }
+
+  $('#engineeringSignInBtn').addEventListener('click', async () => {
+    if (!state.auth) return;
+    const email = formValue('#engineeringEmail');
+    const password = formValue('#engineeringPassword');
+    if (!email || !password) {
+      setBanner('Enter the engineering email and password.', 'danger');
+      return;
+    }
+    const btn = $('#engineeringSignInBtn');
+    btn.disabled = true;
+    try {
+      await state.auth.signIn(email, password);
+      $('#engineeringPassword').value = '';
+      state.api = state.auth.connectedApi();
+      state.mode = 'connected';
+      $('#authCard').classList.add('hidden');
+      $('#signOutBtn').classList.remove('hidden');
+      renderMode();
+      await refresh();
+    } catch (err) {
+      setBanner('Engineering sign-in failed: ' + (err?.message || String(err)), 'danger');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('#engineeringPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('#engineeringSignInBtn').click();
+  });
+
+  $('#signOutBtn').addEventListener('click', async () => {
+    if (!state.auth) return;
+    await state.auth.signOut();
+    state.api = null;
+    state.mode = 'signin';
+    state.data = {summary:{total:0},cases:[]};
+    state.pendingResolveCommandIds = {};
+    closeDrawer();
+    $('#authCard').classList.remove('hidden');
+    $('#signOutBtn').classList.add('hidden');
+    renderMode();
+    renderSummary();
+    renderCards();
+  });
 
   $('#refreshBtn').addEventListener('click', () => state.mode === 'connected' ? refresh() : load());
   $('#closeDrawer').addEventListener('click', closeDrawer);
