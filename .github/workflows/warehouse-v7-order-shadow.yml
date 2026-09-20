@@ -178,8 +178,7 @@ jobs:
           path: |
             /tmp/v7-order-source-audit-report.json
             /tmp/v7-order-migration-rehearsal-1.json
-            /tmp/v7-order-migration-rehearsal-2.json \
-            /tmp/v7-order-exception-real-evidence-report.json
+            /tmp/v7-order-migration-rehearsal-2.json
             /tmp/v7-order-exception-real-evidence-report.json
           if-no-files-found: ignore
           retention-days: 7
@@ -191,4 +190,5 @@ jobs:
             /tmp/v7-order-shadow-envelope.json \
             /tmp/v7-order-source-audit-report.json \
             /tmp/v7-order-migration-rehearsal-1.json \
-            /tmp/v7-order-migration-rehearsal-2.json
+            /tmp/v7-order-migration-rehearsal-2.json \
+            /tmp/v7-order-exception-real-evidence-report.json
