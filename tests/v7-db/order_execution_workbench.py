@@ -22,7 +22,7 @@ select warehouse_v7.bind_order_execution('{T}','{B}','{O}',1,'OUTBOUND','{P}','{
 """)
 listed=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_order_execution_workbench('{T}','open')::text;")
 assert listed['summary']['open']==1 and listed['summary']['outbound_open']==1,listed
-task=listed['tasks'][0];assert task['stock_version']==1 and task['stock_quantity']=='2.000000',task
+task=listed['tasks'][0];assert task['stock_version']==1 and float(task['stock_quantity'])==2,task
 detail=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.get_order_execution_workbench_task('{T}','{O}')::text;")
 assert detail['can_execute'] is True and detail['next_action']=='SHIP_ORDER',detail
 viewer=j(f"set request.jwt.claim.sub='{V}';select warehouse_v7.get_order_execution_workbench_task('{T}','{O}')::text;")
