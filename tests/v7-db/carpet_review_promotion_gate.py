@@ -101,7 +101,8 @@ stage('derived_carpet_review_v7','REVIEW:DUP','deferred','LOCATION_MISSING',{
  'current_state':{'collection':'Other','colour':'Blue','location':None,'length':50,'original_length':50,'measure':'FULL'},
  'references':{}
 })
-run(f"set request.jwt.claim.sub='{A}';select warehouse_v7.resolve_carpet_review('{T}','derived_carpet_review_v7','REVIEW:DUP',0,'{{"location_code":"3A"}}'::jsonb,'{A}');")
+run(f"""set request.jwt.claim.sub='{A}';
+select warehouse_v7.resolve_carpet_review('{T}','derived_carpet_review_v7','REVIEW:DUP',0,'{"location_code":"3A"}'::jsonb,'{A}');""")
 dup=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.preview_carpet_review_promotion_case('{T}','derived_carpet_review_v7','REVIEW:DUP')::text;")
 assert dup['ready'] is False and 'COMPANY_ROLL_ALREADY_ACTIVE' in dup['blockers'],dup
 bad=run(f"set request.jwt.claim.sub='{A}';select warehouse_v7.promote_carpet_review('{T}','derived_carpet_review_v7','REVIEW:DUP',1,'{A}');",ok=False)
