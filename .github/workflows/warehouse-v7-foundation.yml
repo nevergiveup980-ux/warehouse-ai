@@ -25,6 +25,7 @@ jobs:
       - run: node tests/v7-order-exception-workbench.mjs
       - run: node tests/v7-order-exception-api-edge.mjs
       - run: node tests/v7-order-exception-api-client.mjs
+      - run: node tests/v7-order-exception-engineering-activation.mjs
       - run: node tests/v7-order-exception-workbench-adapter.mjs
       - run: node tests/v7-carpet-transfer-engine.mjs
       - run: node tests/v7-carpet-return-engine.mjs
