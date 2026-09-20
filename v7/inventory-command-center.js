@@ -23,6 +23,8 @@
     if(x.kind==='CONFLICT'||x.kind==='REVIEW'){
       const label=x.kind==='CONFLICT'?'Identity conflict':'Operational review';
       const detail=x.review_reason||(x.kind==='CONFLICT'?'Company roll number needs confirmation':'Carpet data needs confirmation');
+      const dataset=x.kind==='CONFLICT'?'derived_carpet_identity_v7':'derived_carpet_review_v7';
+      const href='/carpet-review-workbench.html?dataset='+encodeURIComponent(dataset)+'&record='+encodeURIComponent(x.source_id||'');
       return '<article class="card review"><div class="card-top"><span class="kind">REVIEW</span><span class="badge review">'+esc(label)+'</span></div>'+
         '<div class="title">'+esc(x.display_id||'Carpet review')+'</div>'+
         '<div class="product">'+esc(detail)+'</div>'+
@@ -30,7 +32,8 @@
           (x.location_code?'<span class="detail">'+esc(x.location_code)+'</span>':'')+
           (x.quantity_text?'<span class="detail">'+esc(qty(x.quantity_text))+' ft</span>':'')+
           (x.measure_status?'<span class="detail">'+esc(x.measure_status)+'</span>':'')+
-          '<span class="detail">'+esc(x.source_id||'')+'</span></div></article>';
+          '<span class="detail">'+esc(x.source_id||'')+'</span></div>'+
+        '<div class="details"><a class="detail" href="'+href+'">Review details</a></div></article>';
     }
     if(x.kind==='CARPET'){
       const shared=x.shared_legacy_roll_number?'<span class="badge shared">Shared legacy number</span>':'<span class="badge">Carpet</span>';

@@ -437,6 +437,28 @@ jobs:
             --actor 44444444-4444-4444-8444-444444444444 \
             --report /tmp/v7-carpet-review-promotion-gate-report.json
 
+      - name: Exercise real Carpet Review Workbench on disposable localhost PostgreSQL
+        env:
+          RUNLU_V7_TENANT: 33333333-3333-4333-8333-333333333333
+          RUNLU_V7_ACTOR: 44444444-4444-4444-8444-444444444444
+          RUNLU_V7_INVENTORY_PORT: 8789
+        run: |
+          set -euo pipefail
+          node v7/inventory-command-center-local-server.mjs > /tmp/v7-carpet-review-real-http-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8789/healthz >/dev/null; then break; fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then cat /tmp/v7-carpet-review-real-http-server.log; exit 1; fi
+            sleep 0.25
+          done
+          python3 v7/carpet-review-workbench-http-e2e.py \
+            --base-url http://127.0.0.1:8789 \
+            --mode real \
+            --review-report /tmp/v7-carpet-review-queue-stage-report.json \
+            --report /tmp/v7-carpet-review-real-http-e2e.json
+          cat /tmp/v7-carpet-review-real-http-server.log
+
       - name: Exercise real Inventory Command Center on disposable localhost PostgreSQL
         env:
           RUNLU_V7_TENANT: 33333333-3333-4333-8333-333333333333
@@ -512,6 +534,8 @@ jobs:
             /tmp/v7-carpet-review-queue-stage-report.json
             /tmp/v7-carpet-review-workbench-report.json
             /tmp/v7-carpet-review-promotion-gate-report.json
+            /tmp/v7-carpet-review-real-http-e2e.json
+            /tmp/v7-carpet-review-real-http-server.log
             /tmp/v7-inventory-command-center-http-e2e-report.json
             /tmp/v7-inventory-command-center-server.log
           if-no-files-found: ignore
@@ -520,4 +544,4 @@ jobs:
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-carpet-operational-v2-rehearsal-1.json             /tmp/v7-carpet-operational-v2-rehearsal-2.json             /tmp/v7-carpet-review-queue-stage-report.json             /tmp/v7-carpet-review-workbench-report.json             /tmp/v7-carpet-review-promotion-gate-report.json             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-carpet-operational-v2-rehearsal-1.json             /tmp/v7-carpet-operational-v2-rehearsal-2.json             /tmp/v7-carpet-review-queue-stage-report.json             /tmp/v7-carpet-review-workbench-report.json             /tmp/v7-carpet-review-promotion-gate-report.json             /tmp/v7-carpet-review-real-http-e2e.json             /tmp/v7-carpet-review-real-http-server.log             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json

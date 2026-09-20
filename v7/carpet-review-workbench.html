@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RUNLU V7 — Carpet Review Workbench</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17212a;background:#f3f5f7;--line:#dfe4e8;--muted:#68737d;--accent:#17324d;--danger:#9a3434;--ok:#1b6b48;--warn:#8a651e}
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7}.shell{max-width:1100px;margin:auto;padding:16px}header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:6px 0 14px}.eyebrow{font-size:11px;font-weight:900;letter-spacing:.12em;color:#607080}h1{margin:5px 0;font-size:28px}.sub{font-size:13px;color:var(--muted);line-height:1.45}.mode{padding:7px 9px;border-radius:999px;background:#fff0dc;color:#765319;font-size:10px;font-weight:900}.banner{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}.banner.success{background:#edf9f0;border-color:#b8dfc2}.banner.danger{background:#fff0f0;border-color:#efbcbc}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:12px}.metric{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px}.metric b{display:block;font-size:25px}.metric span{font-size:10px;color:var(--muted)}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;font-weight:800;color:#34414c;text-decoration:none;cursor:pointer}.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.active{background:var(--accent);color:#fff}.btn:disabled{opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px}.card.focus{outline:3px solid #d7e4ef}.card.resolved{opacity:.78}.top{display:flex;justify-content:space-between;gap:8px}.title{font-size:20px;font-weight:900;margin:6px 0}.badge{font-size:10px;font-weight:900;padding:4px 7px;border-radius:999px;background:#fdeaea;color:#8b2929}.badge.done{background:#e5f4e9;color:#1b6b48}.reason{font-size:12px;font-weight:800;margin:5px 0}.help{font-size:11px;color:#5b6670;line-height:1.4;margin-bottom:7px}.meta{font-size:11px;color:var(--muted);line-height:1.55}.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.field{display:flex;flex-direction:column;gap:4px}.field.full{grid-column:1/-1}.field label{font-size:10px;font-weight:850;color:#5d6872}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;background:#fff}.actions{display:flex;gap:7px;margin-top:10px}.promotion{margin-top:9px;border-radius:9px;padding:8px 9px;background:#f7f8f9;font-size:10px;color:#59646d}.promotion.ready{background:#edf9f0;color:#1b6b48}.empty{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;color:var(--muted)}.note{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px;font-size:11px;line-height:1.5;color:#48545e}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}header{display:block}.mode{display:inline-block;margin-top:7px}.fields{grid-template-columns:1fr}}
+</style>
+</head>
+<body><div class="shell">
+<header><div><div class="eyebrow">RUNLU WAREHOUSE OS · V7 CARPET</div><h1>Carpet Review Workbench</h1><div class="sub">Confirm only what the physical warehouse or trusted evidence proves. No field is guessed.</div></div><span class="mode">DISPOSABLE ENGINEERING</span></header>
+<div id="banner" class="banner">Connecting to carpet review queue…</div>
+<section class="metrics"><div class="metric"><b id="total">0</b><span>Total</span></div><div class="metric"><b id="open">0</b><span>Open</span></div><div class="metric"><b id="resolved">0</b><span>Resolved overlay</span></div><div class="metric"><b id="identity">0</b><span>Identity</span></div><div class="metric"><b id="operational">0</b><span>Operational</span></div></section>
+<div class="toolbar"><a class="btn" href="/inventory-command-center.html">Back to Inventory</a><button class="btn active" data-status="open">Open</button><button class="btn" data-status="resolved">Resolved</button><button class="btn" data-status="all">All</button><button id="refresh" class="btn">Refresh</button></div>
+<div id="grid" class="grid"></div>
+<div class="note"><b>Safety boundary:</b> Save Resolution writes only to the disposable V7 review overlay. It does not create a carpet roll, inventory movement, command, or event. Promotion remains a separate explicit gate, and production promotion is disabled.</div>
+</div>
+<script src="/carpet-review-workbench-local-engineering-config.js"></script>
+<script src="/carpet-review-workbench-local-api-client.js"></script>
+<script src="/carpet-review-workbench.js"></script>
+</body></html>
