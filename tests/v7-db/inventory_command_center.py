@@ -39,6 +39,12 @@ stage('INSTANCE:C2','valid','CARPET_IDENTITY_V2_READY',{
 stage('CONFLICT:E','conflict','LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE',{
   'legacy_instance_id':'E','roll_numbers':['RC2220','RC22220'],'conflict_type':'LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE'
 })
+raw=json.dumps({
+  'legacy_instance_id':'R1','company_roll_number':'RC900','shared_legacy_roll_number':False,
+  'reasons':['LOCATION_MISSING'],'current_state':{'collection':'Review Carpet','colour':'Stone','location':None,'length':77,'measure':'CAL'}
+},separators=(',',':'))
+sid=val(run(f"select warehouse_v7.stage_legacy_record('{T}','derived_carpet_review_v7','REVIEW:R1',{q(raw)}::jsonb,{q(raw)}::jsonb);"))
+run(f"set request.jwt.claim.sub='{A}';select warehouse_v7.classify_legacy_record('{T}','{sid}','deferred','LOCATION_MISSING','{A}');")
 
 center=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.get_inventory_command_center('{T}')::text;")
 s=center['summary']
@@ -48,18 +54,23 @@ assert s['carpet_physical_instances']==3,s
 assert s['carpet_distinct_company_roll_numbers']==2,s
 assert s['shared_legacy_roll_instances']==2,s
 assert s['carpet_identity_conflicts']==1,s
+assert s['carpet_operational_deferred']==1,s
+assert s['carpet_review_total']==2,s
 assert center['carpet_identity_contract']['manufacturer_roll_role']=='reference_only'
 
 carpet=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','CARPET',null,null,50)::text;")
 shared=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','SHARED','CHC022',null,50)::text;")
 loc=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','ALL',null,'12C',50)::text;")
 search=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','ALL','jasper',null,50)::text;")
-review=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','CONFLICT','RC2220',null,50)::text;")
+review=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','REVIEW',null,null,50)::text;")
+conflict=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','CONFLICT','RC2220',null,50)::text;")
 assert carpet['matching_count']==3,carpet
 assert shared['matching_count']==2 and all(x['display_id']=='CHC022' for x in shared['items']),shared
 assert loc['matching_count']==3,loc
 assert search['matching_count']==1 and search['items'][0]['kind']=='STOCK',search
-assert review['matching_count']==1 and 'RC2220' in review['items'][0]['display_id'],review
+assert review['matching_count']==2,review
+assert any(x['kind']=='REVIEW' and x['display_id']=='RC900' and 'LOCATION_MISSING' in (x.get('review_reason') or '') for x in review['items']),review
+assert conflict['matching_count']==1 and 'RC2220' in conflict['items'][0]['display_id'],conflict
 
 bad=run(f"set request.jwt.claim.sub='{A}';select warehouse_v7.list_inventory_command_center('{T}','NOPE',null,null,50)::text;",ok=False)
 assert bad.returncode!=0 and 'INVALID_INVENTORY_KIND_FILTER' in (bad.stdout+bad.stderr),(bad.stdout,bad.stderr)

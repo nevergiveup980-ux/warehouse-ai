@@ -17,6 +17,7 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--base-url",required=True)
     ap.add_argument("--identity-report")
+    ap.add_argument("--operational-report")
     ap.add_argument("--report",required=True)
     args=ap.parse_args()
     base=args.base_url.rstrip("/")
@@ -36,12 +37,12 @@ def main():
     _,all_env=get_json(base+"/api/inventory-command-center?action=list&kind=ALL&limit=100")
     _,carpet_env=get_json(base+"/api/inventory-command-center?action=list&kind=CARPET&limit=100")
     _,shared_env=get_json(base+"/api/inventory-command-center?action=list&kind=SHARED&limit=100")
-    _,review_env=get_json(base+"/api/inventory-command-center?action=list&kind=CONFLICT&limit=100")
+    _,review_env=get_json(base+"/api/inventory-command-center?action=list&kind=REVIEW&limit=100")
     all_data,carpet,shared,review=[x["data"] for x in (all_env,carpet_env,shared_env,review_env)]
     assert all_data["read_only"] is True
     assert carpet["matching_count"]==overview["summary"]["carpet_physical_instances"]
     assert shared["matching_count"]==overview["summary"]["shared_legacy_roll_instances"]
-    assert review["matching_count"]==overview["summary"]["carpet_identity_conflicts"]
+    assert review["matching_count"]==overview["summary"]["carpet_review_total"]
 
     chc022=None
     if overview["summary"]["shared_legacy_roll_instances"]:
@@ -62,6 +63,16 @@ def main():
         }
         assert all(identity_checks.values()),identity_checks
 
+    operational_checks={}
+    if args.operational_report:
+        op=json.load(open(args.operational_report,encoding="utf-8"))
+        expected_deferred=int((op.get("readiness") or {}).get("deferred_physical_instances") or 0)
+        operational_checks={
+          "deferred_matches_operational_v2":overview["summary"]["carpet_operational_deferred"]==expected_deferred,
+          "review_total_is_identity_plus_deferred":overview["summary"]["carpet_review_total"]==overview["summary"]["carpet_identity_conflicts"]+expected_deferred
+        }
+        assert all(operational_checks.values()),operational_checks
+
     bad,_=request_status(base+"/api/inventory-command-center?action=list&kind=NOPE")
     post,post_body=request_status(base+"/api/inventory-command-center",method="POST",body=b"{}")
     assert bad==400
@@ -76,6 +87,7 @@ def main():
       "review_matching":review["matching_count"],
       "chc022_shared_matching":None if chc022 is None else chc022["matching_count"],
       "identity_checks":identity_checks,
+      "operational_checks":operational_checks,
       "invalid_kind_rejected":bad==400,
       "mutation_rejected":post==405,
       "verdict":"HTTP_E2E_PASS"

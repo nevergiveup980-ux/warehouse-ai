@@ -8,9 +8,12 @@ const js=fs.readFileSync('v7/inventory-command-center.js','utf8');
 const client=fs.readFileSync('v7/inventory-command-center-local-api-client.js','utf8');
 const server=fs.readFileSync('v7/inventory-command-center-local-server.mjs','utf8');
 const stage=fs.readFileSync('v7/carpet-identity-v2-stage.py','utf8');
+const reviewStage=fs.readFileSync('v7/carpet-review-queue-stage.py','utf8');
 
 assert.match(sql,/V7_INVENTORY_COMMAND_CENTER/);
 assert.match(sql,/derived_carpet_identity_v7/);
+assert.match(sql,/derived_carpet_review_v7/);
+assert.match(sql,/carpet_review_total/);
 assert.match(sql,/shared_legacy_roll_number/);
 assert.match(sql,/manufacturer_roll_role','reference_only'/);
 assert.match(sql,/carpet_operational_cutover',false/);
@@ -21,11 +24,14 @@ assert.doesNotMatch(sql,/update warehouse_v7\.carpet_roll/i);
 assert.match(html,/Inventory Command Center/);
 assert.match(html,/Company roll-number identity first/);
 assert.match(html,/Shared CHC/);
+assert.match(html,/Review queue/);
 assert.match(html,/READ ONLY/);
 assert.doesNotMatch(html,/manufacturerRoll/);
 
 assert.match(js,/state=\{api:null,overview:null,list:null,kind:'ALL'/);
 assert.match(js,/shared_legacy_roll_number/);
+assert.match(js,/carpet_review_total/);
+assert.match(js,/Operational review/);
 assert.doesNotMatch(js,/localStorage|sessionStorage/);
 
 assert.match(server,/INVENTORY_COMMAND_CENTER_READ_ONLY/);
@@ -35,6 +41,9 @@ assert.doesNotMatch(server,/service_role|SUPABASE_SERVICE/i);
 assert.match(stage,/CARPET_IDENTITY_STAGE_REFUSES_DATABASE/);
 assert.match(stage,/operational_inventory_writes/);
 assert.match(stage,/derived_carpet_identity_v7/);
+assert.match(reviewStage,/CARPET_REVIEW_STAGE_REFUSES_DATABASE/);
+assert.match(reviewStage,/operational_inventory_writes/);
+assert.match(reviewStage,/derived_carpet_review_v7/);
 
 const calls=[];
 const window={

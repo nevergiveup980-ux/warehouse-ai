@@ -17,14 +17,20 @@
     $('#stockCount').textContent=s.ordinary_stock_items??0;
     $('#distinctRolls').textContent=s.carpet_distinct_company_roll_numbers??0;
     $('#sharedCount').textContent=s.shared_legacy_roll_instances??0;
-    $('#conflictCount').textContent=s.carpet_identity_conflicts??0;
+    $('#conflictCount').textContent=s.carpet_review_total??s.carpet_identity_conflicts??0;
   }
   function card(x){
-    if(x.kind==='CONFLICT'){
-      return '<article class="card review"><div class="card-top"><span class="kind">REVIEW</span><span class="badge review">Identity conflict</span></div>'+
-        '<div class="title">'+esc(x.display_id||'Carpet identity review')+'</div>'+
-        '<div class="product">Company roll number needs confirmation</div>'+
-        '<div class="details"><span class="detail">'+esc(x.source_id||'')+'</span></div></article>';
+    if(x.kind==='CONFLICT'||x.kind==='REVIEW'){
+      const label=x.kind==='CONFLICT'?'Identity conflict':'Operational review';
+      const detail=x.review_reason||(x.kind==='CONFLICT'?'Company roll number needs confirmation':'Carpet data needs confirmation');
+      return '<article class="card review"><div class="card-top"><span class="kind">REVIEW</span><span class="badge review">'+esc(label)+'</span></div>'+
+        '<div class="title">'+esc(x.display_id||'Carpet review')+'</div>'+
+        '<div class="product">'+esc(detail)+'</div>'+
+        '<div class="details">'+
+          (x.location_code?'<span class="detail">'+esc(x.location_code)+'</span>':'')+
+          (x.quantity_text?'<span class="detail">'+esc(qty(x.quantity_text))+' ft</span>':'')+
+          (x.measure_status?'<span class="detail">'+esc(x.measure_status)+'</span>':'')+
+          '<span class="detail">'+esc(x.source_id||'')+'</span></div></article>';
     }
     if(x.kind==='CARPET'){
       const shared=x.shared_legacy_roll_number?'<span class="badge shared">Shared legacy number</span>':'<span class="badge">Carpet</span>';
@@ -58,7 +64,7 @@
         state.api.list({kind:state.kind,query:state.query||null,limit:50})
       ]);
       state.overview=overview;state.list=list;renderOverview();renderList();
-      banner('Inventory connected. Carpet count uses company-roll Identity V2 staging; operational carpet cutover remains disabled.','success');
+      banner('Inventory connected. Carpet Identity V2 is reconciled; review items stay quarantined and operational carpet cutover remains disabled.','success');
     }catch(err){banner('Inventory Command Center could not load: '+(err?.message||String(err)),'danger');}
     finally{$('#refreshBtn').disabled=false;}
   }

@@ -32,7 +32,7 @@
   <div class="metric stock"><b id="stockCount">0</b><span>Other stock items</span></div>
   <div class="metric rolls"><b id="distinctRolls">0</b><span>Distinct company roll numbers</span></div>
   <div class="metric shared"><b id="sharedCount">0</b><span>Shared legacy-roll instances</span></div>
-  <div class="metric review"><b id="conflictCount">0</b><span>Identity review</span></div>
+  <div class="metric review"><b id="conflictCount">0</b><span>Carpet review queue</span></div>
 </section>
 
 <section class="workbench">
@@ -45,13 +45,13 @@
     <button class="filter" data-kind="CARPET" type="button">Carpet</button>
     <button class="filter" data-kind="STOCK" type="button">Other stock</button>
     <button class="filter" data-kind="SHARED" type="button">Shared CHC</button>
-    <button class="filter" data-kind="CONFLICT" type="button">Review</button>
+    <button class="filter" data-kind="REVIEW" type="button">Review queue</button>
   </div>
   <div id="listMeta" class="meta">Loading inventory…</div>
   <div id="inventoryList" class="list"></div>
 </section>
 
-<div class="identity-note"><b>V7 safety boundary:</b> Carpet cards here are reconciled migration-stage identities only. They are not yet operational <code>carpet_roll</code> rows, and this screen has no Receive, Cut, Transfer, Ship or Return mutation endpoint.</div>
+<div class="identity-note"><b>V7 safety boundary:</b> Carpet cards here are reconciled migration-stage identities only. Review queue items remain quarantined until their missing location, measure, product label or roll-number conflict is confirmed. This screen has no Receive, Cut, Transfer, Ship or Return mutation endpoint.</div>
 </div>
 <script src="/inventory-command-center-local-engineering-config.js"></script>
 <script src="/inventory-command-center-local-api-client.js"></script>
