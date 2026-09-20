@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--end-integrity", required=True)
     ap.add_argument("--dry-run-1", required=True)
     ap.add_argument("--dry-run-2", required=True)
+    ap.add_argument("--release-readiness", required=True)
     ap.add_argument("--report", required=True)
     ap.add_argument("--expected-source-md5", default="")
     args = ap.parse_args()
@@ -62,6 +63,7 @@ def main():
     end = source_summary(load(args.end_integrity))
     first = load(args.dry_run_1)
     second = load(args.dry_run_2)
+    release = load(args.release_readiness)
     expected = args.expected_source_md5.strip().lower()
 
     checks = {}
@@ -110,6 +112,13 @@ def main():
         (first.get("reconciliation") or {}).get("checks")
         == (second.get("reconciliation") or {}).get("checks")
     )
+    checks["release_readiness_mode"] = release.get("mode") == "V7_ENGINEERING_RELEASE_READINESS_GATE"
+    checks["release_technical_gate_pass"] = release.get("technical_gate_pass") is True
+    checks["release_allowed"] = release.get("release_allowed") is True
+    checks["release_verdict_ready"] = release.get("verdict") == "RELEASE_READY"
+    checks["release_report_production_writes_zero"] = release.get("production_writes") == 0
+    checks["release_report_does_not_authorize_production_write"] = release.get("production_write_authorized") is False
+    checks["release_blockers_empty"] = (release.get("release_blockers") or []) == []
 
     failed = [name for name, ok in checks.items() if not ok]
     rec = first.get("reconciliation") or {}
@@ -121,6 +130,13 @@ def main():
         "source_start": start,
         "source_end": end,
         "expected_snapshot_lock": expected or None,
+        "release_readiness": {
+            "technical_gate_pass": release.get("technical_gate_pass"),
+            "release_allowed": release.get("release_allowed"),
+            "verdict": release.get("verdict"),
+            "release_blockers": release.get("release_blockers") or [],
+            "human_action_items_remaining": len(release.get("human_action_items") or []),
+        },
         "manifest_summary": first.get("manifest_summary"),
         "reconciliation": {
             "expected": rec.get("expected"),

@@ -557,7 +557,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preflight]')
         run: |
           set -euo pipefail
-          python3 v7/cutover-preflight.py             --start-integrity /tmp/v7-real-source-integrity.json             --end-integrity /tmp/v7-preflight-end-integrity.json             --dry-run-1 /tmp/v7-real-dry-run-report-1.json             --dry-run-2 /tmp/v7-real-dry-run-report-2.json             --report /tmp/v7-controlled-cutover-preflight-report.json             --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5"
+          python3 v7/cutover-preflight.py             --start-integrity /tmp/v7-real-source-integrity.json             --end-integrity /tmp/v7-preflight-end-integrity.json             --dry-run-1 /tmp/v7-real-dry-run-report-1.json             --dry-run-2 /tmp/v7-real-dry-run-report-2.json             --release-readiness /tmp/v7-release-readiness-report.json             --report /tmp/v7-controlled-cutover-preflight-report.json             --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5"
 
       - name: Upload sanitized real dry-run and preflight reports
         if: always()

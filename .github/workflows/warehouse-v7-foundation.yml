@@ -48,6 +48,7 @@ jobs:
       - run: node tests/v7-carpet-review-promotion-gate.mjs
       - run: node tests/v7-carpet-review-workbench-ui.mjs
       - run: node tests/v7-release-readiness-gate.mjs
+      - run: node tests/v7-cutover-preflight.mjs
       - run: node tests/v7-snapshot-transformer.mjs
       - run: node tests/v7-snapshot-envelope.mjs
       - run: node tests/v7-inventory-alias-transformer.mjs

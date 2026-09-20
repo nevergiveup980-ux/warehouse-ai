@@ -32,3 +32,13 @@ The release report also includes `human_action_items`: one compact, deterministi
 question per review case, including the roll label(s), reason, and exact field that
 must be confirmed. This makes a blocked release actionable without weakening the
 rule that historical evidence never decides the answer automatically.
+
+
+## Controlled cutover preflight dependency
+
+The controlled cutover preflight now consumes this release-readiness report as a
+hard prerequisite. A stable V6 source snapshot and successful disposable replay
+are not enough: preflight stops unless `release_allowed=true`,
+`verdict=RELEASE_READY`, and `release_blockers=[]`. This prevents a technically
+clean migration rehearsal from being mistaken for permission to cut over while
+human carpet-review work remains.
