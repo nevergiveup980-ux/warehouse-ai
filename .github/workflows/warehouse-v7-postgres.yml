@@ -96,6 +96,8 @@ jobs:
         run: python3 tests/v7-db/order_cross_tenant_rls.py
       - name: Order evidence immutability attack
         run: python3 tests/v7-db/order_evidence_immutability.py
+      - name: Order exception resolution regression
+        run: python3 tests/v7-db/order_exception_resolution.py
       - name: Carpet transfer return lifecycle regression
         run: python3 tests/v7-db/carpet_transfer_return_regression.py
       - name: Database smoke and integrity tests
