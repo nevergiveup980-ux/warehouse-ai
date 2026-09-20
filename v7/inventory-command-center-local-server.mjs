@@ -11,7 +11,7 @@ const DB=process.env.PGDATABASE || 'warehouse_v7_test';
 const TENANT=String(process.env.RUNLU_V7_TENANT || '');
 const ACTOR=String(process.env.RUNLU_V7_ACTOR || '');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const KINDS=new Set(['ALL','STOCK','CARPET','SHARED','CONFLICT']);
+const KINDS=new Set(['ALL','STOCK','CARPET','SHARED','REVIEW','CONFLICT']);
 
 if(DB!=='warehouse_v7_test')throw new Error('INVENTORY_COMMAND_CENTER_REFUSES_DATABASE:'+DB);
 if(!UUID.test(TENANT))throw new Error('RUNLU_V7_TENANT_REQUIRED');
