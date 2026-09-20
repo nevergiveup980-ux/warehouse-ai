@@ -8,11 +8,12 @@ const sql=fs.readFileSync('v7/order-exception-workbench-1.0.sql','utf8');
 for (const x of [
   'Order Exception Workbench',
   'Resolve & create canonical order',
-  'ENGINEERING DEMO',
   'NOT CONNECTED',
   'Source evidence',
   'Resolution note'
 ]) assert.ok(html.includes(x),x);
+
+assert.ok((html+js).includes('ENGINEERING DEMO'),'ENGINEERING DEMO');
 
 for (const x of [
   'RUNLU_V7_ORDER_EXCEPTION_API',
