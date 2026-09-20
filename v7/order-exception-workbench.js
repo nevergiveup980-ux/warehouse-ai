@@ -1,0 +1,404 @@
+(() => {
+  'use strict';
+
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const state = {
+    api: null,
+    mode: 'disconnected',
+    status: 'open',
+    data: null,
+    selected: null,
+    detail: null,
+  };
+
+  const REASON_LABELS = {
+    STRUCTURED_STATUS_MISSING: 'Status confirmation required',
+    IDENTITY_CRITICAL_FIELDS_CONFLICT: 'Identity conflict',
+    STRUCTURED_STATUS_MOVED_BACKWARD: 'Lifecycle regression',
+    WEAK_SOURCE_IDENTITY: 'Identity confirmation required',
+    UNKNOWN_STRUCTURED_STATUS: 'Unknown legacy status',
+  };
+
+  const DEMO = {
+    tenant_id: 'engineering-preview',
+    status_filter: 'open',
+    can_resolve: false,
+    summary: {
+      total: 4,
+      status_missing: 1,
+      identity_conflict: 1,
+      lifecycle_regression: 1,
+      weak_identity: 1,
+      unknown_status: 0,
+    },
+    cases: [
+      {
+        case_id: 'demo-status',
+        reason: 'STRUCTURED_STATUS_MISSING',
+        status: 'open',
+        version: 1,
+        evidence_count: 8,
+        linked_evidence_rows: 8,
+        required_confirmation: ['lifecycle','fulfillment_status','resolution_note'],
+        display_context: {
+          order_kind: 'STANDARD',
+          purchase_order_number: 'PO-DEMO-001',
+          product_label: 'Example Flooring',
+          source_location: '33A',
+          quantity: '12',
+          unit: 'BOX',
+          latest_structured_status: null,
+        },
+        reason_help: {
+          title: 'Status confirmation required',
+          summary: 'The legacy order has no trustworthy structured status.',
+          action: 'Confirm lifecycle and fulfillment from source paperwork or warehouse knowledge.',
+        },
+      },
+      {
+        case_id: 'demo-conflict',
+        reason: 'IDENTITY_CRITICAL_FIELDS_CONFLICT',
+        status: 'open',
+        version: 1,
+        evidence_count: 3,
+        linked_evidence_rows: 3,
+        required_confirmation: ['canonical_identity','lifecycle','fulfillment_status','resolution_note'],
+        display_context: {
+          order_kind: 'STANDARD',
+          purchase_order_number: 'PO-DEMO-002',
+          product_label: 'Example Product',
+          source_location: '12B',
+          quantity: '5',
+          unit: 'ROLL',
+        },
+        reason_help: {
+          title: 'Identity conflict',
+          summary: 'Rows with the same lineage key disagree on identity-critical fields.',
+          action: 'Confirm the canonical identity before creating a V7 order.',
+        },
+      },
+      {
+        case_id: 'demo-regression',
+        reason: 'STRUCTURED_STATUS_MOVED_BACKWARD',
+        status: 'open',
+        version: 1,
+        evidence_count: 4,
+        linked_evidence_rows: 4,
+        required_confirmation: ['final_lifecycle','final_fulfillment_status','resolution_note'],
+        display_context: {
+          order_kind: 'SPECIAL',
+          purchase_order_number: 'PO-DEMO-003',
+          product_label: 'Example Special Order',
+          quantity: '1',
+          unit: 'EACH',
+          latest_structured_status: 'Ready for Pickup',
+        },
+        reason_help: {
+          title: 'Lifecycle regression',
+          summary: 'The source status moved backward in time.',
+          action: 'Confirm the final trustworthy state.',
+        },
+      },
+      {
+        case_id: 'demo-weak',
+        reason: 'WEAK_SOURCE_IDENTITY',
+        status: 'open',
+        version: 1,
+        evidence_count: 1,
+        linked_evidence_rows: 1,
+        required_confirmation: ['canonical_identity','lifecycle','fulfillment_status','resolution_note'],
+        display_context: {
+          order_kind: 'SPECIAL',
+          product_label: 'Example Legacy Order',
+          quantity: '2',
+          unit: 'BOX',
+        },
+        reason_help: {
+          title: 'Identity confirmation required',
+          summary: 'The row lacks enough structured identity for safe automatic import.',
+          action: 'Confirm a durable order identifier and the canonical order state.',
+        },
+      },
+    ],
+  };
+
+  function esc(v='') {
+    return String(v).replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[m]);
+  }
+
+  function field(ctx, key, fallback='—') {
+    const v = ctx?.[key];
+    return (v === null || v === undefined || v === '') ? fallback : v;
+  }
+
+  function reasonClass(reason) {
+    if (reason === 'IDENTITY_CRITICAL_FIELDS_CONFLICT') return 'danger';
+    if (reason === 'STRUCTURED_STATUS_MOVED_BACKWARD') return 'warn';
+    if (reason === 'WEAK_SOURCE_IDENTITY') return 'soft';
+    return 'neutral';
+  }
+
+  function setBanner(message, kind='info') {
+    const el = $('#statusBanner');
+    el.className = 'status-banner ' + kind;
+    el.textContent = message;
+    el.hidden = false;
+  }
+
+  function renderSummary() {
+    const s = state.data?.summary || {};
+    $('#totalCount').textContent = s.total ?? 0;
+    $('#statusCount').textContent = s.status_missing ?? 0;
+    $('#conflictCount').textContent = s.identity_conflict ?? 0;
+    $('#regressionCount').textContent = s.lifecycle_regression ?? 0;
+    $('#weakCount').textContent = s.weak_identity ?? 0;
+  }
+
+  function renderCards() {
+    const host = $('#caseGrid');
+    const cases = state.data?.cases || [];
+    host.innerHTML = '';
+
+    if (!cases.length) {
+      host.innerHTML = '<div class="empty">No cases match this filter.</div>';
+      return;
+    }
+
+    for (const c of cases) {
+      const ctx = c.display_context || {};
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'case-card ' + reasonClass(c.reason);
+      card.dataset.caseId = c.case_id;
+      card.innerHTML = `
+        <div class="card-top">
+          <span class="reason-pill">${esc(c.reason_help?.title || REASON_LABELS[c.reason] || c.reason)}</span>
+          <span class="evidence">${esc(c.linked_evidence_rows ?? c.evidence_count ?? 0)} evidence</span>
+        </div>
+        <div class="order-title">${esc(field(ctx,'product_label','Order review'))}</div>
+        <div class="order-meta">
+          <span>${esc(field(ctx,'purchase_order_number','No PO'))}</span>
+          <span>${esc(field(ctx,'source_location','No location'))}</span>
+          <span>${esc(field(ctx,'quantity','?'))} ${esc(field(ctx,'unit',''))}</span>
+        </div>
+        <div class="reason-summary">${esc(c.reason_help?.summary || '')}</div>
+        <div class="card-foot">
+          <span>v${esc(c.version ?? 1)}</span>
+          <span>Open case →</span>
+        </div>
+      `;
+      card.addEventListener('click', () => openCase(c.case_id));
+      host.appendChild(card);
+    }
+  }
+
+  function renderMode() {
+    const badge = $('#modeBadge');
+    if (state.mode === 'demo') {
+      badge.textContent = 'ENGINEERING DEMO';
+      badge.className = 'mode-badge demo';
+      setBanner('Engineering preview: demo records only. No production order or inventory data is shown or changed.', 'warn');
+    } else if (state.mode === 'connected') {
+      badge.textContent = 'AUTHENTICATED V7';
+      badge.className = 'mode-badge live';
+      $('#statusBanner').hidden = true;
+    } else {
+      badge.textContent = 'NOT CONNECTED';
+      badge.className = 'mode-badge offline';
+      setBanner('No authenticated V7 workbench adapter is connected. Add ?demo=1 to preview the interface safely.', 'info');
+    }
+  }
+
+  async function load() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('demo') === '1') {
+      state.mode = 'demo';
+      state.data = structuredClone(DEMO);
+      renderMode();
+      renderSummary();
+      renderCards();
+      return;
+    }
+
+    const api = window.RUNLU_V7_ORDER_EXCEPTION_API;
+    if (!api || typeof api.list !== 'function' || typeof api.get !== 'function' || typeof api.resolve !== 'function') {
+      state.mode = 'disconnected';
+      state.data = {summary:{total:0},cases:[]};
+      renderMode();
+      renderSummary();
+      renderCards();
+      return;
+    }
+
+    state.api = api;
+    state.mode = 'connected';
+    renderMode();
+    await refresh();
+  }
+
+  async function refresh() {
+    $('#refreshBtn').disabled = true;
+    try {
+      state.data = await state.api.list(state.status);
+      renderSummary();
+      renderCards();
+    } catch (err) {
+      setBanner('Workbench could not load: ' + (err?.message || String(err)), 'danger');
+    } finally {
+      $('#refreshBtn').disabled = false;
+    }
+  }
+
+  function formValue(id) {
+    return $(id)?.value?.trim() || '';
+  }
+
+  function renderDetail(detail) {
+    state.detail = detail;
+    const c = detail;
+    const ctx = c.display_context || {};
+    $('#drawerTitle').textContent = c.reason_help?.title || REASON_LABELS[c.reason] || c.reason;
+    $('#drawerReason').textContent = c.reason_help?.summary || '';
+    $('#drawerAction').textContent = c.reason_help?.action || '';
+    $('#drawerEvidenceCount').textContent = String(c.evidence?.length ?? c.linked_evidence_rows ?? c.evidence_count ?? 0);
+    $('#drawerCaseVersion').textContent = 'v' + String(c.version ?? 1);
+
+    $('#orderKind').value = field(ctx,'order_kind','STANDARD');
+    $('#poNumber').value = field(ctx,'purchase_order_number','');
+    $('#soNumber').value = field(ctx,'sales_order_number','');
+    $('#recoveryKey').value = field(ctx,'recovery_key','');
+    $('#customerLabel').value = field(ctx,'customer_label','');
+    $('#productLabel').value = field(ctx,'product_label','');
+    $('#sourceLocation').value = field(ctx,'source_location','');
+    $('#quantity').value = field(ctx,'quantity','');
+    $('#unit').value = field(ctx,'unit','');
+    $('#resolutionNote').value = '';
+
+    const latest = field(ctx,'latest_structured_status','');
+    if (c.reason === 'STRUCTURED_STATUS_MOVED_BACKWARD' || c.reason === 'STRUCTURED_STATUS_MISSING') {
+      $('#lifecycle').value = 'in_progress';
+      $('#fulfillment').value = latest === 'Picked Up' ? 'picked_up' : 'pending';
+    } else {
+      $('#lifecycle').value = 'in_progress';
+      $('#fulfillment').value = 'pending';
+    }
+
+    const req = c.required_confirmation || [];
+    $('#requiredList').innerHTML = req.map(x=>`<li>${esc(String(x).replaceAll('_',' '))}</li>`).join('');
+
+    const evidence = c.evidence || [];
+    $('#evidenceList').innerHTML = evidence.length
+      ? evidence.map((e,i)=>`
+          <div class="evidence-row">
+            <div><strong>Evidence ${i+1}</strong><span>${esc(e.source_dataset || '')}</span></div>
+            <pre>${esc(JSON.stringify(e.structured_fields || {}, null, 2))}</pre>
+          </div>`).join('')
+      : '<div class="muted">Evidence details load only through an authenticated V7 adapter.</div>';
+
+    const canResolve = state.mode === 'connected' && c.can_resolve === true && c.status !== 'resolved';
+    $('#resolveBtn').disabled = !canResolve;
+    $('#resolveHint').textContent = state.mode === 'demo'
+      ? 'Resolve is disabled in demo mode.'
+      : c.can_resolve === true
+        ? 'Owner/Admin resolution is available.'
+        : 'Owner/Admin role is required to resolve this case.';
+
+    $('#drawer').classList.add('open');
+    $('#drawerBackdrop').hidden = false;
+  }
+
+  async function openCase(caseId) {
+    state.selected = caseId;
+    if (state.mode === 'demo') {
+      const base = state.data.cases.find(x=>x.case_id===caseId);
+      renderDetail({
+        ...structuredClone(base),
+        can_resolve:false,
+        evidence:Array.from({length:Math.min(base.evidence_count || 1,3)},(_,i)=>({
+          source_dataset:'demo',
+          source_record_id:'demo-'+(i+1),
+          structured_fields:base.display_context,
+        })),
+      });
+      return;
+    }
+
+    if (!state.api) return;
+    setBanner('Loading case evidence…', 'info');
+    try {
+      const detail = await state.api.get(caseId);
+      if (!detail) throw new Error('Case not found');
+      $('#statusBanner').hidden = true;
+      renderDetail(detail);
+    } catch (err) {
+      setBanner('Case could not load: ' + (err?.message || String(err)), 'danger');
+    }
+  }
+
+  function closeDrawer() {
+    $('#drawer').classList.remove('open');
+    $('#drawerBackdrop').hidden = true;
+    state.selected = null;
+    state.detail = null;
+  }
+
+  async function resolveCase() {
+    if (!state.api || state.mode !== 'connected' || !state.detail) return;
+    const note = formValue('#resolutionNote');
+    if (!note) {
+      $('#resolutionNote').focus();
+      setBanner('Resolution note is required.', 'danger');
+      return;
+    }
+
+    const payload = {
+      expected_version: Number(state.detail.version),
+      order_kind: formValue('#orderKind'),
+      lifecycle: formValue('#lifecycle'),
+      fulfillment_status: formValue('#fulfillment'),
+      fields: {
+        recovery_key: formValue('#recoveryKey') || null,
+        sales_order_number: formValue('#soNumber') || null,
+        purchase_order_number: formValue('#poNumber') || null,
+        customer_label: formValue('#customerLabel') || null,
+        product_label: formValue('#productLabel') || null,
+        source_location: formValue('#sourceLocation') || null,
+        quantity: formValue('#quantity') || null,
+        unit: formValue('#unit') || null,
+      },
+      resolution_note: note,
+    };
+
+    $('#resolveBtn').disabled = true;
+    try {
+      const result = await state.api.resolve(state.detail.case_id, payload);
+      if (result?.status !== 'committed') {
+        throw new Error(result?.code || 'Resolution was not committed');
+      }
+      closeDrawer();
+      setBanner('Case resolved and canonical V7 order created. Inventory was not changed.', 'success');
+      await refresh();
+    } catch (err) {
+      setBanner('Resolution failed: ' + (err?.message || String(err)), 'danger');
+      $('#resolveBtn').disabled = false;
+    }
+  }
+
+  $('#refreshBtn').addEventListener('click', () => state.mode === 'connected' ? refresh() : load());
+  $('#closeDrawer').addEventListener('click', closeDrawer);
+  $('#drawerBackdrop').addEventListener('click', closeDrawer);
+  $('#resolveBtn').addEventListener('click', resolveCase);
+  $$('#filterBar button').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.status = btn.dataset.status || 'open';
+      $$('#filterBar button').forEach(x=>x.classList.toggle('active',x===btn));
+      if (state.mode === 'connected') await refresh();
+    });
+  });
+
+  load();
+})();
