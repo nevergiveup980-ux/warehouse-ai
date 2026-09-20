@@ -21,42 +21,44 @@
     UNKNOWN_STRUCTURED_STATUS: 'Unknown legacy status',
   };
 
+  const demoStatusCases = Array.from({length:9}, (_,i) => ({
+    case_id: 'demo-status-' + (i+1),
+    reason: 'STRUCTURED_STATUS_MISSING',
+    status: 'open',
+    version: 1,
+    evidence_count: i === 0 ? 8 : 1 + (i % 3),
+    linked_evidence_rows: i === 0 ? 8 : 1 + (i % 3),
+    required_confirmation: ['lifecycle','fulfillment_status','resolution_note'],
+    display_context: {
+      order_kind: i % 3 === 0 ? 'SPECIAL' : 'STANDARD',
+      purchase_order_number: 'PO-DEMO-' + String(i+1).padStart(3,'0'),
+      product_label: 'Example Order ' + (i+1),
+      source_location: ['33A','12B','10A'][i % 3],
+      quantity: String(1+i),
+      unit: i % 3 === 0 ? 'EACH' : 'BOX',
+      latest_structured_status: null,
+    },
+    reason_help: {
+      title: 'Status confirmation required',
+      summary: 'The legacy order has no trustworthy structured status.',
+      action: 'Confirm lifecycle and fulfillment from source paperwork or warehouse knowledge.',
+    },
+  }));
+
   const DEMO = {
     tenant_id: 'engineering-preview',
     status_filter: 'open',
     can_resolve: false,
     summary: {
-      total: 4,
-      status_missing: 1,
+      total: 12,
+      status_missing: 9,
       identity_conflict: 1,
       lifecycle_regression: 1,
       weak_identity: 1,
       unknown_status: 0,
     },
     cases: [
-      {
-        case_id: 'demo-status',
-        reason: 'STRUCTURED_STATUS_MISSING',
-        status: 'open',
-        version: 1,
-        evidence_count: 8,
-        linked_evidence_rows: 8,
-        required_confirmation: ['lifecycle','fulfillment_status','resolution_note'],
-        display_context: {
-          order_kind: 'STANDARD',
-          purchase_order_number: 'PO-DEMO-001',
-          product_label: 'Example Flooring',
-          source_location: '33A',
-          quantity: '12',
-          unit: 'BOX',
-          latest_structured_status: null,
-        },
-        reason_help: {
-          title: 'Status confirmation required',
-          summary: 'The legacy order has no trustworthy structured status.',
-          action: 'Confirm lifecycle and fulfillment from source paperwork or warehouse knowledge.',
-        },
-      },
+      ...demoStatusCases,
       {
         case_id: 'demo-conflict',
         reason: 'IDENTITY_CRITICAL_FIELDS_CONFLICT',
@@ -67,8 +69,8 @@
         required_confirmation: ['canonical_identity','lifecycle','fulfillment_status','resolution_note'],
         display_context: {
           order_kind: 'STANDARD',
-          purchase_order_number: 'PO-DEMO-002',
-          product_label: 'Example Product',
+          purchase_order_number: 'PO-DEMO-CONFLICT',
+          product_label: 'Example Conflicting Order',
           source_location: '12B',
           quantity: '5',
           unit: 'ROLL',
@@ -89,8 +91,8 @@
         required_confirmation: ['final_lifecycle','final_fulfillment_status','resolution_note'],
         display_context: {
           order_kind: 'SPECIAL',
-          purchase_order_number: 'PO-DEMO-003',
-          product_label: 'Example Special Order',
+          purchase_order_number: 'PO-DEMO-REGRESSION',
+          product_label: 'Example Lifecycle Order',
           quantity: '1',
           unit: 'EACH',
           latest_structured_status: 'Ready for Pickup',
@@ -111,7 +113,7 @@
         required_confirmation: ['canonical_identity','lifecycle','fulfillment_status','resolution_note'],
         display_context: {
           order_kind: 'SPECIAL',
-          product_label: 'Example Legacy Order',
+          product_label: 'Example Weak-Identity Order',
           quantity: '2',
           unit: 'BOX',
         },
