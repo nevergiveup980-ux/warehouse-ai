@@ -42,11 +42,15 @@ function projectRefFromUrl(url: string) {
 
 function projectRefFromDbUrl(url: string) {
   try {
-    const host = new URL(url).hostname;
-    const direct = host.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    const parsed = new URL(url);
+    const direct = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
     if (direct) return direct[1];
-    const pooler = host.match(/^aws-[^.]+-pooler\.([a-z0-9]+)\.supabase\.com$/i);
-    if (pooler) return pooler[1];
+
+    // Supavisor/pooler URLs encode the project ref in usernames such as
+    // postgres.<project-ref>, while the pooler hostname is shared.
+    const user = decodeURIComponent(parsed.username || "");
+    const pooled = user.match(/^postgres\.([a-z0-9]+)$/i);
+    if (pooled) return pooled[1];
     return "";
   } catch {
     return "";
