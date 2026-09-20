@@ -351,6 +351,7 @@ declare
   cmd warehouse_v7.command;
   x warehouse_v7.order_exception_case;
   new_order uuid:=gen_random_uuid();
+  v_fields jsonb;
   v_quantity numeric;
   out_result jsonb;
 begin
@@ -383,17 +384,6 @@ begin
   end if;
   if nullif(trim(coalesce(p_resolution_note,'')),'') is null then
     raise exception using errcode='22023',message='ORDER_EXCEPTION_RESOLUTION_NOTE_REQUIRED';
-  end if;
-
-  if nullif(trim(coalesce(p_fields->>'quantity','')),'') is not null then
-    begin
-      v_quantity:=(p_fields->>'quantity')::numeric;
-    exception when invalid_text_representation then
-      raise exception using errcode='22023',message='INVALID_ORDER_RESOLUTION_QUANTITY';
-    end;
-    if v_quantity<0 then
-      raise exception using errcode='22023',message='INVALID_ORDER_RESOLUTION_QUANTITY';
-    end if;
   end if;
 
   cmd:=warehouse_v7.begin_command(
@@ -457,20 +447,67 @@ begin
     );
   end if;
 
+  -- Human-supplied fields override sanitized queue context; missing fields safely
+  -- fall back to the structured V6 context captured when the case was opened.
+  v_fields:=coalesce(x.display_context,'{}'::jsonb)||coalesce(p_fields,'{}'::jsonb);
+
+  if nullif(trim(coalesce(v_fields->>'product_label','')),'') is null
+     or nullif(trim(coalesce(v_fields->>'unit','')),'') is null
+     or nullif(trim(coalesce(v_fields->>'quantity','')),'') is null then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'ORDER_EXCEPTION_CANONICAL_FIELDS_REQUIRED',
+      jsonb_build_object('required',jsonb_build_array('product_label','quantity','unit'))
+    );
+    return jsonb_build_object(
+      'status','rejected','code','ORDER_EXCEPTION_CANONICAL_FIELDS_REQUIRED'
+    );
+  end if;
+
+  if nullif(trim(coalesce(v_fields->>'recovery_key','')),'') is null
+     and nullif(trim(coalesce(v_fields->>'sales_order_number','')),'') is null
+     and nullif(trim(coalesce(v_fields->>'purchase_order_number','')),'') is null then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'ORDER_EXCEPTION_CANONICAL_IDENTITY_REQUIRED'
+    );
+    return jsonb_build_object(
+      'status','rejected','code','ORDER_EXCEPTION_CANONICAL_IDENTITY_REQUIRED'
+    );
+  end if;
+
+  begin
+    v_quantity:=(v_fields->>'quantity')::numeric;
+  exception when invalid_text_representation then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'INVALID_ORDER_RESOLUTION_QUANTITY'
+    );
+    return jsonb_build_object(
+      'status','rejected','code','INVALID_ORDER_RESOLUTION_QUANTITY'
+    );
+  end;
+
+  if v_quantity<=0 then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'INVALID_ORDER_RESOLUTION_QUANTITY'
+    );
+    return jsonb_build_object(
+      'status','rejected','code','INVALID_ORDER_RESOLUTION_QUANTITY'
+    );
+  end if;
+
   insert into warehouse_v7.order_record(
     tenant_id,id,order_kind,source_identity_key,recovery_key,
     sales_order_number,purchase_order_number,customer_label,product_label,
     source_location,quantity,unit,lifecycle,fulfillment_status,version
   ) values(
     p_tenant,new_order,p_order_kind,'exception:'||x.case_key,
-    nullif(trim(coalesce(p_fields->>'recovery_key','')),''),
-    nullif(trim(coalesce(p_fields->>'sales_order_number','')),''),
-    nullif(trim(coalesce(p_fields->>'purchase_order_number','')),''),
-    nullif(trim(coalesce(p_fields->>'customer_label','')),''),
-    nullif(trim(coalesce(p_fields->>'product_label','')),''),
-    nullif(trim(coalesce(p_fields->>'source_location','')),''),
+    nullif(trim(coalesce(v_fields->>'recovery_key','')),''),
+    nullif(trim(coalesce(v_fields->>'sales_order_number','')),''),
+    nullif(trim(coalesce(v_fields->>'purchase_order_number','')),''),
+    nullif(trim(coalesce(v_fields->>'customer_label','')),''),
+    nullif(trim(coalesce(v_fields->>'product_label','')),''),
+    nullif(trim(coalesce(v_fields->>'source_location','')),''),
     v_quantity,
-    nullif(upper(trim(coalesce(p_fields->>'unit',''))),''),
+    nullif(upper(trim(coalesce(v_fields->>'unit',''))),''),
     p_lifecycle,p_fulfillment,1
   );
 
@@ -484,7 +521,7 @@ begin
       'order_kind',p_order_kind,
       'lifecycle',p_lifecycle,
       'fulfillment_status',p_fulfillment,
-      'fields',coalesce(p_fields,'{}'::jsonb)
+      'fields',v_fields
     ),
     p_actor
   );
