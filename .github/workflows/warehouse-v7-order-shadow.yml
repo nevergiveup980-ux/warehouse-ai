@@ -162,6 +162,14 @@ jobs:
           },indent=2,sort_keys=True))
           PY
 
+      - name: Rehearse one real-evidence exception resolution
+        run: |
+          set -euo pipefail
+          python3 v7/order-exception-real-evidence-rehearsal.py \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --actor 56565656-5656-4565-8565-565656565656 \
+            --report /tmp/v7-order-exception-real-evidence-report.json
+
       - name: Upload sanitized order audit report
         if: always()
         uses: actions/upload-artifact@v4
@@ -170,7 +178,9 @@ jobs:
           path: |
             /tmp/v7-order-source-audit-report.json
             /tmp/v7-order-migration-rehearsal-1.json
-            /tmp/v7-order-migration-rehearsal-2.json
+            /tmp/v7-order-migration-rehearsal-2.json \
+            /tmp/v7-order-exception-real-evidence-report.json
+            /tmp/v7-order-exception-real-evidence-report.json
           if-no-files-found: ignore
           retention-days: 7
 
