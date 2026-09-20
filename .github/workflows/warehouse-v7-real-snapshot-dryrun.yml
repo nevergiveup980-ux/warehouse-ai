@@ -98,6 +98,24 @@ jobs:
           print('carpet identity V2 conflicts:',r['counts']['conflict_groups'])
           PY
 
+      - name: Audit future Cloud Carpet Record Contract V2
+        run: |
+          set -euo pipefail
+          node v7/cloud-carpet-record-contract-v2-cli.mjs /tmp/v7-real-snapshot.json \
+            --identity-report /tmp/v7-carpet-identity-v2-report.json \
+            --report /tmp/v7-cloud-carpet-record-contract-v2-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-cloud-carpet-record-contract-v2-report.json'))
+          assert r['mode']=='V7_CLOUD_CARPET_RECORD_CONTRACT_V2_AUDIT'
+          assert r['production_writes']==0
+          assert r['contract']['manufacturer_roll_role']=='reference_only'
+          assert r['contract']['source_roll_role']=='lineage_reference_only'
+          assert r['identity_v2_reconciliation_pass'] is True
+          print('cloud contract V2 projected physical instances:',r['counts']['accepted_physical_instances'])
+          print('cloud contract V2 conflict groups:',r['counts']['conflict_groups'])
+          PY
+
       - name: Build and verify real migration manifest
         id: manifest
         run: |
@@ -421,6 +439,7 @@ jobs:
             /tmp/v7-carpet-lifecycle-shadow-report.json
             /tmp/v7-carpet-roll-number-audit.json
             /tmp/v7-carpet-identity-v2-report.json
+            /tmp/v7-cloud-carpet-record-contract-v2-report.json
             /tmp/v7-carpet-identity-v2-stage-report.json
             /tmp/v7-inventory-command-center-http-e2e-report.json
             /tmp/v7-inventory-command-center-server.log
@@ -430,4 +449,4 @@ jobs:
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
