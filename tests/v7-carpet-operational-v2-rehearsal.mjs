@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const py=fs.readFileSync('v7/carpet-operational-v2-rehearsal.py','utf8');
+const wf=fs.readFileSync('.github/workflows/warehouse-v7-real-snapshot-dryrun.yml','utf8');
+
+assert.match(py,/CARPET_V2_OPERATIONAL_REFUSES_DATABASE/);
+assert.match(py,/warehouse_v7_test/);
+assert.match(py,/production_writes["']?:0|["']production_writes["']:\s*0/);
+assert.match(py,/manufacturer_roll_role["']?:["']reference_only|["']manufacturer_roll_role["']:\s*["']reference_only/);
+assert.match(py,/source_roll_role["']?:["']lineage_reference_only|["']source_roll_role["']:\s*["']lineage_reference_only/);
+assert.match(py,/CHC022/);
+assert.match(py,/CHC023/);
+assert.match(py,/ordinary_duplicate_roll_groups/);
+assert.match(py,/import_valid_carpet_roll/);
+assert.match(py,/MIGRATION_OPENING_CARPET/);
+assert.doesNotMatch(py,/supabase\.co|service_role|SUPABASE_SERVICE/i);
+assert.match(wf,/Rehearse operational Carpet Identity V2 in isolated disposable tenant/);
+assert.match(wf,/Replay operational Carpet Identity V2 rehearsal/);
+assert.match(wf,/v7-carpet-operational-v2-rehearsal-1\.json/);
+console.log('V7 Carpet Identity V2 operational rehearsal static contract: PASS');

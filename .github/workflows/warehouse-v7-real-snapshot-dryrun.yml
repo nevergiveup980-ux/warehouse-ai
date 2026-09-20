@@ -364,6 +364,41 @@ jobs:
           },indent=2))
           PY
 
+      - name: Rehearse operational Carpet Identity V2 in isolated disposable tenant
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-operational-v2-rehearsal.py \
+            /tmp/v7-real-snapshot.json /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 78787878-7878-4787-8787-787878787878 \
+            --actor 89898989-8989-4898-8989-898989898989 \
+            --report /tmp/v7-carpet-operational-v2-rehearsal-1.json
+
+      - name: Replay operational Carpet Identity V2 rehearsal
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-operational-v2-rehearsal.py \
+            /tmp/v7-real-snapshot.json /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 78787878-7878-4787-8787-787878787878 \
+            --actor 89898989-8989-4898-8989-898989898989 \
+            --report /tmp/v7-carpet-operational-v2-rehearsal-2.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-carpet-operational-v2-rehearsal-1.json'))
+          b=json.load(open('/tmp/v7-carpet-operational-v2-rehearsal-2.json'))
+          for r in (a,b):
+              assert r['mode']=='V7_CARPET_IDENTITY_V2_OPERATIONAL_REHEARSAL'
+              assert r['production_writes']==0
+              assert r['database']=='warehouse_v7_test'
+              assert r['pass'] is True
+              assert r['ordinary_duplicate_roll_groups']==0
+          assert a['fingerprint']==b['fingerprint']
+          assert a['readiness']==b['readiness']
+          assert a['after']==b['after']
+          assert b['new_rows']=={'products':0,'locations':0,'carpet_rolls':0,'commands':0,'movements':0,'events':0}
+          print('CARPET V2 OPERATIONAL REPLAY + IDEMPOTENCY: PASS')
+          print(json.dumps({'readiness':a['readiness'],'after':a['after'],'shared':a['shared_roll_instances']},indent=2))
+          PY
+
       - name: Stage Carpet Identity V2 for read-only Inventory Command Center
         run: |
           set -euo pipefail
@@ -441,6 +476,8 @@ jobs:
             /tmp/v7-carpet-identity-v2-report.json
             /tmp/v7-cloud-carpet-record-contract-v2-report.json
             /tmp/v7-carpet-identity-v2-stage-report.json
+            /tmp/v7-carpet-operational-v2-rehearsal-1.json
+            /tmp/v7-carpet-operational-v2-rehearsal-2.json
             /tmp/v7-inventory-command-center-http-e2e-report.json
             /tmp/v7-inventory-command-center-server.log
           if-no-files-found: ignore
@@ -449,4 +486,4 @@ jobs:
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-carpet-operational-v2-rehearsal-1.json             /tmp/v7-carpet-operational-v2-rehearsal-2.json             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
