@@ -38,7 +38,7 @@ assert.match(s,/unique\(tenant_id,order_kind,source_identity_key\)/);
 assert.match(s,/for update/);
 assert.match(s,/order_source_evidence_append_only/);
 assert.match(s,/order_record_no_delete/);
-assert.equal((s.match(/insert into warehouse_v7\.event/g)||[]).length,1);
+assert.equal((s.match(/insert into warehouse_v7\.event/g)||[]).length,2);
 assert.doesNotMatch(s,/localStorage|cloud_master|global_pause/i);
 
 console.log('V7 Order Engine 1.0 contract: PASS');
