@@ -28,6 +28,7 @@ jobs:
       - run: node tests/v7-order-exception-engineering-auth.mjs
       - run: node tests/v7-order-exception-engineering-activation.mjs
       - run: node tests/v7-order-exception-workbench-adapter.mjs
+      - run: node tests/v7-order-exception-real-evidence-rehearsal.mjs
       - run: node tests/v7-carpet-transfer-engine.mjs
       - run: node tests/v7-carpet-return-engine.mjs
       - run: node tests/v7-incremental-shadow-bridge.mjs
