@@ -86,3 +86,31 @@ A real connected engineering deployment is allowed only after:
 - Same command UUID retry returns the same result.
 
 Creating a new Supabase development branch can have a platform cost. Cost confirmation is required before that branch is created.
+
+
+## Standalone engineering sign-in
+
+The workbench can now run as a standalone engineering page once a non-production
+Supabase branch/project exists. Load a runtime config based on:
+
+`v7/order-exception-engineering-config.example.js`
+
+The page then uses:
+
+- `v7/order-exception-engineering-auth.js` for password sign-in and in-memory token refresh.
+- `v7/order-exception-api-client.js` for authenticated Edge API calls.
+- `v7/order-exception-workbench.js` for the case list/detail/resolution UI.
+
+The standalone auth module hard-rejects the production project ref. It does not
+store the password, access token, or refresh token in localStorage/sessionStorage.
+A browser refresh intentionally requires a fresh engineering sign-in.
+
+The Edge API applies a second safety lock: it rejects both the production
+`SUPABASE_URL` project ref and any production/mismatched `SUPABASE_DB_URL`.
+This protects against deploying the engineering function to one project while
+accidentally pointing its database connection at another.
+
+Before creating a canonical order, the UI validates durable order identity,
+product, positive quantity, unit, lifecycle/fulfillment compatibility, and a
+resolution note. The user must then explicitly confirm the irreversible case
+resolution. Inventory quantities are not changed by this action.
