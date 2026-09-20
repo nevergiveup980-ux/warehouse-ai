@@ -111,6 +111,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-exception-workbench-1.0.sql
 
       - name: Rehearse strict V6 order migration
         run: |
