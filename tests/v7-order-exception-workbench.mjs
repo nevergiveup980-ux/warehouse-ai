@@ -14,6 +14,9 @@ for (const x of [
 ]) assert.ok(html.includes(x),x);
 
 assert.ok((html+js).includes('ENGINEERING DEMO'),'ENGINEERING DEMO');
+assert.ok(js.includes('total: 12'),'demo total 12');
+assert.ok(js.includes('status_missing: 9'),'demo missing-status 9');
+assert.ok(js.includes('Array.from({length:9}'),'nine status cards');
 
 for (const x of [
   'RUNLU_V7_ORDER_EXCEPTION_API',
