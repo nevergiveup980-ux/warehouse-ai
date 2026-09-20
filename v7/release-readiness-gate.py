@@ -104,6 +104,21 @@ def main():
 
     technical_failures=sorted(k for k,v in checks.items() if not v)
 
+    human_action_items=[]
+    for case in review_evidence.get("cases") or []:
+        plan=case.get("confirmation_plan") or {}
+        human_action_items.append({
+          "source_dataset":case.get("source_dataset"),
+          "source_record_id":case.get("source_record_id"),
+          "review_kind":case.get("review_kind"),
+          "roll_labels":case.get("roll_labels") or [],
+          "reasons":case.get("reasons") or [],
+          "required_fields":plan.get("required_fields") or [],
+          "verification_question":plan.get("verification_question"),
+          "confirmation_source":plan.get("confirmation_source")
+        })
+    human_action_items.sort(key=lambda x:(0 if x.get("review_kind")=="IDENTITY" else 1,(x.get("roll_labels") or [""])[0],x.get("source_record_id") or ""))
+
     open_reviews=int(rs.get("open") or 0)
     resolved_reviews=int(rs.get("resolved") or 0)
     promoted=int(ps.get("promoted") or 0)
@@ -130,6 +145,7 @@ def main():
       "verdict":"RELEASE_READY" if release_allowed else ("TECHNICAL_STOP" if technical_failures else "RELEASE_BLOCKED"),
       "technical_failures":technical_failures,
       "release_blockers":blockers,
+      "human_action_items":human_action_items,
       "carpet":{
         "active_source_rows":int(ic.get("active_source_rows") or 0),
         "legacy_instance_candidates":int(ic.get("legacy_instance_candidates") or 0),
@@ -142,6 +158,7 @@ def main():
         "review_resolved":resolved_reviews,
         "review_evidence_cases":int(evidence_summary.get("cases_total") or 0),
         "review_required_fields":required_counts,
+        "human_action_items":len(human_action_items),
         "promotion_promotable":promotable,
         "promotion_promoted":promoted
       },

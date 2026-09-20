@@ -26,3 +26,9 @@ verification question and the exact field that a warehouse human must confirm.
 Current categories are location, measure status, product name, and company roll
 number. Historical data remains reference-only; the gate never converts a
 historical candidate into a resolution automatically.
+
+
+The release report also includes `human_action_items`: one compact, deterministic
+question per review case, including the roll label(s), reason, and exact field that
+must be confirmed. This makes a blocked release actionable without weakening the
+rule that historical evidence never decides the answer automatically.
