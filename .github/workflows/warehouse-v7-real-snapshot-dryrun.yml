@@ -482,6 +482,36 @@ jobs:
             --report /tmp/v7-inventory-command-center-http-e2e-report.json
           cat /tmp/v7-inventory-command-center-server.log
 
+      - name: Build V7 engineering release-readiness verdict
+        run: |
+          set -euo pipefail
+          python3 v7/release-readiness-gate.py \
+            --dry-run-1 /tmp/v7-real-dry-run-report-1.json \
+            --dry-run-2 /tmp/v7-real-dry-run-report-2.json \
+            --identity /tmp/v7-carpet-identity-v2-report.json \
+            --operational /tmp/v7-carpet-operational-v2-rehearsal-1.json \
+            --review /tmp/v7-carpet-review-workbench-report.json \
+            --promotion /tmp/v7-carpet-review-promotion-gate-report.json \
+            --inventory-http /tmp/v7-inventory-command-center-http-e2e-report.json \
+            --review-http /tmp/v7-carpet-review-real-http-e2e.json \
+            --cut-shadow /tmp/v7-cut-shadow-report.json \
+            --receive-shadow /tmp/v7-receive-shadow-report.json \
+            --shipping-shadow /tmp/v7-shipping-shadow-report.json \
+            --transfer-shadow /tmp/v7-transfer-shadow-report.json \
+            --return-shadow /tmp/v7-return-shadow-report.json \
+            --supplier-return-shadow /tmp/v7-supplier-return-shadow-report.json \
+            --carpet-lifecycle-shadow /tmp/v7-carpet-lifecycle-shadow-report.json \
+            --order-audit /tmp/v7-order-source-audit-report.json \
+            --report /tmp/v7-release-readiness-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-release-readiness-report.json'))
+          assert r['production_writes']==0
+          assert r['technical_gate_pass'] is True
+          print('release verdict:',r['verdict'])
+          print('release blockers:',json.dumps(r['release_blockers']))
+          PY
+
       - name: Capture V6 source again for cutover drift detection
         if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preflight]')
         run: |
@@ -537,6 +567,7 @@ jobs:
             /tmp/v7-carpet-review-real-http-e2e.json
             /tmp/v7-carpet-review-real-http-server.log
             /tmp/v7-inventory-command-center-http-e2e-report.json
+            /tmp/v7-release-readiness-report.json
             /tmp/v7-inventory-command-center-server.log
           if-no-files-found: ignore
           retention-days: 7
@@ -544,4 +575,4 @@ jobs:
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-carpet-operational-v2-rehearsal-1.json             /tmp/v7-carpet-operational-v2-rehearsal-2.json             /tmp/v7-carpet-review-queue-stage-report.json             /tmp/v7-carpet-review-workbench-report.json             /tmp/v7-carpet-review-promotion-gate-report.json             /tmp/v7-carpet-review-real-http-e2e.json             /tmp/v7-carpet-review-real-http-server.log             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-carpet-operational-v2-rehearsal-1.json             /tmp/v7-carpet-operational-v2-rehearsal-2.json             /tmp/v7-carpet-review-queue-stage-report.json             /tmp/v7-carpet-review-workbench-report.json             /tmp/v7-carpet-review-promotion-gate-report.json             /tmp/v7-carpet-review-real-http-e2e.json             /tmp/v7-carpet-review-real-http-server.log             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-release-readiness-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
