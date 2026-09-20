@@ -17,6 +17,8 @@ Modules share stable IDs and database contracts, never mutable browser datasets.
 - Transfer owns location movements.
 - Shipping owns outbound movements.
 - Return owns compensating inbound movements; it never rewrites history.
+- Supplier Return owns outbound movements back to a supplier; historical work-only records never manufacture stock movement.
+- Orders own customer/special-order identity and lifecycle. They reference inventory commands but do not overwrite stock balances.
 - History consumes immutable events and owns no operational state.
 - Dashboard/Map/Voice are projections/interfaces; they cannot become systems of record.
 
