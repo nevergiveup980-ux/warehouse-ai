@@ -18,7 +18,7 @@ assert.ok((html+js).includes('ENGINEERING DEMO'),'ENGINEERING DEMO');
 for (const x of [
   'RUNLU_V7_ORDER_EXCEPTION_API',
   'structured_fields',
-  'inventory was not changed',
+  'Inventory was not changed',
   'Owner/Admin role is required',
   'demo records only'
 ]) assert.ok(js.includes(x),x);
