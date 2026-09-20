@@ -19,7 +19,7 @@ const dry={mode:'DISPOSABLE_POSTGRES_DRY_RUN',production_writes:0,reconciliation
 const identity={mode:'V7_CARPET_IDENTITY_V2_REHEARSAL',production_writes:0,counts:{active_source_rows:469,legacy_instance_candidates:239,accepted_physical_instances:238,conflict_groups:1}};
 const operational={production_writes:0,pass:true,readiness:{ready_physical_instances:225,deferred_physical_instances:13}};
 const review={production_writes:0,pass:true,expected_review_total:14,summary:{total:14,open:14,resolved:0}};
-const evidence={mode:'V7_CARPET_REVIEW_EVIDENCE_PACK',production_writes:0,auto_resolution_allowed:false,summary:{cases_total:14}};
+const evidence={mode:'V7_CARPET_REVIEW_EVIDENCE_PACK',production_writes:0,auto_resolution_allowed:false,summary:{cases_total:14,cases_with_confirmation_plan:14,required_field_counts:{location_code:7,measure_status:5,product_name:1,company_roll_number:1}}};
 const promotion={production_writes:0,pass:true,automatic_promotion:false,production_enabled:false,summary:{total:14,promoted:0,promotable:0}};
 const inventory={verdict:'HTTP_E2E_PASS'};
 const reviewHttp={verdict:'REAL_HTTP_E2E_PASS'};
@@ -44,6 +44,7 @@ assert.equal(out.release_allowed,false);
 assert.equal(out.verdict,'RELEASE_BLOCKED');
 assert.equal(out.carpet.review_open,14);
 assert.equal(out.carpet.review_evidence_cases,14);
+assert.deepEqual(out.carpet.review_required_fields,{location_code:7,measure_status:5,product_name:1,company_roll_number:1});
 assert.ok(out.release_blockers.some(x=>x.code==='CARPET_REVIEW_OPEN'&&x.count===14));
 assert.ok(out.release_blockers.some(x=>x.code==='CARPET_REVIEW_PROMOTION_PENDING'&&x.count===14));
 

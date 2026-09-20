@@ -82,6 +82,39 @@ def unique(values):
         out.append(v)
     return out
 
+def confirmation_plan(case):
+    reasons=[upper(x) for x in case.get("reasons") or [] if upper(x)]
+    roll_labels=[upper(x) for x in case.get("roll_labels") or [] if upper(x)]
+    display=" ↔ ".join(roll_labels) if roll_labels else "this carpet roll"
+    required=[]
+    questions=[]
+    for reason in reasons:
+        if reason=="LOCATION_MISSING":
+            required.append("location_code")
+            questions.append(f"Where is {display} physically located?")
+        elif reason in ("MEASURE_REVIEW","MEASURE_INVALID","FULL_MISMATCH"):
+            required.append("measure_status")
+            questions.append(f"Confirm FULL, CAL, or TM for {display}.")
+        elif reason in ("PRODUCT_NAME_MISSING","PRODUCT_LABEL_HISTORY_VARIANT"):
+            required.append("product_name")
+            questions.append(f"What is the carpet product / collection for {display}?")
+        elif reason in ("LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE","COMPANY_ROLL_REUSED_ACROSS_PHYSICAL_INSTANCES"):
+            required.append("company_roll_number")
+            if len(roll_labels)>1:
+                questions.append(f"Which company roll number is on the physical label: {' or '.join(roll_labels)}?")
+            else:
+                questions.append(f"What company roll number is on the physical label for {display}?")
+        else:
+            questions.append(f"Confirm the flagged warehouse data for {display}.")
+    return {
+      "required_fields":sorted(set(required)),
+      "verification_question":" ".join(questions),
+      "allowed_measure_values":["FULL","CAL","TM"] if "measure_status" in required else [],
+      "confirmation_source":"physical_roll_or_trusted_warehouse_knowledge",
+      "auto_fill_allowed":False,
+      "auto_resolve_allowed":False
+    }
+
 def case_evidence(case,core,cut_rows,op_rows):
     alias=text(case.get("legacy_instance_id"))
     labels=[upper(x) for x in case.get("roll_labels") or [] if upper(x)]
@@ -115,6 +148,7 @@ def case_evidence(case,core,cut_rows,op_rows):
       "Only exact legacy-instance history is used to form candidate field values.",
       "Roll-label CUT/operation matches may refer to another physical roll when a legacy company roll number is shared."
     ]
+    plan=confirmation_plan(case)
     return {
       "source_dataset":case["source_dataset"],
       "source_record_id":case["source_record_id"],
@@ -122,6 +156,7 @@ def case_evidence(case,core,cut_rows,op_rows):
       "legacy_instance_id":alias or None,
       "roll_labels":labels,
       "reasons":case.get("reasons") or [],
+      "confirmation_plan":plan,
       "policy":{
         "auto_resolution_allowed":False,
         "historical_candidates_are_reference_only":True,
@@ -208,7 +243,14 @@ def main():
       "cases_with_location_candidates":sum(bool(x["candidates"]["locations"]) for x in out_cases),
       "cases_with_measure_candidates":sum(bool(x["candidates"]["measures"]) for x in out_cases),
       "cases_with_product_candidates":sum(bool(x["candidates"]["products"]) for x in out_cases),
-      "cases_with_roll_candidates":sum(bool(x["candidates"]["company_roll_numbers"]) for x in out_cases)
+      "cases_with_roll_candidates":sum(bool(x["candidates"]["company_roll_numbers"]) for x in out_cases),
+      "cases_with_confirmation_plan":sum(bool((x.get("confirmation_plan") or {}).get("verification_question")) for x in out_cases),
+      "required_field_counts":{
+        "location_code":sum("location_code" in (x.get("confirmation_plan") or {}).get("required_fields",[]) for x in out_cases),
+        "measure_status":sum("measure_status" in (x.get("confirmation_plan") or {}).get("required_fields",[]) for x in out_cases),
+        "product_name":sum("product_name" in (x.get("confirmation_plan") or {}).get("required_fields",[]) for x in out_cases),
+        "company_roll_number":sum("company_roll_number" in (x.get("confirmation_plan") or {}).get("required_fields",[]) for x in out_cases)
+      }
     }
     out={
       "mode":"V7_CARPET_REVIEW_EVIDENCE_PACK",

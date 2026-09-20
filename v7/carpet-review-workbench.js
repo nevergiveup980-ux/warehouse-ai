@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
-const state={api:null,status:'open',data:null,focus:null,single:false,query:''};
+const state={api:null,status:'open',data:null,focus:null,single:false,query:'',fieldFilter:'ALL'};
 const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const reasons=c=>(c.reasons||[]).map(x=>String(x).toUpperCase());
 function banner(msg,kind=''){const e=$('#banner');e.textContent=msg;e.className='banner '+kind;}
@@ -22,9 +22,12 @@ function helpText(r){
   };return map[r]||'Confirm this field from physical inventory or trusted evidence.';
 }
 function caseMatches(c){
+  const fields=(c.evidence?.confirmation_plan?.required_fields||[]);
+  if(state.fieldFilter!=='ALL'&&!fields.includes(state.fieldFilter))return false;
   const q=state.query.trim().toUpperCase();if(!q)return true;
   return [
     c.company_roll_display,c.product_name,c.colour,c.location_code,c.measure_status,c.source_record_id,
+    c.evidence?.confirmation_plan?.verification_question,
     ...(c.reasons||[])
   ].some(v=>String(v??'').toUpperCase().includes(q));
 }
@@ -48,6 +51,15 @@ function setFocus(c,{updateUrl=true}={}){
 function leaveSingle(){
   state.single=false;state.focus=null;
   if(history?.replaceState){const u=new URL(location.href);u.searchParams.delete('dataset');u.searchParams.delete('record');u.searchParams.delete('single');history.replaceState(null,'',u);}
+}
+function confirmationBlock(c){
+  const plan=c.evidence?.confirmation_plan||{};
+  if(!plan.verification_question)return '';
+  const fields=(plan.required_fields||[]).map(x=>String(x).replaceAll('_',' ')).join(' · ');
+  return '<div class="confirmation"><div class="confirmation-label">PHYSICAL CONFIRMATION</div>'+
+    '<div class="confirmation-question">'+esc(plan.verification_question)+'</div>'+
+    (fields?'<div class="confirmation-fields">Required: '+esc(fields)+'</div>':'')+
+    '</div>';
 }
 function evidenceBlock(c){
   const e=c.evidence||{},p=e.policy||{},cand=e.candidates||{};
@@ -85,7 +97,7 @@ function card(c){
     '<div class="help">'+esc(rs.map(helpText).join(' '))+'</div>'+
     '<div class="meta">'+esc(c.product_name||'Unnamed product')+(c.colour?' · '+esc(c.colour):'')+'<br>'+
       'Location: '+esc(c.location_code||'—')+' · Length: '+esc(c.length_text||'—')+' ft · Measure: '+esc(c.measure_status||'—')+'<br>'+
-      'Source: '+esc(c.source_record_id)+'</div>'+evidenceBlock(c)+
+      'Source: '+esc(c.source_record_id)+'</div>'+confirmationBlock(c)+evidenceBlock(c)+
     (resolved?
       '<div class="meta">Saved v'+esc(c.resolution_version)+': '+esc(JSON.stringify(c.resolution_payload||{}))+'</div><div class="promotion" data-promotion>Checking promotion gate…</div><div class="actions"><button class="btn reopen">Reopen</button><button class="btn secondary focusone">Review one</button></div>':
       '<div class="fields">'+fields+'</div><div class="actions"><button class="btn primary save">Save Resolution</button><button class="btn primary single-only save-next">Save & Next</button><button class="btn secondary focusone">Review one</button></div>')+
@@ -119,7 +131,11 @@ function render(){
   $('#nextReview').hidden=!state.single||list.length<2;
   $('#previousReview').disabled=state.single&&(i<=0||list.length<2);
   $('#nextReview').disabled=state.single&&(i<0||i>=list.length-1||list.length<2);
-  $('#progress').textContent=state.single&&list.length?'Review '+String(i+1)+' of '+String(list.length):String(list.length)+' '+state.status+' review case'+(list.length===1?'':'s')+(state.query?' matching search':'');
+  $('#progress').textContent=state.single&&list.length?'Review '+String(i+1)+' of '+String(list.length):String(list.length)+' '+state.status+' review case'+(list.length===1?'':'s')+(state.fieldFilter!=='ALL'?' · filtered':'')+(state.query?' · search':'');
+  const allCases=state.data?.cases||[];
+  const counts={ALL:allCases.length,location_code:0,measure_status:0,product_name:0,company_roll_number:0};
+  allCases.forEach(c=>(c.evidence?.confirmation_plan?.required_fields||[]).forEach(f=>{if(f in counts)counts[f]++;}));
+  $('[data-field-filter]').forEach(b=>{b.classList.toggle('active',b.dataset.fieldFilter===state.fieldFilter);const n=counts[b.dataset.fieldFilter]??0;const base=b.dataset.label||b.textContent.replace(/\s+\d+$/,'');b.textContent=base+' '+n;});
   refreshPromotionCards();
   if(state.focus){
     const el=$('#grid .card').find(x=>x.dataset.dataset===state.focus.dataset&&x.dataset.record===state.focus.record);
@@ -171,6 +187,7 @@ $('#previousReview').addEventListener('click',()=>moveFocus(-1));
 $('#nextReview').addEventListener('click',()=>moveFocus(1));
 $('#queueSearch').addEventListener('input',e=>{state.query=e.target.value.trim();if(state.single){const list=filteredCases();if(list.length)setFocus(list[0],{updateUrl:false});}render();});
 $('#queueClear').addEventListener('click',()=>{$('#queueSearch').value='';state.query='';render();});
+$('[data-field-filter]').forEach(b=>b.addEventListener('click',()=>{state.fieldFilter=b.dataset.fieldFilter;state.single=false;state.focus=null;render();}));
 (async()=>{try{
   const qs=new URLSearchParams(location.search),dataset=qs.get('dataset'),record=qs.get('record');
   if(dataset&&record){state.focus={dataset,record};state.single=true;}

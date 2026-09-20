@@ -87,6 +87,9 @@ def main():
     checks["review_evidence_production_writes_zero"]=review_evidence.get("production_writes")==0
     checks["review_evidence_never_auto_resolves"]=review_evidence.get("auto_resolution_allowed") is False
     checks["review_evidence_covers_queue"]=int(evidence_summary.get("cases_total") or 0)==review_total
+    checks["review_evidence_action_plan_complete"]=int(evidence_summary.get("cases_with_confirmation_plan") or 0)==review_total
+    required_counts=evidence_summary.get("required_field_counts") or {}
+    checks["review_required_fields_reconcile"]=sum(int(v or 0) for v in required_counts.values())>=review_total
     checks["promotion_gate_verified"]=promotion.get("pass") is True and promotion.get("production_writes")==0
     checks["automatic_promotion_disabled"]=promotion.get("automatic_promotion") is False
     checks["production_promotion_disabled"]=promotion.get("production_enabled") is False
@@ -138,6 +141,7 @@ def main():
         "review_open":open_reviews,
         "review_resolved":resolved_reviews,
         "review_evidence_cases":int(evidence_summary.get("cases_total") or 0),
+        "review_required_fields":required_counts,
         "promotion_promotable":promotable,
         "promotion_promoted":promoted
       },

@@ -22,6 +22,8 @@ def main():
     assert expected>0 and data['summary']['open']==expected and len(data['cases'])==expected,(expected,data['summary'])
     assert all((c.get('evidence') or {}).get('policy',{}).get('auto_resolution_allowed') is False for c in data['cases'])
     assert all((c.get('evidence') or {}).get('policy',{}).get('physical_confirmation_required') is True for c in data['cases'])
+    assert all((c.get('evidence') or {}).get('confirmation_plan',{}).get('verification_question') for c in data['cases'])
+    assert all((c.get('evidence') or {}).get('confirmation_plan',{}).get('required_fields') for c in data['cases'])
     _,gate=get(base+'/api/carpet-review?action=gate')
     assert gate['data']['summary']['open']==expected
     assert gate['data']['summary']['promotable']==0 and gate['data']['summary']['promoted']==0

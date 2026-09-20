@@ -17,3 +17,12 @@ A release may therefore be technically healthy while still returning
 while review cases are open or review promotions are pending.
 
 Production writes are never authorized by this report.
+
+
+## Human review action plan
+
+The Carpet Review evidence pack must cover every open review case with an explicit
+verification question and the exact field that a warehouse human must confirm.
+Current categories are location, measure status, product name, and company roll
+number. Historical data remains reference-only; the gate never converts a
+historical candidate into a resolution automatically.
