@@ -60,3 +60,13 @@ assert.ok((html+js).includes("engineeringPassword"),"engineeringPassword");
 assert.ok((html+js).includes("ENGINEERING SIGN-IN"),"ENGINEERING SIGN-IN");
 
 assert.ok((html+js).includes("RUNLU_V7_ENGINEERING_AUTH_CONFIG"),"RUNLU_V7_ENGINEERING_AUTH_CONFIG");
+
+assert.ok(js.includes("validateResolutionForm"),"validateResolutionForm");
+
+assert.ok(js.includes("Quantity must be greater than zero."),"Quantity must be greater than zero.");
+
+assert.ok(js.includes("Draft orders must use Unverified fulfillment."),"Draft orders must use Unverified fulfillment.");
+
+assert.ok(js.includes("Completed or archived orders must use Completed fulfillment."),"Completed or archived orders must use Completed fulfillment.");
+
+assert.ok(js.includes("Inventory quantities will not change."),"Inventory quantities will not change.");
