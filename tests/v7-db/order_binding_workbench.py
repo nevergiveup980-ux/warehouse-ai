@@ -25,7 +25,7 @@ viewer=j(f"set request.jwt.claim.sub='{V}';select warehouse_v7.get_order_binding
 assert viewer['can_bind'] is False,viewer
 denied=run(f"set request.jwt.claim.sub='{V}';select warehouse_v7.bind_order_execution('{T}','{uuid.uuid4()}','{O}',1,'OUTBOUND','{P}','{L}','{S}',4,'BOX','{{}}','{V}','TEST')::text;",ok=False)
 assert denied.returncode!=0 and 'ROLE_WRITE_DENIED' in (denied.stdout+denied.stderr),(denied.stdout,denied.stderr)
-bound=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.bind_order_execution('{T}','{C}','{O}',1,'OUTBOUND','{P}','{L}','{S}',4,'BOX','{{"reviewed":true}}','{A}','TEST')::text;")
+bound=j(f"""set request.jwt.claim.sub='{A}';select warehouse_v7.bind_order_execution('{T}','{C}','{O}',1,'OUTBOUND','{P}','{L}','{S}',4,'BOX','{{"reviewed":true}}'::jsonb,'{A}','TEST')::text;""")
 assert bound['status']=='committed',bound
 after=j(f"set request.jwt.claim.sub='{A}';select warehouse_v7.get_order_binding_workbench_order('{T}','{O}')::text;")
 assert after['binding_status']=='bound' and after['product_id']==P and after['location_id']==L and after['stock_item_id']==S,after
