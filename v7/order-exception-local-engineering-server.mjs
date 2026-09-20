@@ -16,6 +16,8 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const STATUSES=new Set(['open','resolved','needs_review']);
 const EXECUTION_STATUSES=new Set(['open','completed','all']);
 const BINDING_STATUSES=new Set(['unbound','bound','all']);
+const TODAY_PRIORITIES=new Set(['P1','P2','P3']);
+const TODAY_WORK_TYPES=new Set(['EXCEPTION','BINDING','RECEIVE','SHIP']);
 const KINDS=new Set(['STANDARD','SPECIAL']);
 const LIFECYCLES=new Set(['draft','in_progress','completed','archived']);
 const FULFILLMENT=new Set(['unverified','pending','received','backorder','ready_for_pickup','picked_up','completed']);
@@ -61,6 +63,15 @@ function getCase(caseId){
 }
 function commandCenter(){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_orders_command_center('+q(TENANT)+'::uuid)::text;');
+}
+function commandCenterToday(priority,workType,minAgeHours,limit){
+  const prioritySql=priority?q(priority)+'::text':'null';
+  const workTypeSql=workType?q(workType)+'::text':'null';
+  const ageSql=minAgeHours===null?'null':String(minAgeHours)+'::integer';
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_orders_today_work('+q(TENANT)+'::uuid,'+prioritySql+','+workTypeSql+','+ageSql+','+String(limit)+'::integer)::text;');
+}
+function commandCenterCompletedRecent(hours,limit){
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_orders_completed_recent('+q(TENANT)+'::uuid,'+String(hours)+'::integer,'+String(limit)+'::integer)::text;');
 }
 function bindingList(status){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_order_binding_workbench('+q(TENANT)+'::uuid,'+q(status)+'::text)::text;');
@@ -183,7 +194,27 @@ const server=http.createServer(async(req,res)=>{
       return send(res,200,"window.RUNLU_V7_LOCAL_ENGINEERING_CONFIG = Object.freeze({endpoint:'/api/order-exception'});\n",'application/javascript; charset=utf-8');
     }
     if(url.pathname==='/api/orders-command-center' && req.method==='GET'){
-      return send(res,200,{ok:true,data:commandCenter()});
+      const action=url.searchParams.get('action') || 'overview';
+      if(action==='overview') return send(res,200,{ok:true,data:commandCenter()});
+      if(action==='today'){
+        const priority=url.searchParams.get('priority');
+        const workType=url.searchParams.get('type');
+        const agedRaw=url.searchParams.get('aged');
+        const limitRaw=url.searchParams.get('limit') || '50';
+        if(priority && !TODAY_PRIORITIES.has(priority))return send(res,400,{error:'INVALID_TODAY_PRIORITY_FILTER'});
+        if(workType && !TODAY_WORK_TYPES.has(workType))return send(res,400,{error:'INVALID_TODAY_WORK_TYPE_FILTER'});
+        const minAge=agedRaw===null?null:Number(agedRaw),limit=Number(limitRaw);
+        if(minAge!==null && (!Number.isInteger(minAge)||minAge<0||minAge>87600))return send(res,400,{error:'INVALID_TODAY_AGE_FILTER'});
+        if(!Number.isInteger(limit)||limit<1||limit>100)return send(res,400,{error:'INVALID_TODAY_LIMIT'});
+        return send(res,200,{ok:true,data:commandCenterToday(priority,workType,minAge,limit)});
+      }
+      if(action==='completed_recent'){
+        const hours=Number(url.searchParams.get('hours') || '24'),limit=Number(url.searchParams.get('limit') || '12');
+        if(!Number.isInteger(hours)||hours<1||hours>168)return send(res,400,{error:'INVALID_COMPLETED_RECENT_HOURS'});
+        if(!Number.isInteger(limit)||limit<1||limit>100)return send(res,400,{error:'INVALID_COMPLETED_RECENT_LIMIT'});
+        return send(res,200,{ok:true,data:commandCenterCompletedRecent(hours,limit)});
+      }
+      return send(res,400,{error:'UNKNOWN_ACTION'});
     }
     if(url.pathname==='/api/orders-command-center'){
       return send(res,405,{error:'COMMAND_CENTER_READ_ONLY'});

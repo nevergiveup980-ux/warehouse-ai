@@ -23,7 +23,20 @@
     if(target.origin!==page.origin)throw new Error('V7_LOCAL_COMMAND_CENTER_REQUIRES_SAME_ORIGIN');
     return Object.freeze({
       async get(){
-        return readJson(await fetchImpl(target.toString(),{method:'GET',cache:'no-store'}));
+        const url=new URL(target.toString());url.searchParams.set('action','overview');
+        return readJson(await fetchImpl(url.toString(),{method:'GET',cache:'no-store'}));
+      },
+      async getToday({priority=null,work_type=null,min_age_hours=null,limit=50}={}){
+        const url=new URL(target.toString());url.searchParams.set('action','today');
+        if(priority)url.searchParams.set('priority',priority);
+        if(work_type)url.searchParams.set('type',work_type);
+        if(min_age_hours!==null&&min_age_hours!==undefined)url.searchParams.set('aged',String(min_age_hours));
+        url.searchParams.set('limit',String(limit));
+        return readJson(await fetchImpl(url.toString(),{method:'GET',cache:'no-store'}));
+      },
+      async getCompletedRecent({hours=24,limit=12}={}){
+        const url=new URL(target.toString());url.searchParams.set('action','completed_recent');url.searchParams.set('hours',String(hours));url.searchParams.set('limit',String(limit));
+        return readJson(await fetchImpl(url.toString(),{method:'GET',cache:'no-store'}));
       },
     });
   };

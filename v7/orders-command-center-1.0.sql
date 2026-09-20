@@ -327,3 +327,182 @@ begin
   );
 end
 $command_center$;
+
+
+-- V1.2: filtered Today worklist. This is a read-only projection; filters do not
+-- create commands, events, movements, or mutate order state.
+create or replace function warehouse_v7.list_orders_today_work(
+  p_tenant uuid,
+  p_priority text default null,
+  p_work_type text default null,
+  p_min_age_hours integer default null,
+  p_limit integer default 50
+)
+returns jsonb
+language plpgsql
+security invoker
+stable
+as $today_work$
+declare
+  matching_count int;
+  items jsonb;
+begin
+  if not warehouse_v7.is_tenant_member(p_tenant) then
+    raise exception using errcode='42501',message='TENANT_MEMBERSHIP_REQUIRED';
+  end if;
+  if p_priority is not null and p_priority not in ('P1','P2','P3') then
+    raise exception using errcode='22023',message='INVALID_TODAY_PRIORITY_FILTER';
+  end if;
+  if p_work_type is not null and p_work_type not in ('EXCEPTION','BINDING','RECEIVE','SHIP') then
+    raise exception using errcode='22023',message='INVALID_TODAY_WORK_TYPE_FILTER';
+  end if;
+  if p_min_age_hours is not null and (p_min_age_hours<0 or p_min_age_hours>87600) then
+    raise exception using errcode='22023',message='INVALID_TODAY_AGE_FILTER';
+  end if;
+  if p_limit<1 or p_limit>100 then
+    raise exception using errcode='22023',message='INVALID_TODAY_LIMIT';
+  end if;
+
+  select count(*)::int into matching_count
+  from warehouse_v7.orders_attention_queue a
+  where a.tenant_id=p_tenant
+    and (p_priority is null or a.priority=p_priority)
+    and (p_work_type is null or a.work_type=p_work_type)
+    and (p_min_age_hours is null or a.age_hours>=p_min_age_hours);
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'work_type',x.work_type,
+      'entity_id',x.entity_id,
+      'order_id',x.order_id,
+      'display_id',x.display_id,
+      'title',x.title,
+      'subtitle',x.subtitle,
+      'priority',x.priority,
+      'priority_rank',x.priority_rank,
+      'priority_reason',x.priority_reason,
+      'age_hours',x.age_hours,
+      'attention_since',x.attention_since,
+      'target_path',x.target_path
+    )
+    order by x.priority_rank,x.age_hours desc,x.work_type,x.display_id,x.entity_id
+  ),'[]'::jsonb)
+  into items
+  from (
+    select *
+    from warehouse_v7.orders_attention_queue a
+    where a.tenant_id=p_tenant
+      and (p_priority is null or a.priority=p_priority)
+      and (p_work_type is null or a.work_type=p_work_type)
+      and (p_min_age_hours is null or a.age_hours>=p_min_age_hours)
+    order by a.priority_rank,a.age_hours desc,a.work_type,a.display_id,a.entity_id
+    limit p_limit
+  ) x;
+
+  return jsonb_build_object(
+    'tenant_id',p_tenant,
+    'read_only',true,
+    'matching_count',matching_count,
+    'returned_count',jsonb_array_length(items),
+    'limit',p_limit,
+    'filters',jsonb_build_object(
+      'priority',p_priority,
+      'work_type',p_work_type,
+      'min_age_hours',p_min_age_hours
+    ),
+    'items',items
+  );
+end
+$today_work$;
+
+-- "Today completed" is intentionally a rolling window until a tenant timezone
+-- contract exists. It must not imply a local calendar-day boundary we do not know.
+create or replace function warehouse_v7.list_orders_completed_recent(
+  p_tenant uuid,
+  p_hours integer default 24,
+  p_limit integer default 12
+)
+returns jsonb
+language plpgsql
+security invoker
+stable
+as $completed_recent$
+declare
+  matching_count int;
+  items jsonb;
+begin
+  if not warehouse_v7.is_tenant_member(p_tenant) then
+    raise exception using errcode='42501',message='TENANT_MEMBERSHIP_REQUIRED';
+  end if;
+  if p_hours<1 or p_hours>168 then
+    raise exception using errcode='22023',message='INVALID_COMPLETED_RECENT_HOURS';
+  end if;
+  if p_limit<1 or p_limit>100 then
+    raise exception using errcode='22023',message='INVALID_COMPLETED_RECENT_LIMIT';
+  end if;
+
+  with completed as (
+    select
+      q.order_id,
+      coalesce(q.purchase_order_number,q.sales_order_number,q.recovery_key,q.order_id::text) as display_id,
+      q.customer_label,
+      q.flow,
+      q.canonical_product_name,
+      q.canonical_location_code,
+      q.expected_quantity,
+      q.unit,
+      max(a.created_at) as completed_at
+    from warehouse_v7.order_execution_workbench_queue q
+    join warehouse_v7.order_fulfillment_action a
+      on a.tenant_id=q.tenant_id and a.order_id=q.order_id
+    where q.tenant_id=p_tenant and q.task_status='completed'
+    group by
+      q.order_id,q.purchase_order_number,q.sales_order_number,q.recovery_key,
+      q.customer_label,q.flow,q.canonical_product_name,q.canonical_location_code,
+      q.expected_quantity,q.unit
+  )
+  select count(*)::int into matching_count
+  from completed
+  where completed_at>=now()-make_interval(hours=>p_hours);
+
+  with completed as (
+    select
+      q.order_id,
+      coalesce(q.purchase_order_number,q.sales_order_number,q.recovery_key,q.order_id::text) as display_id,
+      q.customer_label,
+      q.flow,
+      q.canonical_product_name,
+      q.canonical_location_code,
+      q.expected_quantity,
+      q.unit,
+      max(a.created_at) as completed_at
+    from warehouse_v7.order_execution_workbench_queue q
+    join warehouse_v7.order_fulfillment_action a
+      on a.tenant_id=q.tenant_id and a.order_id=q.order_id
+    where q.tenant_id=p_tenant and q.task_status='completed'
+    group by
+      q.order_id,q.purchase_order_number,q.sales_order_number,q.recovery_key,
+      q.customer_label,q.flow,q.canonical_product_name,q.canonical_location_code,
+      q.expected_quantity,q.unit
+  )
+  select coalesce(jsonb_agg(to_jsonb(x) order by x.completed_at desc,x.display_id,x.order_id),'[]'::jsonb)
+  into items
+  from (
+    select *
+    from completed
+    where completed_at>=now()-make_interval(hours=>p_hours)
+    order by completed_at desc,display_id,order_id
+    limit p_limit
+  ) x;
+
+  return jsonb_build_object(
+    'tenant_id',p_tenant,
+    'read_only',true,
+    'hours',p_hours,
+    'window_semantics','rolling_hours_not_calendar_day',
+    'matching_count',matching_count,
+    'returned_count',jsonb_array_length(items),
+    'items',items
+  );
+end
+$completed_recent$;
