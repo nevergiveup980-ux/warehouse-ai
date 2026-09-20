@@ -41,7 +41,7 @@ insert into warehouse_v7.order_source_evidence(
 ),(
  '{T}','{uuid.uuid4()}',null,'{CASE}','runlu_orders_v20','source-b',
  'rk-test','deferred','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
- 'STRUCTURED_STATUS_MISSING','{"status":null}'::jsonb
+ 'STRUCTURED_STATUS_MISSING','{{"status":null}}'::jsonb
 );
 """)
 
