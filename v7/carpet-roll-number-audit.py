@@ -51,6 +51,57 @@ def main():
         m=re.match(r"([A-Z]+)",roll)
         prefixes[m.group(1) if m else "OTHER"]+=1
 
+    def selected_record(r):
+        p=r.get("payload") or {}
+        return {
+          "record_id":str(r.get("record_id") or ""),
+          "row_updated_at":r.get("updated_at"),
+          "payload_id":p.get("id"),
+          "roll":p.get("roll"),
+          "physicalRollId":p.get("physicalRollId"),
+          "sourceRoll":p.get("sourceRoll"),
+          "manufacturerRoll":p.get("manufacturerRoll"),
+          "collection":p.get("collection"),
+          "colour":p.get("colour"),
+          "location":p.get("location"),
+          "length":p.get("length"),
+          "originalLength":p.get("originalLength"),
+          "measure":p.get("measure"),
+          "status":p.get("status"),
+          "createdAt":p.get("createdAt"),
+          "updatedAt":p.get("updatedAt"),
+          "legacyKey":p.get("legacyKey"),
+          "migrationSource":p.get("migrationSource")
+        }
+
+    focus_names={"CHC022","CHC023","RC2244","RC2323","FROSTED SLATE(GRTEY)"}
+    focus_rolls=sorted({
+      roll for roll in by_roll
+      if roll in focus_names or roll.startswith("CHC022-") or roll.startswith("CHC023-")
+    })
+    focus_groups={}
+    for roll in focus_rolls:
+        members=by_roll[roll]
+        active=[x for x in members if key((x.get("payload") or {}).get("status"))=="ACTIVE"]
+        state_sig=Counter()
+        label_sig=Counter()
+        for x in active:
+            p=x.get("payload") or {}
+            state=(key(p.get("collection")),key(p.get("colour")),key(p.get("location")),
+                   str(p.get("length") or "").strip(),str(p.get("originalLength") or "").strip(),key(p.get("measure")))
+            label=(key(p.get("collection")),key(p.get("colour")))
+            state_sig["|".join(state)]+=1
+            label_sig["|".join(label)]+=1
+        focus_groups[roll]={
+          "all_records":len(members),
+          "active_records":len(active),
+          "distinct_active_state_signatures":len(state_sig),
+          "active_state_signature_counts":dict(sorted(state_sig.items())),
+          "distinct_active_name_colour_pairs":len(label_sig),
+          "active_name_colour_counts":dict(sorted(label_sig.items())),
+          "records":[selected_record(x) for x in sorted(members,key=lambda x:(str(x.get("updated_at") or ""),str(x.get("record_id") or "")))]
+        }
+
     report={
       "mode":"V6_COMPANY_CARPET_ROLL_NUMBER_AUDIT",
       "production_writes":0,
@@ -80,6 +131,7 @@ def main():
         "same_roll_multiple_location_length_measure_states":len(state_variants),
         "prefix_counts":dict(sorted(prefixes.items()))
       },
+      "focus_groups":focus_groups,
       "samples":{
         "most_repeated_active":[
           {"roll":roll,"active_records":len(members)}
