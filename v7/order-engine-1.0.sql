@@ -61,10 +61,11 @@ create index if not exists order_source_evidence_recovery_idx
   where recovery_key is not null;
 
 create or replace function warehouse_v7.reject_order_source_evidence_mutation()
-returns trigger language plpgsql security invoker as $
+returns trigger language plpgsql security invoker as $order_evidence_guard$
 begin
   raise exception using errcode='55000',message='ORDER_SOURCE_EVIDENCE_APPEND_ONLY';
-end $;
+end
+$order_evidence_guard$;
 
 drop trigger if exists order_source_evidence_append_only on warehouse_v7.order_source_evidence;
 create trigger order_source_evidence_append_only
@@ -72,10 +73,11 @@ before update or delete on warehouse_v7.order_source_evidence
 for each row execute function warehouse_v7.reject_order_source_evidence_mutation();
 
 create or replace function warehouse_v7.reject_order_record_delete()
-returns trigger language plpgsql security invoker as $
+returns trigger language plpgsql security invoker as $order_delete_guard$
 begin
   raise exception using errcode='55000',message='ORDER_RECORD_DELETE_FORBIDDEN_USE_ARCHIVE';
-end $;
+end
+$order_delete_guard$;
 
 drop trigger if exists order_record_no_delete on warehouse_v7.order_record;
 create trigger order_record_no_delete
