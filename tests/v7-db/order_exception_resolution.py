@@ -28,7 +28,7 @@ insert into warehouse_v7.order_exception_case(
  '{T}','{CASE}','v6:test-case','runlu_orders_v20',
  'STRUCTURED_STATUS_MISSING','open','0123456789abcdef0123456789abcdef',
  2,'["lifecycle","fulfillment_status","resolution_note"]'::jsonb,
- '{"purchase_order_number":"PO-TEST","product_label":"Test Product"}'::jsonb,1
+ '{{"purchase_order_number":"PO-TEST","product_label":"Test Product"}}'::jsonb,1
 );
 
 insert into warehouse_v7.order_source_evidence(
@@ -37,7 +37,7 @@ insert into warehouse_v7.order_source_evidence(
 ) values(
  '{T}','{uuid.uuid4()}',null,'{CASE}','runlu_orders_v20','source-a',
  'rk-test','deferred','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
- 'STRUCTURED_STATUS_MISSING','{"status":null}'::jsonb
+ 'STRUCTURED_STATUS_MISSING','{{"status":null}}'::jsonb
 ),(
  '{T}','{uuid.uuid4()}',null,'{CASE}','runlu_orders_v20','source-b',
  'rk-test','deferred','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
