@@ -48,3 +48,15 @@ assert.ok(js.includes('pendingResolveCommandIds'));
 assert.ok(js.includes('command_id: commandId'));
 
 console.log('V7 order exception workbench UI/read contract: PASS');
+
+assert.ok((html+js).includes("order-exception-engineering-auth.js"),"order-exception-engineering-auth.js");
+
+assert.ok((html+js).includes("Administrator sign in"),"Administrator sign in");
+
+assert.ok((html+js).includes("engineeringEmail"),"engineeringEmail");
+
+assert.ok((html+js).includes("engineeringPassword"),"engineeringPassword");
+
+assert.ok((html+js).includes("ENGINEERING SIGN-IN"),"ENGINEERING SIGN-IN");
+
+assert.ok((html+js).includes("RUNLU_V7_ENGINEERING_AUTH_CONFIG"),"RUNLU_V7_ENGINEERING_AUTH_CONFIG");
