@@ -299,6 +299,7 @@ def main():
 
             context={
                 "order_kind":"STANDARD" if ds=="runlu_orders_v20" else "SPECIAL",
+                "recovery_key":norm(latest.get("recoveryKey")) or None,
                 "sales_order_number":norm(latest.get("soNumber")) or None,
                 "purchase_order_number":(
                     norm(latest.get("poNumber")) if ds=="runlu_orders_v20"
