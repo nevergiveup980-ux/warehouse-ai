@@ -30,6 +30,17 @@
     "operator_resolution_denied",
     "cross_tenant_read_denied",
     "zero_inventory_movements",
-    "same_command_retry_identical"
-  ]
+    "same_command_retry_identical",
+    "production_database_ref_forbidden",
+    "project_database_ref_match",
+    "positive_quantity_required",
+    "explicit_resolution_confirmation"
+  ],
+  "standalone_workbench": {
+    "html": "v7/order-exception-workbench.html",
+    "auth": "v7/order-exception-engineering-auth.js",
+    "api_client": "v7/order-exception-api-client.js",
+    "config_template": "v7/order-exception-engineering-config.example.js",
+    "session_storage": "memory_only"
+  }
 }
