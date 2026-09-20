@@ -147,8 +147,11 @@ jobs:
           assert a['actual']==b['actual']
           assert a['actual']['order_fingerprint']==b['actual']['order_fingerprint']
           assert a['actual']['evidence_fingerprint']==b['actual']['evidence_fingerprint']
+          assert a['actual']['exception_fingerprint']==b['actual']['exception_fingerprint']
+          assert a['actual']['exception_cases']==a['expected']['exception_cases']
           assert b['new_rows']['canonical_orders']==0
           assert b['new_rows']['source_evidence']==0
+          assert b['new_rows']['exception_cases']==0
           print('V7 ORDER MIGRATION RECONCILIATION + REPLAY: PASS')
           print(json.dumps({
             'expected':a['expected'],
