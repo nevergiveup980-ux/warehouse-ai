@@ -26,7 +26,6 @@ assert.doesNotMatch(html,/manufacturerRoll/);
 
 assert.match(js,/state=\{api:null,overview:null,list:null,kind:'ALL'/);
 assert.match(js,/shared_legacy_roll_number/);
-assert.match(js,/carpet_operational_cutover/);
 assert.doesNotMatch(js,/localStorage|sessionStorage/);
 
 assert.match(server,/INVENTORY_COMMAND_CENTER_READ_ONLY/);

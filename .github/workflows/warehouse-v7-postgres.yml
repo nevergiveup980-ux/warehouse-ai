@@ -36,6 +36,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/inventory-command-center-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
@@ -113,6 +114,8 @@ jobs:
         run: python3 tests/v7-db/order_binding_workbench.py
       - name: Orders command center regression
         run: python3 tests/v7-db/orders_command_center.py
+      - name: Inventory command center regression
+        run: python3 tests/v7-db/inventory_command_center.py
       - name: Carpet transfer return lifecycle regression
         run: python3 tests/v7-db/carpet_transfer_return_regression.py
       - name: Database smoke and integrity tests
