@@ -42,5 +42,9 @@ assert.doesNotMatch(html+js,/functions\/v1\/|rest\/v1\//i);
 // Demo must be opt-in and cannot resolve.
 assert.ok(js.includes("params.get('demo') === '1'"));
 assert.ok(js.includes("state.mode === 'connected' && c.can_resolve === true"));
+assert.ok(html.includes('order-exception-api-client.js'));
+assert.ok(js.includes('RUNLU_V7_WORKBENCH_CONFIG'));
+assert.ok(js.includes('pendingResolveCommandIds'));
+assert.ok(js.includes('command_id: commandId'));
 
 console.log('V7 order exception workbench UI/read contract: PASS');
