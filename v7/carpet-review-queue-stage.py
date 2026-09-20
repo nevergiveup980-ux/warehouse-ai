@@ -88,7 +88,8 @@ def main():
             "length":state.get("length"),
             "original_length":state.get("original_length"),
             "measure":state.get("measure")
-          }
+          },
+          "references":base.get("references") or {}
         }
         if not alias or not roll or not reasons:
             raise RuntimeError("CARPET_REVIEW_REQUIRED_FIELDS")

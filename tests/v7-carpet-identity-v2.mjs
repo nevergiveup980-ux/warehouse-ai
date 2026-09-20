@@ -47,6 +47,9 @@ assert.equal(out.counts.accepted_distinct_company_roll_numbers,3);
 assert.equal(out.shared_roll_groups.find(x=>x.company_roll_number==='CHC022').physical_instance_count,2);
 assert.equal(out.physical_instances.find(x=>x.company_roll_number==='RC200').current_state.length,51);
 assert.ok(out.conflicts.some(x=>x.type==='COMPANY_ROLL_REUSED_ACROSS_PHYSICAL_INSTANCES'&&x.company_roll_number==='RC300'));
-assert.ok(out.conflicts.some(x=>x.type==='LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE'&&x.legacy_instance_id==='E'));
+const divergence=out.conflicts.find(x=>x.type==='LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE'&&x.legacy_instance_id==='E');
+assert.ok(divergence);
+assert.equal(divergence.current_state.location,'4A');
+assert.equal(divergence.current_state.length,20);
 
 console.log('V7 carpet company-roll identity V2 contract: PASS');

@@ -49,11 +49,31 @@ export function reconcileCarpetIdentity(rows,{sharedRollNumbers=['CHC022','CHC02
   for(const [legacyInstanceId,members] of byLegacyInstance){
     const rolls=[...new Set(members.map(r=>normalizeCompanyRollNumber((r.payload||{}).roll)).filter(Boolean))].sort();
     if(rolls.length!==1){
+      const selected=currentRow(members);
+      const p=selected.payload||{};
       conflicts.push({
         type:'LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE',
         legacy_instance_id:legacyInstanceId,
         roll_numbers:rolls,
-        source_record_ids:members.map(r=>String(r.record_id)).sort()
+        source_record_ids:members.map(r=>String(r.record_id)).sort(),
+        selected_source_record_id:String(selected.record_id),
+        source_row_count:members.length,
+        current_state:{
+          collection:key(p.collection)||null,
+          colour:key(p.colour)||null,
+          location:key(p.location)||null,
+          length:p.length??null,
+          original_length:p.originalLength??null,
+          measure:upper(p.measure)||null,
+          status:upper(p.status)||null,
+          payload_updated_at:p.updatedAt??null,
+          row_updated_at:selected.updated_at??null
+        },
+        references:{
+          manufacturer_roll:key(p.manufacturerRoll)||null,
+          source_roll:key(p.sourceRoll)||null,
+          physical_roll_id:key(p.physicalRollId)||null
+        }
       });
       continue;
     }

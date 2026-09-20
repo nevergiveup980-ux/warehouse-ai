@@ -110,7 +110,11 @@ $stage$;""")
           "company_roll_number":None,
           "roll_numbers":conflict.get("roll_numbers") or [],
           "conflict_type":ctype,
-          "source_record_ids":conflict.get("source_record_ids") or []
+          "source_record_ids":conflict.get("source_record_ids") or [],
+          "selected_source_record_id":conflict.get("selected_source_record_id"),
+          "source_row_count":conflict.get("source_row_count"),
+          "current_state":conflict.get("current_state") or {},
+          "references":conflict.get("references") or {}
         }
         blocks.append(f"""do $stage$
 declare sid uuid;
