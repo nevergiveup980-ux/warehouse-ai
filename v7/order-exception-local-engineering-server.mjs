@@ -14,6 +14,7 @@ const DEVICE='V7_LOCAL_DISPOSABLE_WORKBENCH';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STATUSES=new Set(['open','resolved','needs_review']);
+const EXECUTION_STATUSES=new Set(['open','completed','all']);
 const KINDS=new Set(['STANDARD','SPECIAL']);
 const LIFECYCLES=new Set(['draft','in_progress','completed','archived']);
 const FULFILLMENT=new Set(['unverified','pending','received','backorder','ready_for_pickup','picked_up','completed']);
@@ -57,6 +58,31 @@ function list(status){
 function getCase(caseId){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_order_exception_workbench_case('+q(TENANT)+'::uuid,'+q(caseId)+'::uuid)::text;');
 }
+function executionList(status){
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_order_execution_workbench('+q(TENANT)+'::uuid,'+q(status)+'::text)::text;');
+}
+function executionGet(orderId){
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_order_execution_workbench_task('+q(TENANT)+'::uuid,'+q(orderId)+'::uuid)::text;');
+}
+function executeOrderTask(body){
+  const orderId=String(body.order_id || ''), commandId=String(body.command_id || '');
+  const stockId=body.stock_item_id ? String(body.stock_item_id) : null;
+  const orderVersion=Number(body.expected_order_version), stockVersion=Number(body.expected_stock_version), quantity=Number(body.quantity);
+  if(!UUID.test(orderId)) throw Object.assign(new Error('ORDER_ID_REQUIRED'),{http:400});
+  if(!UUID.test(commandId)) throw Object.assign(new Error('COMMAND_ID_REQUIRED'),{http:400});
+  if(stockId!==null && !UUID.test(stockId)) throw Object.assign(new Error('STOCK_ITEM_ID_INVALID'),{http:400});
+  if(!Number.isInteger(orderVersion) || orderVersion<1) throw Object.assign(new Error('EXPECTED_ORDER_VERSION_REQUIRED'),{http:400});
+  if(!Number.isInteger(stockVersion) || stockVersion<0) throw Object.assign(new Error('EXPECTED_STOCK_VERSION_REQUIRED'),{http:400});
+  if(!Number.isFinite(quantity) || quantity<=0) throw Object.assign(new Error('INVALID_EXECUTION_QUANTITY'),{http:400});
+  const task=executionGet(orderId);
+  if(!task) throw Object.assign(new Error('ORDER_EXECUTION_TASK_NOT_FOUND'),{http:404});
+  if(task.task_status!=='open') throw Object.assign(new Error('ORDER_EXECUTION_TASK_COMPLETED'),{http:409});
+  if(task.flow==='INBOUND'){
+    if(!stockId) throw Object.assign(new Error('INBOUND_STOCK_ITEM_ID_REQUIRED'),{http:400});
+    return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.receive_bound_order_stock('+q(TENANT)+'::uuid,'+q(commandId)+'::uuid,'+q(orderId)+'::uuid,'+String(orderVersion)+'::bigint,'+q(stockId)+'::uuid,'+String(stockVersion)+'::bigint,'+String(quantity)+'::numeric,jsonb_build_object(\'workbench\',\'local_execution\'),'+q(ACTOR)+'::uuid,'+q(DEVICE)+'::text)::text;');
+  }
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.ship_bound_order_stock('+q(TENANT)+'::uuid,'+q(commandId)+'::uuid,'+q(orderId)+'::uuid,'+String(orderVersion)+'::bigint,'+String(stockVersion)+'::bigint,'+String(quantity)+'::numeric,jsonb_build_object(\'workbench\',\'local_execution\'),'+q(ACTOR)+'::uuid,'+q(DEVICE)+'::text)::text;');
+}
 function resolveCase(body){
   const caseId=String(body.case_id || ''), commandId=String(body.command_id || '');
   const expected=Number(body.expected_version), kind=String(body.order_kind || '');
@@ -81,6 +107,9 @@ function resolveCase(body){
 const STATIC=new Map([
   ['/','order-exception-workbench.html'],
   ['/order-exception-workbench.html','order-exception-workbench.html'],
+  ['/order-execution-workbench.html','order-execution-workbench.html'],
+  ['/order-execution-local-api-client.js','order-execution-local-api-client.js'],
+  ['/order-execution-workbench.js','order-execution-workbench.js'],
   ['/order-exception-local-api-client.js','order-exception-local-api-client.js'],
   ['/order-exception-workbench-adapter.js','order-exception-workbench-adapter.js'],
   ['/order-exception-api-client.js','order-exception-api-client.js'],
@@ -107,8 +136,32 @@ const server=http.createServer(async(req,res)=>{
       const data=list('open');
       return send(res,200,{ok:true,data:{mode:'V7_DISPOSABLE_LOCAL_ENGINEERING',database:sql('select current_database();'),tenant_id:TENANT,open_cases:data?.summary?.total ?? null,production_reachable:false}});
     }
+    if(req.method==='GET' && url.pathname==='/order-execution-local-engineering-config.js'){
+      return send(res,200,"window.RUNLU_V7_ORDER_EXECUTION_LOCAL_CONFIG = Object.freeze({endpoint:'/api/order-execution'});\n",'application/javascript; charset=utf-8');
+    }
     if(req.method==='GET' && url.pathname==='/order-exception-local-engineering-config.js'){
       return send(res,200,"window.RUNLU_V7_LOCAL_ENGINEERING_CONFIG = Object.freeze({endpoint:'/api/order-exception'});\n",'application/javascript; charset=utf-8');
+    }
+    if(url.pathname==='/api/order-execution' && req.method==='GET'){
+      const action=url.searchParams.get('action') || 'list';
+      if(action==='list'){
+        const status=url.searchParams.get('status') || 'open';
+        if(!EXECUTION_STATUSES.has(status)) return send(res,400,{error:'INVALID_EXECUTION_STATUS'});
+        return send(res,200,{ok:true,data:executionList(status)});
+      }
+      if(action==='get'){
+        const orderId=url.searchParams.get('order_id') || '';
+        if(!UUID.test(orderId)) return send(res,400,{error:'ORDER_ID_REQUIRED'});
+        const detail=executionGet(orderId);
+        return detail ? send(res,200,{ok:true,data:detail}) : send(res,404,{ok:false,error:'ORDER_EXECUTION_TASK_NOT_FOUND'});
+      }
+      return send(res,400,{error:'UNKNOWN_ACTION'});
+    }
+    if(url.pathname==='/api/order-execution' && req.method==='POST'){
+      const body=await bodyJson(req);
+      if(body?.action!=='execute') return send(res,400,{error:'UNKNOWN_ACTION'});
+      const result=executeOrderTask(body);
+      return result?.status==='committed' ? send(res,200,{ok:true,data:result}) : send(res,409,{ok:false,data:result,error:result?.code || 'ORDER_EXECUTION_REJECTED'});
     }
     if(url.pathname==='/api/order-exception' && req.method==='GET'){
       const action=url.searchParams.get('action') || 'list';

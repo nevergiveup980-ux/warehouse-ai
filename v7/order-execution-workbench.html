@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RUNLU V7 — Order Execution Workbench</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#18212a;background:#f3f5f7;--line:#dfe4e8;--muted:#68737d;--accent:#17324d;--receive:#1b6b48;--ship:#81531a}
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7}.shell{max-width:1180px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:8px 0 15px}.eyebrow{font-size:12px;font-weight:850;letter-spacing:.12em;color:#607080}h1{margin:5px 0 3px;font-size:28px;line-height:1.05}.sub,.muted{color:var(--muted);font-size:13px}.nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.nav a,.ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;font-weight:750;color:#34414c;text-decoration:none}.mode{border-radius:999px;padding:8px 10px;font-size:11px;font-weight:850;background:#ddf5e5;color:#155a2a}.banner{border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 13px;margin-bottom:13px}.banner.success{background:#edf9f0;border-color:#b8dfc2}.banner.danger{background:#fff0f0;border-color:#efbcbc}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px}.metric b{display:block;font-size:24px}.metric span{font-size:12px;color:var(--muted)}.toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:14px 0}.filters{display:flex;gap:7px}.filters button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;font-weight:750}.filters button.active{background:var(--accent);color:#fff}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.task{appearance:none;text-align:left;background:#fff;border:1px solid var(--line);border-left:4px solid #87939c;border-radius:15px;padding:15px;color:inherit}.task.receive{border-left-color:var(--receive)}.task.ship{border-left-color:var(--ship)}.top,.meta,.foot,.progress-label{display:flex;justify-content:space-between;gap:8px}.pill{font-size:11px;font-weight:850}.receive .pill{color:var(--receive)}.ship .pill{color:var(--ship)}.title{font-size:17px;font-weight:850;margin:13px 0 7px}.meta,.foot,.progress-label{font-size:11px;color:var(--muted);flex-wrap:wrap}.progress{height:7px;border-radius:99px;background:#e9edf0;overflow:hidden;margin:7px 0 10px}.progress>span{display:block;height:100%;background:#566d82}.foot{border-top:1px solid #edf0f2;padding-top:10px}.empty{grid-column:1/-1;padding:34px;text-align:center;border:1px dashed #cbd2d8;background:#fff;border-radius:14px;color:var(--muted)}
+.backdrop{position:fixed;inset:0;background:rgba(19,28,36,.32);z-index:20}.drawer{position:fixed;z-index:21;top:0;right:0;height:100%;width:min(620px,100%);background:#fff;transform:translateX(101%);transition:.2s ease;box-shadow:-14px 0 50px rgba(0,0,0,.14);display:flex;flex-direction:column}.drawer.open{transform:none}.drawer-head{padding:18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.drawer-head h2{margin:4px 0}.drawer-body{padding:18px;overflow:auto}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.detail{border:1px solid var(--line);border-radius:11px;padding:10px}.detail label{display:block;font-size:10px;font-weight:850;color:#65717b;text-transform:uppercase}.detail b{display:block;margin-top:4px;font-size:14px;overflow-wrap:anywhere}.section{font-size:13px;font-weight:850;margin:18px 0 8px}.history{border:1px solid var(--line);border-radius:11px;padding:9px;margin:7px 0;font-size:12px}.execute-box{position:sticky;bottom:-18px;margin:18px -18px -18px;padding:14px 18px;background:#fff;border-top:1px solid var(--line)}.qty{display:flex;gap:8px;align-items:end}.field{flex:1}.field label{display:block;font-size:11px;font-weight:850;margin-bottom:5px}.field input{width:100%;padding:11px;border:1px solid #cfd6dc;border-radius:10px;font:inherit}.primary{border:0;border-radius:11px;padding:12px 15px;background:var(--accent);color:#fff;font-weight:850;min-width:150px}.primary:disabled{background:#b6bec5}
+@media(max-width:850px){.metrics{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.shell{padding:12px}.grid{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}header{display:block}.nav{margin-top:10px}h1{font-size:23px}.qty{display:block}.primary{width:100%;margin-top:8px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div><div class="eyebrow">RUNLU WAREHOUSE OS · V7 WAVE 2</div><h1>Order Execution Workbench</h1><div class="sub">Bound orders become explicit Receive / Ship tasks.</div></div>
+  <div class="nav"><a href="/order-exception-workbench.html">Exceptions</a><span class="mode">DISPOSABLE V7</span></div>
+</header>
+<div id="banner" class="banner">Connecting to the disposable engineering machine…</div>
+<section class="metrics">
+  <div class="metric"><b id="openCount">0</b><span>Open tasks</span></div>
+  <div class="metric"><b id="inCount">0</b><span>Inbound open</span></div>
+  <div class="metric"><b id="outCount">0</b><span>Outbound open</span></div>
+  <div class="metric"><b id="doneCount">0</b><span>Completed</span></div>
+</section>
+<div class="toolbar">
+  <div id="filters" class="filters"><button class="active" data-status="open">Open</button><button data-status="completed">Completed</button><button data-status="all">All</button></div>
+  <button id="refreshBtn" class="ghost" type="button">Refresh</button>
+</div>
+<main id="grid" class="grid"></main>
+</div>
+<div id="backdrop" class="backdrop" hidden></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-head"><div><div class="eyebrow" id="drawerFlow">TASK</div><h2 id="drawerTitle">Order task</h2></div><button id="closeBtn" class="ghost" type="button">Close</button></div>
+  <div class="drawer-body">
+    <div id="detailGrid" class="detail-grid"></div>
+    <div class="section">Execution history</div><div id="history"></div>
+    <div class="execute-box">
+      <div class="qty"><div class="field"><label>Quantity to execute</label><input id="qty" inputmode="decimal"></div><button id="executeBtn" class="primary" type="button" disabled>Execute</button></div>
+      <div id="hint" class="muted" style="margin-top:7px"></div>
+    </div>
+  </div>
+</aside>
+<script src="./order-execution-local-engineering-config.js"></script>
+<script src="./order-execution-local-api-client.js"></script>
+<script src="./order-execution-workbench.js"></script>
+</body>
+</html>
