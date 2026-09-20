@@ -6,6 +6,18 @@ const PRODUCTION_PROJECT_REF = "ekrnknlawekeoszzkamd";
 const DEVICE = "V7_ORDER_EXCEPTION_WORKBENCH";
 
 function json(status: number, body: unknown, origin = "*") {
+  if (status === 204) {
+    return new Response(null, {
+      status,
+      headers: {
+        "cache-control": "no-store",
+        "access-control-allow-origin": origin,
+        "access-control-allow-headers": "authorization,content-type",
+        "access-control-allow-methods": "GET,POST,OPTIONS",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -23,6 +35,19 @@ function projectRefFromUrl(url: string) {
   try {
     const host = new URL(url).hostname;
     return host.endsWith(".supabase.co") ? host.split(".")[0] : "";
+  } catch {
+    return "";
+  }
+}
+
+function projectRefFromDbUrl(url: string) {
+  try {
+    const host = new URL(url).hostname;
+    const direct = host.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    if (direct) return direct[1];
+    const pooler = host.match(/^aws-[^.]+-pooler\.([a-z0-9]+)\.supabase\.com$/i);
+    if (pooler) return pooler[1];
+    return "";
   } catch {
     return "";
   }
@@ -98,6 +123,15 @@ Deno.serve(async (req: Request) => {
 
   const dbUrl = Deno.env.get("SUPABASE_DB_URL");
   if (!dbUrl) return json(500, { error: "DB_URL_MISSING" }, origin);
+
+  const dbProjectRef = projectRefFromDbUrl(dbUrl);
+  if (dbProjectRef === PRODUCTION_PROJECT_REF) {
+    return json(403, { error: "PRODUCTION_DATABASE_FORBIDDEN" }, origin);
+  }
+  if (dbProjectRef && dbProjectRef !== currentProjectRef) {
+    return json(403, { error: "PROJECT_DATABASE_MISMATCH" }, origin);
+  }
+
   const sql = postgres(dbUrl, { prepare: false, max: 1, idle_timeout: 5 });
 
   try {
