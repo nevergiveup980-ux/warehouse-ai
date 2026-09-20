@@ -3,6 +3,28 @@
 -- Source migration evidence stays immutable. Resolving a review never writes carpet_roll,
 -- command, event, or inventory_movement. Promotion is a later, separate cutover step.
 
+create table if not exists warehouse_v7.carpet_review_evidence (
+  tenant_id uuid not null,
+  source_dataset text not null,
+  source_record_id text not null,
+  evidence jsonb not null default '{}'::jsonb check(jsonb_typeof(evidence)='object'),
+  generated_at timestamptz not null default now(),
+  primary key(tenant_id,source_dataset,source_record_id)
+);
+
+alter table warehouse_v7.carpet_review_evidence enable row level security;
+alter table warehouse_v7.carpet_review_evidence force row level security;
+drop policy if exists carpet_review_evidence_select on warehouse_v7.carpet_review_evidence;
+create policy carpet_review_evidence_select on warehouse_v7.carpet_review_evidence
+  for select using (warehouse_v7.is_tenant_member(tenant_id));
+drop policy if exists carpet_review_evidence_insert on warehouse_v7.carpet_review_evidence;
+create policy carpet_review_evidence_insert on warehouse_v7.carpet_review_evidence
+  for insert with check (warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin']));
+drop policy if exists carpet_review_evidence_update on warehouse_v7.carpet_review_evidence;
+create policy carpet_review_evidence_update on warehouse_v7.carpet_review_evidence
+  for update using (warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin']))
+  with check (warehouse_v7.has_tenant_role(tenant_id,ARRAY['owner','admin']));
+
 create table if not exists warehouse_v7.carpet_review_resolution (
   tenant_id uuid not null,
   source_dataset text not null,
@@ -105,6 +127,7 @@ select
   coalesce(r.status,'open') as review_status,
   coalesce(r.version,0)::bigint as resolution_version,
   coalesce(r.resolution_payload,'{}'::jsonb) as resolution_payload,
+  coalesce(e.evidence,'{}'::jsonb) as evidence,
   r.resolved_by,
   r.resolved_at,
   coalesce(r.updated_at,m.reviewed_at,m.staged_at) as updated_at
@@ -113,6 +136,10 @@ left join warehouse_v7.carpet_review_resolution r
   on r.tenant_id=m.tenant_id
  and r.source_dataset=m.source_dataset
  and r.source_record_id=m.source_record_id
+left join warehouse_v7.carpet_review_evidence e
+  on e.tenant_id=m.tenant_id
+ and e.source_dataset=m.source_dataset
+ and e.source_record_id=m.source_record_id
 where
   (m.source_dataset='derived_carpet_review_v7' and m.classification='deferred')
   or
@@ -173,6 +200,7 @@ begin
         'review_status',q.review_status,
         'resolution_version',q.resolution_version,
         'resolution_payload',q.resolution_payload,
+        'evidence',q.evidence,
         'resolved_by',q.resolved_by,
         'resolved_at',q.resolved_at,
         'updated_at',q.updated_at
@@ -227,6 +255,7 @@ begin
     'review_status',q.review_status,
     'resolution_version',q.resolution_version,
     'resolution_payload',q.resolution_payload,
+    'evidence',q.evidence,
     'can_resolve',warehouse_v7.has_tenant_role(p_tenant,ARRAY['owner','admin']),
     'operational_cutover',false
   );

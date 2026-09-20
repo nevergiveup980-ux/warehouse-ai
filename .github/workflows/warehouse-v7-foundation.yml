@@ -43,6 +43,7 @@ jobs:
       - run: node tests/v7-cloud-carpet-record-contract-v2.mjs
       - run: node tests/v7-carpet-operational-v2-rehearsal.mjs
       - run: node tests/v7-inventory-command-center.mjs
+      - run: node tests/v7-carpet-review-evidence.mjs
       - run: node tests/v7-carpet-review-workbench.mjs
       - run: node tests/v7-carpet-review-promotion-gate.mjs
       - run: node tests/v7-carpet-review-workbench-ui.mjs

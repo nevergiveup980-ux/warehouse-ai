@@ -49,6 +49,22 @@ function leaveSingle(){
   state.single=false;state.focus=null;
   if(history?.replaceState){const u=new URL(location.href);u.searchParams.delete('dataset');u.searchParams.delete('record');u.searchParams.delete('single');history.replaceState(null,'',u);}
 }
+function evidenceBlock(c){
+  const e=c.evidence||{},p=e.policy||{},cand=e.candidates||{};
+  const lines=[];
+  if((cand.company_roll_numbers||[]).length)lines.push('Company roll history: '+cand.company_roll_numbers.join(', '));
+  if((cand.locations||[]).length)lines.push('Location history: '+cand.locations.join(', '));
+  if((cand.measures||[]).length)lines.push('Measure history: '+cand.measures.join(', '));
+  if((cand.products||[]).length)lines.push('Product history: '+cand.products.map(x=>[x.collection,x.colour].filter(Boolean).join(' / ')).join('; '));
+  const alias=(e.exact_legacy_instance_history||[]).length,cuts=(e.cut_history_by_roll_label||[]).length,ops=(e.operation_history_by_roll_label||[]).length;
+  const counts='Exact instance rows: '+alias+' · CUT matches: '+cuts+' · Operation matches: '+ops;
+  return '<details class="evidence"><summary>Historical evidence <span>reference only</span></summary>'+
+    '<div class="evidence-body"><b>No automatic resolution.</b> Confirm against the physical roll or trusted warehouse knowledge.'+
+    '<div class="evidence-line">'+esc(counts)+'</div>'+
+    (lines.length?lines.map(x=>'<div class="evidence-line">'+esc(x)+'</div>').join(''):'<div class="evidence-line">No historical candidate value found for the missing field.</div>')+
+    (p.physical_confirmation_required===true?'<div class="evidence-warning">Physical confirmation required.</div>':'')+
+    '</div></details>';
+}
 function card(c){
   const rs=reasons(c),resolved=c.review_status==='resolved';
   const needsRoll=rs.some(x=>x.includes('ROLL_NUMBER')||x.includes('COMPANY_ROLL'));
@@ -69,7 +85,7 @@ function card(c){
     '<div class="help">'+esc(rs.map(helpText).join(' '))+'</div>'+
     '<div class="meta">'+esc(c.product_name||'Unnamed product')+(c.colour?' · '+esc(c.colour):'')+'<br>'+
       'Location: '+esc(c.location_code||'—')+' · Length: '+esc(c.length_text||'—')+' ft · Measure: '+esc(c.measure_status||'—')+'<br>'+
-      'Source: '+esc(c.source_record_id)+'</div>'+
+      'Source: '+esc(c.source_record_id)+'</div>'+evidenceBlock(c)+
     (resolved?
       '<div class="meta">Saved v'+esc(c.resolution_version)+': '+esc(JSON.stringify(c.resolution_payload||{}))+'</div><div class="promotion" data-promotion>Checking promotion gate…</div><div class="actions"><button class="btn reopen">Reopen</button><button class="btn secondary focusone">Review one</button></div>':
       '<div class="fields">'+fields+'</div><div class="actions"><button class="btn primary save">Save Resolution</button><button class="btn primary single-only save-next">Save & Next</button><button class="btn secondary focusone">Review one</button></div>')+

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const sql=fs.readFileSync('v7/carpet-review-workbench-1.0.sql','utf8');
+assert.match(sql,/carpet_review_evidence/);
 assert.match(sql,/carpet_review_resolution/);
 assert.match(sql,/carpet_review_workbench_queue/);
 assert.match(sql,/list_carpet_review_workbench/);
+assert.match(sql,/'evidence',q\.evidence/);
 assert.match(sql,/resolve_carpet_review/);
 assert.match(sql,/reopen_carpet_review/);
 assert.match(sql,/assert_admin_identity/);

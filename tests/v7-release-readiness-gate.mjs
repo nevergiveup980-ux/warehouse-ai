@@ -19,6 +19,7 @@ const dry={mode:'DISPOSABLE_POSTGRES_DRY_RUN',production_writes:0,reconciliation
 const identity={mode:'V7_CARPET_IDENTITY_V2_REHEARSAL',production_writes:0,counts:{active_source_rows:469,legacy_instance_candidates:239,accepted_physical_instances:238,conflict_groups:1}};
 const operational={production_writes:0,pass:true,readiness:{ready_physical_instances:225,deferred_physical_instances:13}};
 const review={production_writes:0,pass:true,expected_review_total:14,summary:{total:14,open:14,resolved:0}};
+const evidence={mode:'V7_CARPET_REVIEW_EVIDENCE_PACK',production_writes:0,auto_resolution_allowed:false,summary:{cases_total:14}};
 const promotion={production_writes:0,pass:true,automatic_promotion:false,production_enabled:false,summary:{total:14,promoted:0,promotable:0}};
 const inventory={verdict:'HTTP_E2E_PASS'};
 const reviewHttp={verdict:'REAL_HTTP_E2E_PASS'};
@@ -27,7 +28,7 @@ const args=[
   'v7/release-readiness-gate.py',
   '--dry-run-1',write('d1.json',dry),'--dry-run-2',write('d2.json',dry),
   '--identity',write('identity.json',identity),'--operational',write('op.json',operational),
-  '--review',write('review.json',review),'--promotion',write('promotion.json',promotion),
+  '--review',write('review.json',review),'--review-evidence',write('evidence.json',evidence),'--promotion',write('promotion.json',promotion),
   '--inventory-http',write('inventory.json',inventory),'--review-http',write('review-http.json',reviewHttp),
   '--cut-shadow',write('cut.json',shadow),'--receive-shadow',write('receive.json',shadow),
   '--shipping-shadow',write('ship.json',shadow),'--transfer-shadow',write('transfer.json',shadow),
@@ -42,6 +43,7 @@ assert.equal(out.technical_gate_pass,true);
 assert.equal(out.release_allowed,false);
 assert.equal(out.verdict,'RELEASE_BLOCKED');
 assert.equal(out.carpet.review_open,14);
+assert.equal(out.carpet.review_evidence_cases,14);
 assert.ok(out.release_blockers.some(x=>x.code==='CARPET_REVIEW_OPEN'&&x.count===14));
 assert.ok(out.release_blockers.some(x=>x.code==='CARPET_REVIEW_PROMOTION_PENDING'&&x.count===14));
 

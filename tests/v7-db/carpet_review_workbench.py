@@ -36,6 +36,15 @@ stage('derived_carpet_review_v7','REVIEW:X','deferred','LOCATION_MISSING',{
 stage('derived_carpet_identity_v7','CONFLICT:Y','conflict','LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE',{
   'legacy_instance_id':'Y','roll_numbers':['RC2220','RC22220'],'conflict_type':'LEGACY_INSTANCE_ROLL_NUMBER_DIVERGENCE'
 })
+evidence=json.dumps({
+  'policy':{'auto_resolution_allowed':False,'historical_candidates_are_reference_only':True,'physical_confirmation_required':True},
+  'candidates':{'locations':['2A'],'measures':['CAL'],'products':[{'collection':'Test Carpet','colour':'Stone'}],'company_roll_numbers':['RC900']},
+  'exact_legacy_instance_history':[{'source_record_id':'old-x'}],
+  'cut_history_by_roll_label':[],'operation_history_by_roll_label':[]
+},separators=(',',':'))
+run(f"""set request.jwt.claim.sub='{A}';
+insert into warehouse_v7.carpet_review_evidence(tenant_id,source_dataset,source_record_id,evidence)
+values('{T}','derived_carpet_review_v7','REVIEW:X',{q(evidence)}::jsonb);""")
 
 before=j(f"""set request.jwt.claim.sub='{A}';select jsonb_build_object(
  'carpet',(select count(*) from warehouse_v7.carpet_roll where tenant_id='{T}'),
@@ -49,6 +58,9 @@ assert w['mode']=='V7_CARPET_REVIEW_WORKBENCH'
 assert w['can_resolve'] is True and w['operational_cutover'] is False
 assert w['summary']=={'total':2,'open':2,'resolved':0,'identity':1,'operational':1},w
 assert len(w['cases'])==2
+x=next(c for c in w['cases'] if c['source_record_id']=='REVIEW:X')
+assert x['evidence']['policy']['auto_resolution_allowed'] is False
+assert x['evidence']['candidates']['locations']==['2A']
 
 bad=run(f"""set request.jwt.claim.sub='{A}';
 select warehouse_v7.resolve_carpet_review('{T}','derived_carpet_review_v7','REVIEW:X',0,'{{"note":"still looking"}}'::jsonb,'{A}');""",ok=False)

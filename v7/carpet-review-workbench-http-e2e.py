@@ -20,10 +20,12 @@ def main():
     assert args.review_report
     expected=int(json.load(open(args.review_report)).get('review_total') or 0)
     assert expected>0 and data['summary']['open']==expected and len(data['cases'])==expected,(expected,data['summary'])
+    assert all((c.get('evidence') or {}).get('policy',{}).get('auto_resolution_allowed') is False for c in data['cases'])
+    assert all((c.get('evidence') or {}).get('policy',{}).get('physical_confirmation_required') is True for c in data['cases'])
     _,gate=get(base+'/api/carpet-review?action=gate')
     assert gate['data']['summary']['open']==expected
     assert gate['data']['summary']['promotable']==0 and gate['data']['summary']['promoted']==0
-    out={'mode':'V7_CARPET_REVIEW_WORKBENCH_REAL_HTTP_E2E','open_cases':expected,'mutations_performed':0,'promotion_gate_opened':False,'verdict':'REAL_HTTP_E2E_PASS'}
+    out={'mode':'V7_CARPET_REVIEW_WORKBENCH_REAL_HTTP_E2E','open_cases':expected,'evidence_cases':expected,'mutations_performed':0,'promotion_gate_opened':False,'verdict':'REAL_HTTP_E2E_PASS'}
   else:
     assert data['summary']['open']>=1
     target=next((x for x in data['cases'] if 'LOCATION_MISSING' in (x.get('reasons') or [])),None)

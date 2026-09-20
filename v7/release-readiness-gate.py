@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--identity",required=True)
     ap.add_argument("--operational",required=True)
     ap.add_argument("--review",required=True)
+    ap.add_argument("--review-evidence",required=True)
     ap.add_argument("--promotion",required=True)
     ap.add_argument("--inventory-http",required=True)
     ap.add_argument("--review-http",required=True)
@@ -40,6 +41,7 @@ def main():
     identity=load(args.identity)
     operational=load(args.operational)
     review=load(args.review)
+    review_evidence=load(args.review_evidence)
     promotion=load(args.promotion)
     inventory_http=load(args.inventory_http)
     review_http=load(args.review_http)
@@ -80,6 +82,11 @@ def main():
     deferred=int(readiness.get("deferred_physical_instances") or 0)
     checks["review_queue_reconciles"]=review_total==identity_conflicts+deferred
     checks["review_workbench_verified"]=review.get("pass") is True and review.get("production_writes")==0
+    evidence_summary=review_evidence.get("summary") or {}
+    checks["review_evidence_mode"]=review_evidence.get("mode")=="V7_CARPET_REVIEW_EVIDENCE_PACK"
+    checks["review_evidence_production_writes_zero"]=review_evidence.get("production_writes")==0
+    checks["review_evidence_never_auto_resolves"]=review_evidence.get("auto_resolution_allowed") is False
+    checks["review_evidence_covers_queue"]=int(evidence_summary.get("cases_total") or 0)==review_total
     checks["promotion_gate_verified"]=promotion.get("pass") is True and promotion.get("production_writes")==0
     checks["automatic_promotion_disabled"]=promotion.get("automatic_promotion") is False
     checks["production_promotion_disabled"]=promotion.get("production_enabled") is False
@@ -130,6 +137,7 @@ def main():
         "review_total":review_total,
         "review_open":open_reviews,
         "review_resolved":resolved_reviews,
+        "review_evidence_cases":int(evidence_summary.get("cases_total") or 0),
         "promotion_promotable":promotable,
         "promotion_promoted":promoted
       },
