@@ -1,0 +1,35 @@
+{
+  "name": "warehouse-v7-order-exception-engineering",
+  "production_project_ref_forbidden": "ekrnknlawekeoszzkamd",
+  "edge_function": {
+    "name": "warehouse-v7-order-exception-api",
+    "source": "v7/order-exception-api-edge.ts",
+    "verify_jwt": false,
+    "authentication": "supabase_auth_getUser"
+  },
+  "migrations": [
+    "v7/schema-2.0.sql",
+    "v7/command-engine-1.0.sql",
+    "v7/ledger-guards-1.0.sql",
+    "v7/tenant-rls-1.0.sql",
+    "v7/command-auth-1.0.sql",
+    "v7/order-engine-1.0.sql",
+    "v7/order-rls-1.0.sql",
+    "v7/order-exception-workbench-1.0.sql"
+  ],
+  "current_verified_rehearsal": {
+    "source_evidence_rows": 55,
+    "canonical_orders": 3,
+    "exception_cases": 12
+  },
+  "required_gates": [
+    "non_production_project_ref",
+    "schema_install_pass",
+    "sanitized_seed_pass",
+    "owner_admin_resolution_pass",
+    "operator_resolution_denied",
+    "cross_tenant_read_denied",
+    "zero_inventory_movements",
+    "same_command_retry_identical"
+  ]
+}
