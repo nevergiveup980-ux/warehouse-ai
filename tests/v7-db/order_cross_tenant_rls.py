@@ -30,18 +30,18 @@ insert into warehouse_v7.order_exception_case(
  evidence_count,required_confirmation,display_context,version
 ) values
  ('{T1}','{X1}','rls:case:a','runlu_orders_v20','STRUCTURED_STATUS_MISSING','open',
-  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',1,'["lifecycle"]'::jsonb,'{"customer_label":"Secret A"}'::jsonb,1),
+  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',1,'["lifecycle"]'::jsonb,'{{"customer_label":"Secret A"}}'::jsonb,1),
  ('{T2}','{X2}','rls:case:b','runlu_orders_v20','STRUCTURED_STATUS_MISSING','open',
-  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',1,'["lifecycle"]'::jsonb,'{"customer_label":"Secret B"}'::jsonb,1);
+  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',1,'["lifecycle"]'::jsonb,'{{"customer_label":"Secret B"}}'::jsonb,1);
 
 insert into warehouse_v7.order_source_evidence(
  tenant_id,id,order_id,exception_case_id,source_dataset,source_record_id,
  evidence_class,source_fingerprint,exception_reason,source_payload
 ) values
  ('{T1}','{E1}',null,'{X1}','runlu_orders_v20','rls-source-a',
-  'deferred','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1','STRUCTURED_STATUS_MISSING','{}'::jsonb),
+  'deferred','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1','STRUCTURED_STATUS_MISSING','{{}}'::jsonb),
  ('{T2}','{E2}',null,'{X2}','runlu_orders_v20','rls-source-b',
-  'deferred','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1','STRUCTURED_STATUS_MISSING','{}'::jsonb);
+  'deferred','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1','STRUCTURED_STATUS_MISSING','{{}}'::jsonb);
 """
 subprocess.check_call(['psql',D,'-v','ON_ERROR_STOP=1','-c',bootstrap],env=E)
 
