@@ -14,6 +14,11 @@ for (const x of [
   'production_writes":0',
   'inventory_writes":0',
   'on conflict(tenant_id,source_dataset,source_record_id,source_fingerprint)',
+  'order_exception_case',
+  'exception_case_id',
+  'required_confirmation',
+  'ORDER_EXCEPTION_CASE_COUNT_MISMATCH',
+  'new_exception_cases',
   'REHEARSAL_PASS'
 ]) assert.ok(s.includes(x),x);
 
