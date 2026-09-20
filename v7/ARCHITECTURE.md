@@ -27,7 +27,9 @@ warehouse_event_v7
 migration_staging_v7
 
 ## Command lifecycle
-RECEIVE -> PUT_AWAY -> CUT -> TRANSFER -> SHIP -> RETURN
+RECEIVE -> PUT_AWAY -> CUT -> TRANSFER -> SHIP -> RETURN / RETURN_TO_SUPPLIER
+
+Wave 2 order orchestration uses `ORDER_TRANSITION` with a separate monotonic order/fulfillment lifecycle. Orders never overwrite inventory balances directly.
 
 Each command returns: command_id, status, affected entity ids, new entity versions.
 Repeated submission of the same command_id returns the original result and performs zero additional business mutation.
