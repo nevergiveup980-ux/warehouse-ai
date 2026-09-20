@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const html=fs.readFileSync('v7/order-exception-workbench.html','utf8');
 const js=fs.readFileSync('v7/order-exception-workbench.js','utf8');
 const sql=fs.readFileSync('v7/order-exception-workbench-1.0.sql','utf8');
+const runtimeConfig=fs.readFileSync('v7/order-exception-engineering-config.js','utf8');
 
 for (const x of [
   'Order Exception Workbench',
@@ -70,3 +71,8 @@ assert.ok(js.includes("Draft orders must use Unverified fulfillment."),"Draft or
 assert.ok(js.includes("Completed or archived orders must use Completed fulfillment."),"Completed or archived orders must use Completed fulfillment.");
 
 assert.ok(js.includes("Inventory quantities will not change."),"Inventory quantities will not change.");
+
+assert.ok(html.includes('order-exception-engineering-config.js'),'safe runtime config loaded');
+
+assert.ok(runtimeConfig.includes('RUNLU_V7_ENGINEERING_AUTH_CONFIG = null'));
+assert.doesNotMatch(runtimeConfig,/sb_publishable_[A-Za-z0-9_-]+|sb_secret_|eyJ[A-Za-z0-9_-]{20,}/);
