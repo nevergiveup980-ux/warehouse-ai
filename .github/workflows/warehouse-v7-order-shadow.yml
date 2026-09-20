@@ -8,8 +8,10 @@ on:
     branches: [warehouse-v7-foundation]
     paths:
       - 'v7/order-*'
+      - 'v7/orders-*'
       - 'v7/snapshot-bridge.ts'
       - 'tests/v7-order-*'
+      - 'tests/v7-orders-*'
       - '.github/workflows/warehouse-v7-order-shadow.yml'
 
 permissions:
