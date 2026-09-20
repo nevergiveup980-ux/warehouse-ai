@@ -29,15 +29,15 @@ insert into warehouse_v7.order_exception_case(
  ('{T1}','{C1}','wb:1','runlu_orders_v20','STRUCTURED_STATUS_MISSING','open',
   'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',2,
   '["lifecycle","fulfillment_status","resolution_note"]'::jsonb,
-  '{"order_kind":"STANDARD","purchase_order_number":"PO-WB-1","product_label":"Product A","quantity":"4","unit":"BOX"}'::jsonb,1),
+  '{{"order_kind":"STANDARD","purchase_order_number":"PO-WB-1","product_label":"Product A","quantity":"4","unit":"BOX"}}'::jsonb,1),
  ('{T1}','{C2}','wb:2','runlu_special_orders_v51','IDENTITY_CRITICAL_FIELDS_CONFLICT','open',
   'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',1,
   '["canonical_identity","lifecycle","fulfillment_status","resolution_note"]'::jsonb,
-  '{"order_kind":"SPECIAL","purchase_order_number":"PO-WB-2","product_label":"Product B","quantity":"1","unit":"EACH"}'::jsonb,1),
+  '{{"order_kind":"SPECIAL","purchase_order_number":"PO-WB-2","product_label":"Product B","quantity":"1","unit":"EACH"}}'::jsonb,1),
  ('{T2}','{C3}','wb:3','runlu_orders_v20','WEAK_SOURCE_IDENTITY','open',
   'cccccccccccccccccccccccccccccccc',1,
   '["canonical_identity","resolution_note"]'::jsonb,
-  '{"order_kind":"STANDARD","product_label":"Secret Tenant 2","quantity":"2","unit":"BOX"}'::jsonb,1);
+  '{{"order_kind":"STANDARD","product_label":"Secret Tenant 2","quantity":"2","unit":"BOX"}}'::jsonb,1);
 
 insert into warehouse_v7.order_source_evidence(
  tenant_id,id,order_id,exception_case_id,source_dataset,source_record_id,recovery_key,
@@ -45,13 +45,13 @@ insert into warehouse_v7.order_source_evidence(
 ) values
  ('{T1}','{E1}',null,'{C1}','runlu_orders_v20','wb-source-1','rk-wb-1',
   'deferred','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1','STRUCTURED_STATUS_MISSING',
-  '{"status":null,"poNumber":"PO-WB-1","product":"Product A","quantity":"4","unit":"Box","customer":"Customer A","notes":"do not surface raw notes"}'::jsonb),
+  '{{"status":null,"poNumber":"PO-WB-1","product":"Product A","quantity":"4","unit":"Box","customer":"Customer A","notes":"do not surface raw notes"}}'::jsonb),
  ('{T1}','{E2}',null,'{C1}','runlu_orders_v20','wb-source-2','rk-wb-1',
   'deferred','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2','STRUCTURED_STATUS_MISSING',
-  '{"status":null,"poNumber":"PO-WB-1","product":"Product A","quantity":"4","unit":"Box","customer":"Customer A"}'::jsonb),
+  '{{"status":null,"poNumber":"PO-WB-1","product":"Product A","quantity":"4","unit":"Box","customer":"Customer A"}}'::jsonb),
  ('{T2}','{E3}',null,'{C3}','runlu_orders_v20','wb-source-3',null,
   'deferred','ccccccccccccccccccccccccccccccc1','WEAK_SOURCE_IDENTITY',
-  '{"product":"Secret Tenant 2","quantity":"2","unit":"Box"}'::jsonb);
+  '{{"product":"Secret Tenant 2","quantity":"2","unit":"Box"}}'::jsonb);
 """)
 
 def call(user,sql,ok=True):
