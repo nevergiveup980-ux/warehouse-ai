@@ -74,6 +74,14 @@ jobs:
           python3 v7/carpet-roll-number-audit.py /tmp/v7-real-snapshot.json \
             --report /tmp/v7-carpet-roll-number-audit.json
 
+      - name: Upload company roll-number audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-company-carpet-roll-number-audit
+          path: /tmp/v7-carpet-roll-number-audit.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Build and verify real migration manifest
         id: manifest
         run: |
