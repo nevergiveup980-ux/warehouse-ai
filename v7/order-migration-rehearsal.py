@@ -178,7 +178,8 @@ def state_fingerprint(tenant):
       ), evidence as (
         select coalesce(md5(string_agg(
           concat_ws('|',
-            id::text,coalesce(order_id::text,''),source_dataset,source_record_id,
+            id::text,coalesce(order_id::text,''),coalesce(exception_case_id::text,''),
+            source_dataset,source_record_id,
             coalesce(recovery_key,''),evidence_class,source_fingerprint,
             coalesce(exception_reason,''),source_payload::text,
             coalesce(source_updated_at::text,'')
@@ -186,12 +187,24 @@ def state_fingerprint(tenant):
         )),'') as fp,
         count(*)::int as n
         from warehouse_v7.order_source_evidence where tenant_id={q(tenant)}::uuid
+      ), exceptions as (
+        select coalesce(md5(string_agg(
+          concat_ws('|',
+            id::text,case_key,source_dataset,reason,status,group_fingerprint,
+            evidence_count::text,required_confirmation::text,display_context::text,
+            version::text,coalesce(resolved_order_id::text,'')
+          ),E'\\n' order by id
+        )),'') as fp,
+        count(*)::int as n
+        from warehouse_v7.order_exception_case where tenant_id={q(tenant)}::uuid
       )
       select jsonb_build_object(
         'orders',(select n from orders),
         'order_fingerprint',(select fp from orders),
         'evidence',(select n from evidence),
-        'evidence_fingerprint',(select fp from evidence)
+        'evidence_fingerprint',(select fp from evidence),
+        'exception_cases',(select n from exceptions),
+        'exception_fingerprint',(select fp from exceptions)
       )::text;
     """)))
 
@@ -243,6 +256,7 @@ def main():
     before=state_fingerprint(a.tenant)
     new_orders=0
     new_evidence=0
+    new_exception_cases=0
     importable=0
     quarantine_counts=defaultdict(int)
     evidence_counts=defaultdict(int)
@@ -256,6 +270,66 @@ def main():
             quarantine_counts[reason]+=1
 
         order_id=None
+        exception_case_id=None
+        if not can_import:
+            exception_case_id=str(uuid.uuid5(NS,"exception:"+key))
+            case_key="v6:"+md5(key)
+            group_fingerprint=md5("\n".join(
+                norm(r.get("source_row_md5")).lower() for r in grp
+            ))
+            latest=grp[-1].get("payload") or {}
+            if reason=="STRUCTURED_STATUS_MISSING":
+                required=["lifecycle","fulfillment_status","resolution_note"]
+            elif reason=="IDENTITY_CRITICAL_FIELDS_CONFLICT":
+                required=[
+                    "canonical_identity","lifecycle",
+                    "fulfillment_status","resolution_note"
+                ]
+            elif reason=="STRUCTURED_STATUS_MOVED_BACKWARD":
+                required=[
+                    "final_lifecycle","final_fulfillment_status","resolution_note"
+                ]
+            elif reason=="WEAK_SOURCE_IDENTITY":
+                required=[
+                    "canonical_identity","lifecycle",
+                    "fulfillment_status","resolution_note"
+                ]
+            else:
+                required=["human_review","resolution_note"]
+
+            context={
+                "order_kind":"STANDARD" if ds=="runlu_orders_v20" else "SPECIAL",
+                "sales_order_number":norm(latest.get("soNumber")) or None,
+                "purchase_order_number":(
+                    norm(latest.get("poNumber")) if ds=="runlu_orders_v20"
+                    else norm(latest.get("po"))
+                ) or None,
+                "customer_label":norm(latest.get("customer")) or None,
+                "product_label":norm(latest.get("product")) or None,
+                "source_location":norm(latest.get("location")) or None,
+                "quantity":norm(latest.get("quantity")) or None,
+                "unit":norm(latest.get("unit")) or None,
+                "latest_structured_status":norm(latest.get("status")) or None,
+            }
+            inserted_case=value(run(f"""
+              with ins as (
+                insert into warehouse_v7.order_exception_case(
+                  tenant_id,id,case_key,source_dataset,reason,status,
+                  group_fingerprint,evidence_count,required_confirmation,
+                  display_context,version
+                ) values(
+                  {q(a.tenant)}::uuid,{q(exception_case_id)}::uuid,{q(case_key)},
+                  {q(ds)},{q(reason)},'open',{q(group_fingerprint)},{len(grp)},
+                  {q(json.dumps(required,separators=(",",":")))}::jsonb,
+                  {q(json.dumps(context,separators=(",",":"),sort_keys=True))}::jsonb,
+                  1
+                )
+                on conflict(tenant_id,case_key) do nothing
+                returning 1
+              ) select count(*) from ins;
+            """))
+            new_exception_cases+=int(inserted_case or 0)
+
         if can_import:
             importable+=1
             representative=grp[-1]
@@ -307,12 +381,13 @@ def main():
             inserted=value(run(f"""
               with ins as (
                 insert into warehouse_v7.order_source_evidence(
-                  tenant_id,id,order_id,source_dataset,source_record_id,recovery_key,
+                  tenant_id,id,order_id,exception_case_id,source_dataset,source_record_id,recovery_key,
                   evidence_class,source_fingerprint,exception_reason,
                   source_payload,source_updated_at
                 ) values(
                   {q(a.tenant)}::uuid,{q(evidence_id)}::uuid,
                   {("null" if order_id is None else q(order_id)+"::uuid")},
+                  {("null" if exception_case_id is None else q(exception_case_id)+"::uuid")},
                   {q(ds)},{q(norm(row.get("record_id")))},
                   {("null" if recovery is None else q(recovery))},
                   {q(eclass)},{q(fp)},
@@ -329,11 +404,14 @@ def main():
 
     after=state_fingerprint(a.tenant)
     expected_evidence=len(rows)
+    expected_exception_cases=sum(quarantine_counts.values())
     stops=[]
     if after["orders"]!=importable:
         stops.append("CANONICAL_ORDER_COUNT_MISMATCH")
     if after["evidence"]!=expected_evidence:
         stops.append("ORDER_EVIDENCE_COUNT_MISMATCH")
+    if after["exception_cases"]!=expected_exception_cases:
+        stops.append("ORDER_EXCEPTION_CASE_COUNT_MISMATCH")
     if sum(quarantine_counts.values())+importable!=len(groups):
         stops.append("ORDER_GROUP_RECONCILIATION_MISMATCH")
 
@@ -350,11 +428,13 @@ def main():
         "identity_groups":len(groups),
         "canonical_orders":importable,
         "source_evidence_rows":expected_evidence,
+        "exception_cases":expected_exception_cases,
       },
       "actual":after,
       "new_rows":{
         "canonical_orders":new_orders,
         "source_evidence":new_evidence,
+        "exception_cases":new_exception_cases,
       },
       "evidence_rows_by_class":dict(sorted(evidence_counts.items())),
       "quarantined_groups_by_reason":dict(sorted(quarantine_counts.items())),
