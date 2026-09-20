@@ -13,7 +13,7 @@ ENV=os.environ.copy()
 ENV.setdefault("PGPASSWORD",os.environ.get("PGPASSWORD","postgres"))
 
 def run(sql,check=True):
-    r=subprocess.run(["psql",CONN,"-v","ON_ERROR_STOP=1","-Atc",sql],text=True,capture_output=True,env=ENV)
+    r=subprocess.run(["psql",CONN,"-v","ON_ERROR_STOP=1","-At"],input=sql,text=True,capture_output=True,env=ENV)
     if check and r.returncode!=0:
         raise RuntimeError(r.stderr.strip() or r.stdout.strip())
     return r
