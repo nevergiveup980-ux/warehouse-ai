@@ -76,7 +76,8 @@ function executeOrderTask(body){
   if(!Number.isFinite(quantity) || quantity<=0) throw Object.assign(new Error('INVALID_EXECUTION_QUANTITY'),{http:400});
   const task=executionGet(orderId);
   if(!task) throw Object.assign(new Error('ORDER_EXECUTION_TASK_NOT_FOUND'),{http:404});
-  if(task.task_status!=='open') throw Object.assign(new Error('ORDER_EXECUTION_TASK_COMPLETED'),{http:409});
+  // Do not reject a completed projection here: an identical command retry must still
+  // reach the domain function so it can return the already-committed idempotent result.
   if(task.flow==='INBOUND'){
     if(!stockId) throw Object.assign(new Error('INBOUND_STOCK_ITEM_ID_REQUIRED'),{http:400});
     return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.receive_bound_order_stock('+q(TENANT)+'::uuid,'+q(commandId)+'::uuid,'+q(orderId)+'::uuid,'+String(orderVersion)+'::bigint,'+q(stockId)+'::uuid,'+String(stockVersion)+'::bigint,'+String(quantity)+'::numeric,jsonb_build_object(\'workbench\',\'local_execution\'),'+q(ACTOR)+'::uuid,'+q(DEVICE)+'::text)::text;');
