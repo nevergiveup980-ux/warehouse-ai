@@ -11,6 +11,7 @@
     data: null,
     selected: null,
     detail: null,
+    pendingResolveCommandIds: {},
   };
 
   const REASON_LABELS = {
@@ -226,6 +227,20 @@
       return;
     }
 
+    if (
+      !window.RUNLU_V7_ORDER_EXCEPTION_API &&
+      window.RUNLU_V7_WORKBENCH_CONFIG &&
+      typeof window.createRunluV7OrderExceptionApi === 'function'
+    ) {
+      try {
+        window.RUNLU_V7_ORDER_EXCEPTION_API = window.createRunluV7OrderExceptionApi(
+          window.RUNLU_V7_WORKBENCH_CONFIG
+        );
+      } catch (err) {
+        setBanner('Workbench configuration is invalid: ' + (err?.message || String(err)), 'danger');
+      }
+    }
+
     const api = window.RUNLU_V7_ORDER_EXCEPTION_API;
     if (!api || typeof api.list !== 'function' || typeof api.get !== 'function' || typeof api.resolve !== 'function') {
       state.mode = 'disconnected';
@@ -357,7 +372,12 @@
       return;
     }
 
+    const caseId = state.detail.case_id;
+    const commandId = state.pendingResolveCommandIds[caseId] || crypto.randomUUID();
+    state.pendingResolveCommandIds[caseId] = commandId;
+
     const payload = {
+      command_id: commandId,
       expected_version: Number(state.detail.version),
       order_kind: formValue('#orderKind'),
       lifecycle: formValue('#lifecycle'),
@@ -381,10 +401,14 @@
       if (result?.status !== 'committed') {
         throw new Error(result?.code || 'Resolution was not committed');
       }
+      delete state.pendingResolveCommandIds[caseId];
       closeDrawer();
       setBanner('Case resolved and canonical V7 order created. Inventory was not changed.', 'success');
       await refresh();
     } catch (err) {
+      if (err?.body?.data?.status === 'rejected' || err?.status === 409) {
+        delete state.pendingResolveCommandIds[caseId];
+      }
       setBanner('Resolution failed: ' + (err?.message || String(err)), 'danger');
       $('#resolveBtn').disabled = false;
     }
