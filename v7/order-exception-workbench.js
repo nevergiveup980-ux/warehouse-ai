@@ -13,6 +13,7 @@
     selected: null,
     detail: null,
     pendingResolveCommandIds: {},
+    connectionKind: null,
   };
 
   const REASON_LABELS = {
@@ -210,6 +211,10 @@
       badge.textContent = 'ENGINEERING SIGN-IN';
       badge.className = 'mode-badge demo';
       setBanner('Connected target is an isolated V7 engineering project. Sign in to load exception cases.', 'info');
+    } else if (state.mode === 'connected' && state.connectionKind === 'local') {
+      badge.textContent = 'DISPOSABLE V7';
+      badge.className = 'mode-badge live';
+      setBanner('Connected to the localhost disposable PostgreSQL engineering machine. Production is unreachable from this mode.', 'success');
     } else if (state.mode === 'connected') {
       badge.textContent = 'AUTHENTICATED V7';
       badge.className = 'mode-badge live';
@@ -230,6 +235,26 @@
       renderSummary();
       renderCards();
       return;
+    }
+
+    if (
+      !window.RUNLU_V7_ORDER_EXCEPTION_API &&
+      window.RUNLU_V7_LOCAL_ENGINEERING_CONFIG &&
+      typeof window.createRunluV7LocalOrderExceptionApi === 'function'
+    ) {
+      try {
+        state.api = window.createRunluV7LocalOrderExceptionApi(window.RUNLU_V7_LOCAL_ENGINEERING_CONFIG);
+        state.mode = 'connected';
+        state.connectionKind = 'local';
+        state.data = {summary:{total:0},cases:[]};
+        $('#authCard').classList.add('hidden');
+        $('#signOutBtn').classList.add('hidden');
+        renderMode();
+        await refresh();
+        return;
+      } catch (err) {
+        setBanner('Disposable engineering connection is invalid: ' + (err?.message || String(err)), 'danger');
+      }
     }
 
     if (
@@ -280,6 +305,7 @@
 
     state.api = api;
     state.mode = 'connected';
+    state.connectionKind = state.connectionKind || 'supabase';
     $('#authCard').classList.add('hidden');
     $('#signOutBtn').classList.toggle('hidden', !state.auth);
     renderMode();
@@ -497,6 +523,7 @@
       $('#engineeringPassword').value = '';
       state.api = state.auth.connectedApi();
       state.mode = 'connected';
+      state.connectionKind = 'supabase';
       $('#authCard').classList.add('hidden');
       $('#signOutBtn').classList.remove('hidden');
       renderMode();
@@ -517,6 +544,7 @@
     await state.auth.signOut();
     state.api = null;
     state.mode = 'signin';
+    state.connectionKind = null;
     state.data = {summary:{total:0},cases:[]};
     state.pendingResolveCommandIds = {};
     closeDrawer();
