@@ -68,6 +68,12 @@ jobs:
           print('source start fingerprint:',integ.get('snapshot_md5'))
           PY
 
+      - name: Audit company-owned carpet roll numbers
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-roll-number-audit.py /tmp/v7-real-snapshot.json \
+            --report /tmp/v7-carpet-roll-number-audit.json
+
       - name: Build and verify real migration manifest
         id: manifest
         run: |
@@ -358,10 +364,11 @@ jobs:
             /tmp/v7-supplier-return-shadow-report.json
             /tmp/v7-order-source-audit-report.json
             /tmp/v7-carpet-lifecycle-shadow-report.json
+            /tmp/v7-carpet-roll-number-audit.json
           if-no-files-found: ignore
           retention-days: 7
 
       - name: Destroy transient warehouse snapshot files
         if: always()
         run: |
-          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json
