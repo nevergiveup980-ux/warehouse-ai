@@ -23,9 +23,25 @@ concurrency:
 jobs:
   order-shadow:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       SNAPSHOT_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-snapshot-bridge
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
 
     steps:
       - uses: actions/checkout@v4
@@ -85,12 +101,72 @@ jobs:
           print(json.dumps(r.get('observed'),indent=2,sort_keys=True))
           PY
 
+      - name: Install disposable V7 order database
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-rls-1.0.sql
+
+      - name: Rehearse strict V6 order migration
+        run: |
+          set -euo pipefail
+          python3 v7/order-migration-rehearsal.py \
+            /tmp/v7-order-shadow-envelope.json \
+            --report /tmp/v7-order-migration-rehearsal-1.json \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --actor 56565656-5656-4565-8565-565656565656
+
+      - name: Replay identical order migration against same disposable database
+        run: |
+          set -euo pipefail
+          python3 v7/order-migration-rehearsal.py \
+            /tmp/v7-order-shadow-envelope.json \
+            --report /tmp/v7-order-migration-rehearsal-2.json \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --actor 56565656-5656-4565-8565-565656565656
+
+      - name: Verify order migration reconciliation and replay
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-order-migration-rehearsal-1.json'))
+          b=json.load(open('/tmp/v7-order-migration-rehearsal-2.json'))
+          for r in (a,b):
+              assert r.get('mode')=='V7_ORDER_MIGRATION_REHEARSAL'
+              assert r.get('production_writes')==0
+              assert r.get('inventory_writes')==0
+              assert r.get('verdict')=='REHEARSAL_PASS'
+              assert not r.get('stop_reasons')
+          assert a['expected']==b['expected']
+          assert a['actual']==b['actual']
+          assert a['actual']['order_fingerprint']==b['actual']['order_fingerprint']
+          assert a['actual']['evidence_fingerprint']==b['actual']['evidence_fingerprint']
+          assert b['new_rows']['canonical_orders']==0
+          assert b['new_rows']['source_evidence']==0
+          print('V7 ORDER MIGRATION RECONCILIATION + REPLAY: PASS')
+          print(json.dumps({
+            'expected':a['expected'],
+            'quarantine':a['quarantined_groups_by_reason'],
+            'first_new_rows':a['new_rows'],
+            'replay_new_rows':b['new_rows'],
+          },indent=2,sort_keys=True))
+          PY
+
       - name: Upload sanitized order audit report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v7-order-shadow-audit-report
-          path: /tmp/v7-order-source-audit-report.json
+          path: |
+            /tmp/v7-order-source-audit-report.json
+            /tmp/v7-order-migration-rehearsal-1.json
+            /tmp/v7-order-migration-rehearsal-2.json
           if-no-files-found: ignore
           retention-days: 7
 
@@ -99,4 +175,6 @@ jobs:
         run: |
           rm -f \
             /tmp/v7-order-shadow-envelope.json \
-            /tmp/v7-order-source-audit-report.json
+            /tmp/v7-order-source-audit-report.json \
+            /tmp/v7-order-migration-rehearsal-1.json \
+            /tmp/v7-order-migration-rehearsal-2.json
