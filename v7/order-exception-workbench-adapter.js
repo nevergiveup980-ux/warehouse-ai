@@ -57,7 +57,7 @@
         requireValue('resolution', resolution);
         if (!crypto?.randomUUID) throw new Error('Secure UUID generation is unavailable');
 
-        const commandId = crypto.randomUUID();
+        const commandId = resolution.command_id || crypto.randomUUID();
         return unwrap(await rpc('resolve_order_exception_create_order', {
           p_tenant: tenantId,
           p_command: commandId,
