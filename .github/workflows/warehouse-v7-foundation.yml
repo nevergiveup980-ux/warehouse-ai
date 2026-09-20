@@ -21,6 +21,7 @@ jobs:
       - run: node tests/v7-supplier-return-engine.mjs
       - run: node tests/v7-order-engine.mjs
       - run: node tests/v7-order-source-audit.mjs
+      - run: node tests/v7-order-migration-rehearsal.mjs
       - run: node tests/v7-carpet-transfer-engine.mjs
       - run: node tests/v7-carpet-return-engine.mjs
       - run: node tests/v7-incremental-shadow-bridge.mjs
