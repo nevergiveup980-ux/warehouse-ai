@@ -392,8 +392,42 @@
     state.detail = null;
   }
 
+  function validateResolutionForm() {
+    const note = formValue('#resolutionNote');
+    const product = formValue('#productLabel');
+    const unit = formValue('#unit');
+    const quantityText = formValue('#quantity');
+    const quantity = Number(quantityText);
+    const lifecycle = formValue('#lifecycle');
+    const fulfillment = formValue('#fulfillment');
+    const hasIdentity = Boolean(
+      formValue('#recoveryKey') || formValue('#soNumber') || formValue('#poNumber')
+    );
+
+    if (!note) return {ok:false,message:'Resolution note is required.',focus:'#resolutionNote'};
+    if (!hasIdentity) return {ok:false,message:'Confirm at least one durable order identifier: Recovery Key, SO, or PO.',focus:'#poNumber'};
+    if (!product) return {ok:false,message:'Product is required for the canonical order.',focus:'#productLabel'};
+    if (!quantityText || !Number.isFinite(quantity) || quantity <= 0) {
+      return {ok:false,message:'Quantity must be greater than zero.',focus:'#quantity'};
+    }
+    if (!unit) return {ok:false,message:'Unit is required for the canonical order.',focus:'#unit'};
+    if (lifecycle === 'draft' && fulfillment !== 'unverified') {
+      return {ok:false,message:'Draft orders must use Unverified fulfillment.',focus:'#fulfillment'};
+    }
+    if ((lifecycle === 'completed' || lifecycle === 'archived') && fulfillment !== 'completed') {
+      return {ok:false,message:'Completed or archived orders must use Completed fulfillment.',focus:'#fulfillment'};
+    }
+    return {ok:true};
+  }
+
   async function resolveCase() {
     if (!state.api || state.mode !== 'connected' || !state.detail) return;
+    const validation = validateResolutionForm();
+    if (!validation.ok) {
+      $(validation.focus)?.focus();
+      setBanner(validation.message, 'danger');
+      return;
+    }
     const note = formValue('#resolutionNote');
     if (!note) {
       $('#resolutionNote').focus();
@@ -423,6 +457,11 @@
       },
       resolution_note: note,
     };
+
+    if (!window.confirm(
+      'Create this canonical V7 order from the reviewed evidence?\n\n' +
+      'This resolves the exception case. Inventory quantities will not change.'
+    )) return;
 
     $('#resolveBtn').disabled = true;
     try {
