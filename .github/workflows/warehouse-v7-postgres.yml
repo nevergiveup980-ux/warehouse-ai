@@ -47,6 +47,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/order-exception-workbench-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-execution-bridge-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-execution-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-binding-workbench-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
       - name: Migration quarantine attack
@@ -107,6 +108,8 @@ jobs:
         run: python3 tests/v7-db/order_execution_bridge.py
       - name: Order execution workbench regression
         run: python3 tests/v7-db/order_execution_workbench.py
+      - name: Order binding workbench regression
+        run: python3 tests/v7-db/order_binding_workbench.py
       - name: Carpet transfer return lifecycle regression
         run: python3 tests/v7-db/carpet_transfer_return_regression.py
       - name: Database smoke and integrity tests

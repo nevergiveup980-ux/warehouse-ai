@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RUNLU V7 — Order Binding Workbench</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#18212a;background:#f3f5f7;--line:#dfe4e8;--muted:#68737d;--accent:#17324d;--ok:#1b6b48;--warn:#895c16}
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7}.shell{max-width:1180px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:8px 0 15px}.eyebrow{font-size:12px;font-weight:850;letter-spacing:.12em;color:#607080}h1{margin:5px 0 3px;font-size:28px;line-height:1.05}.sub,.muted{color:var(--muted);font-size:13px}.nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.nav a,.ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;font-weight:750;color:#34414c;text-decoration:none}.mode{border-radius:999px;padding:8px 10px;font-size:11px;font-weight:850;background:#ddf5e5;color:#155a2a}.banner{border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 13px;margin-bottom:13px}.banner.success{background:#edf9f0;border-color:#b8dfc2}.banner.danger{background:#fff0f0;border-color:#efbcbc}.banner.warn{background:#fff8e8;border-color:#edd9a7}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px}.metric b{display:block;font-size:24px}.metric span{font-size:12px;color:var(--muted)}.toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:14px 0}.filters{display:flex;gap:7px}.filters button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;font-weight:750}.filters button.active{background:var(--accent);color:#fff}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.order{appearance:none;text-align:left;background:#fff;border:1px solid var(--line);border-left:4px solid #b37b22;border-radius:15px;padding:15px;color:inherit}.order.bound{border-left-color:var(--ok)}.top,.meta,.foot{display:flex;justify-content:space-between;gap:8px}.pill{font-size:11px;font-weight:850;color:var(--warn)}.bound .pill{color:var(--ok)}.title{font-size:17px;font-weight:850;margin:13px 0 7px}.meta,.foot{font-size:11px;color:var(--muted);flex-wrap:wrap}.source{background:#f6f8f9;border-radius:10px;padding:9px;margin:10px 0;font-size:12px}.foot{border-top:1px solid #edf0f2;padding-top:10px}.empty{grid-column:1/-1;padding:34px;text-align:center;border:1px dashed #cbd2d8;background:#fff;border-radius:14px;color:var(--muted)}
+.backdrop{position:fixed;inset:0;background:rgba(19,28,36,.32);z-index:20}.drawer{position:fixed;z-index:21;top:0;right:0;height:100%;width:min(680px,100%);background:#fff;transform:translateX(101%);transition:.2s ease;box-shadow:-14px 0 50px rgba(0,0,0,.14);display:flex;flex-direction:column}.drawer.open{transform:none}.drawer-head{padding:18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.drawer-head h2{margin:4px 0}.drawer-body{padding:18px;overflow:auto}.policy{background:#fff8e8;border:1px solid #edd9a7;border-radius:12px;padding:12px;font-size:12px;line-height:1.45}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:850;color:#55616b;text-transform:uppercase}.field select,.field input{width:100%;border:1px solid #cfd6dc;border-radius:10px;padding:10px;font:inherit;background:#fff}.source-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}.source-cell{border:1px solid var(--line);border-radius:11px;padding:10px}.source-cell label{display:block;font-size:10px;font-weight:850;color:#65717b;text-transform:uppercase}.source-cell b{display:block;margin-top:4px;overflow-wrap:anywhere}.bind-box{position:sticky;bottom:-18px;margin:18px -18px -18px;padding:14px 18px;background:#fff;border-top:1px solid var(--line)}.primary{width:100%;border:0;border-radius:11px;padding:12px 15px;background:var(--accent);color:#fff;font-weight:850}.primary:disabled{background:#b6bec5}
+@media(max-width:850px){.metrics{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.shell{padding:12px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}.form-grid,.source-grid{grid-template-columns:1fr}.field.full{grid-column:auto}header{display:block}.nav{margin-top:10px}h1{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div><div class="eyebrow">RUNLU WAREHOUSE OS · V7 WAVE 2</div><h1>Order Binding Workbench</h1><div class="sub">Turn canonical orders into executable tasks by explicit human-reviewed identity.</div></div>
+  <div class="nav"><a href="/order-exception-workbench.html">Exceptions</a><a href="/order-execution-workbench.html">Execution</a><span class="mode">DISPOSABLE V7</span></div>
+</header>
+<div id="banner" class="banner warn">Source labels are display-only. Binding requires explicit canonical IDs.</div>
+<section class="metrics"><div class="metric"><b id="unboundCount">0</b><span>Unbound</span></div><div class="metric"><b id="boundCount">0</b><span>Bound</span></div><div class="metric"><b id="archivedCount">0</b><span>Archived unbound</span></div></section>
+<div class="toolbar"><div id="filters" class="filters"><button class="active" data-status="unbound">Unbound</button><button data-status="bound">Bound</button><button data-status="all">All</button></div><button id="refreshBtn" class="ghost" type="button">Refresh</button></div>
+<main id="grid" class="grid"></main>
+</div>
+<div id="backdrop" class="backdrop" hidden></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-head"><div><div class="eyebrow">EXPLICIT IDENTITY REVIEW</div><h2 id="drawerTitle">Bind order</h2></div><button id="closeBtn" class="ghost" type="button">Close</button></div>
+  <div class="drawer-body">
+    <div class="policy"><strong>No guessing.</strong> The old product/location text below is evidence for a person to review. The system never converts those labels into product, location, or stock IDs automatically.</div>
+    <div id="sourceGrid" class="source-grid"></div>
+    <div class="form-grid">
+      <div class="field"><label>Flow</label><select id="flow"><option value="">Choose…</option><option value="INBOUND">Inbound / Receive</option><option value="OUTBOUND">Outbound / Ship</option></select></div>
+      <div class="field"><label>Expected quantity</label><input id="quantity" inputmode="decimal"></div>
+      <div class="field full"><label>Canonical product</label><select id="product"><option value="">Choose product…</option></select></div>
+      <div class="field full"><label>Canonical location</label><select id="location"><option value="">Choose location…</option></select></div>
+      <div id="stockField" class="field full"><label>Outbound stock item</label><select id="stock"><option value="">Choose stock…</option></select></div>
+      <div class="field full"><label>Unit</label><input id="unit" autocapitalize="characters"></div>
+    </div>
+    <div class="bind-box"><button id="bindBtn" class="primary" type="button" disabled>Bind order to execution</button><div id="hint" class="muted" style="margin-top:7px"></div></div>
+  </div>
+</aside>
+<script src="./order-binding-local-engineering-config.js"></script>
+<script src="./order-binding-local-api-client.js"></script>
+<script src="./order-binding-workbench.js"></script>
+</body>
+</html>

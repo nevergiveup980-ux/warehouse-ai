@@ -109,6 +109,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/order-exception-workbench-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-execution-bridge-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-execution-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-binding-workbench-1.0.sql
 
       - name: Rehearse strict V6 order migration
         run: |
@@ -155,7 +156,13 @@ jobs:
           RUNLU_V7_ACTOR: 56565656-5656-4565-8565-565656565656
         run: python3 v7/order-execution-local-fixture.py
 
-      - name: Exercise Exception + Execution Workbenches on disposable localhost PostgreSQL
+      - name: Seed disposable binding UI fixture
+        env:
+          RUNLU_V7_TENANT: 45454545-4545-4454-8454-454545454545
+          RUNLU_V7_ACTOR: 56565656-5656-4565-8565-565656565656
+        run: python3 v7/order-binding-local-fixture.py
+
+      - name: Exercise Exception + Binding + Execution Workbenches on disposable localhost PostgreSQL
         env:
           RUNLU_V7_TENANT: 45454545-4545-4454-8454-454545454545
           RUNLU_V7_ACTOR: 56565656-5656-4565-8565-565656565656
@@ -178,6 +185,10 @@ jobs:
             --base-url http://127.0.0.1:8787 \
             --tenant 45454545-4545-4454-8454-454545454545 \
             --report /tmp/v7-order-execution-local-http-e2e-report.json
+          python3 v7/order-binding-local-e2e.py \
+            --base-url http://127.0.0.1:8787 \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --report /tmp/v7-order-binding-local-http-e2e-report.json
           cat /tmp/v7-local-workbench-server.log
 
       - name: Rehearse one real-evidence exception resolution
@@ -199,6 +210,7 @@ jobs:
             /tmp/v7-order-exception-real-evidence-report.json
             /tmp/v7-order-exception-local-http-e2e-report.json
             /tmp/v7-order-execution-local-http-e2e-report.json
+            /tmp/v7-order-binding-local-http-e2e-report.json
             /tmp/v7-local-workbench-server.log
           if-no-files-found: ignore
           retention-days: 7
@@ -214,4 +226,5 @@ jobs:
             /tmp/v7-order-exception-real-evidence-report.json \
             /tmp/v7-order-exception-local-http-e2e-report.json \
             /tmp/v7-order-execution-local-http-e2e-report.json \
+            /tmp/v7-order-binding-local-http-e2e-report.json \
             /tmp/v7-local-workbench-server.log

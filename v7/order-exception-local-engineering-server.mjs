@@ -15,6 +15,7 @@ const HERE=path.dirname(fileURLToPath(import.meta.url));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STATUSES=new Set(['open','resolved','needs_review']);
 const EXECUTION_STATUSES=new Set(['open','completed','all']);
+const BINDING_STATUSES=new Set(['unbound','bound','all']);
 const KINDS=new Set(['STANDARD','SPECIAL']);
 const LIFECYCLES=new Set(['draft','in_progress','completed','archived']);
 const FULFILLMENT=new Set(['unverified','pending','received','backorder','ready_for_pickup','picked_up','completed']);
@@ -57,6 +58,29 @@ function list(status){
 }
 function getCase(caseId){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_order_exception_workbench_case('+q(TENANT)+'::uuid,'+q(caseId)+'::uuid)::text;');
+}
+function bindingList(status){
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_order_binding_workbench('+q(TENANT)+'::uuid,'+q(status)+'::text)::text;');
+}
+function bindingGet(orderId){
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_order_binding_workbench_order('+q(TENANT)+'::uuid,'+q(orderId)+'::uuid)::text;');
+}
+function bindOrder(body){
+  const orderId=String(body.order_id || ''),commandId=String(body.command_id || ''),flow=String(body.flow || '');
+  const productId=String(body.product_id || ''),locationId=String(body.location_id || ''),stockId=body.stock_item_id?String(body.stock_item_id):null;
+  const orderVersion=Number(body.expected_order_version),quantity=Number(body.expected_quantity),unit=String(body.unit || '').trim().toUpperCase();
+  if(!UUID.test(orderId))throw Object.assign(new Error('ORDER_ID_REQUIRED'),{http:400});
+  if(!UUID.test(commandId))throw Object.assign(new Error('COMMAND_ID_REQUIRED'),{http:400});
+  if(!UUID.test(productId))throw Object.assign(new Error('PRODUCT_ID_REQUIRED'),{http:400});
+  if(!UUID.test(locationId))throw Object.assign(new Error('LOCATION_ID_REQUIRED'),{http:400});
+  if(stockId!==null && !UUID.test(stockId))throw Object.assign(new Error('STOCK_ITEM_ID_INVALID'),{http:400});
+  if(flow!=='INBOUND' && flow!=='OUTBOUND')throw Object.assign(new Error('INVALID_ORDER_EXECUTION_FLOW'),{http:400});
+  if(flow==='OUTBOUND' && !stockId)throw Object.assign(new Error('OUTBOUND_ORDER_REQUIRES_STOCK_ITEM'),{http:400});
+  if(!Number.isInteger(orderVersion)||orderVersion<1)throw Object.assign(new Error('EXPECTED_ORDER_VERSION_REQUIRED'),{http:400});
+  if(!Number.isFinite(quantity)||quantity<=0)throw Object.assign(new Error('INVALID_ORDER_EXECUTION_QUANTITY'),{http:400});
+  if(!unit)throw Object.assign(new Error('INVALID_ORDER_EXECUTION_UNIT'),{http:400});
+  const stockSql=stockId?q(stockId)+'::uuid':'null';
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.bind_order_execution('+q(TENANT)+'::uuid,'+q(commandId)+'::uuid,'+q(orderId)+'::uuid,'+String(orderVersion)+'::bigint,'+q(flow)+'::text,'+q(productId)+'::uuid,'+q(locationId)+'::uuid,'+stockSql+','+String(quantity)+'::numeric,'+q(unit)+'::text,jsonb_build_object(\'workbench\',\'local_binding\'),'+q(ACTOR)+'::uuid,'+q(DEVICE)+'::text)::text;');
 }
 function executionList(status){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_order_execution_workbench('+q(TENANT)+'::uuid,'+q(status)+'::text)::text;');
@@ -109,6 +133,9 @@ const STATIC=new Map([
   ['/','order-exception-workbench.html'],
   ['/order-exception-workbench.html','order-exception-workbench.html'],
   ['/order-execution-workbench.html','order-execution-workbench.html'],
+  ['/order-binding-workbench.html','order-binding-workbench.html'],
+  ['/order-binding-local-api-client.js','order-binding-local-api-client.js'],
+  ['/order-binding-workbench.js','order-binding-workbench.js'],
   ['/order-execution-local-api-client.js','order-execution-local-api-client.js'],
   ['/order-execution-workbench.js','order-execution-workbench.js'],
   ['/order-exception-local-api-client.js','order-exception-local-api-client.js'],
@@ -137,11 +164,35 @@ const server=http.createServer(async(req,res)=>{
       const data=list('open');
       return send(res,200,{ok:true,data:{mode:'V7_DISPOSABLE_LOCAL_ENGINEERING',database:sql('select current_database();'),tenant_id:TENANT,open_cases:data?.summary?.total ?? null,production_reachable:false}});
     }
+    if(req.method==='GET' && url.pathname==='/order-binding-local-engineering-config.js'){
+      return send(res,200,"window.RUNLU_V7_ORDER_BINDING_LOCAL_CONFIG = Object.freeze({endpoint:'/api/order-binding'});\n",'application/javascript; charset=utf-8');
+    }
     if(req.method==='GET' && url.pathname==='/order-execution-local-engineering-config.js'){
       return send(res,200,"window.RUNLU_V7_ORDER_EXECUTION_LOCAL_CONFIG = Object.freeze({endpoint:'/api/order-execution'});\n",'application/javascript; charset=utf-8');
     }
     if(req.method==='GET' && url.pathname==='/order-exception-local-engineering-config.js'){
       return send(res,200,"window.RUNLU_V7_LOCAL_ENGINEERING_CONFIG = Object.freeze({endpoint:'/api/order-exception'});\n",'application/javascript; charset=utf-8');
+    }
+    if(url.pathname==='/api/order-binding' && req.method==='GET'){
+      const action=url.searchParams.get('action') || 'list';
+      if(action==='list'){
+        const status=url.searchParams.get('status') || 'unbound';
+        if(!BINDING_STATUSES.has(status))return send(res,400,{error:'INVALID_ORDER_BINDING_STATUS'});
+        return send(res,200,{ok:true,data:bindingList(status)});
+      }
+      if(action==='get'){
+        const orderId=url.searchParams.get('order_id') || '';
+        if(!UUID.test(orderId))return send(res,400,{error:'ORDER_ID_REQUIRED'});
+        const detail=bindingGet(orderId);
+        return detail?send(res,200,{ok:true,data:detail}):send(res,404,{ok:false,error:'ORDER_NOT_FOUND'});
+      }
+      return send(res,400,{error:'UNKNOWN_ACTION'});
+    }
+    if(url.pathname==='/api/order-binding' && req.method==='POST'){
+      const body=await bodyJson(req);
+      if(body?.action!=='bind')return send(res,400,{error:'UNKNOWN_ACTION'});
+      const result=bindOrder(body);
+      return result?.status==='committed'?send(res,200,{ok:true,data:result}):send(res,409,{ok:false,data:result,error:result?.code || 'ORDER_BINDING_REJECTED'});
     }
     if(url.pathname==='/api/order-execution' && req.method==='GET'){
       const action=url.searchParams.get('action') || 'list';
