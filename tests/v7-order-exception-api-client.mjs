@@ -6,7 +6,6 @@ const calls=[];
 globalThis.window={
   fetch: async (...args)=>globalThis.fetch(...args),
 };
-globalThis.crypto={randomUUID:()=> '11111111-1111-4111-8111-111111111111'};
 globalThis.fetch=async (url,opts={})=>{
   calls.push({url:String(url),opts});
   const u=String(url);
