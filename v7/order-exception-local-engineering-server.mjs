@@ -59,6 +59,9 @@ function list(status){
 function getCase(caseId){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_order_exception_workbench_case('+q(TENANT)+'::uuid,'+q(caseId)+'::uuid)::text;');
 }
+function commandCenter(){
+  return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.get_orders_command_center('+q(TENANT)+'::uuid)::text;');
+}
 function bindingList(status){
   return queryJson('set request.jwt.claim.sub='+q(ACTOR)+'; select warehouse_v7.list_order_binding_workbench('+q(TENANT)+'::uuid,'+q(status)+'::text)::text;');
 }
@@ -134,6 +137,9 @@ const STATIC=new Map([
   ['/order-exception-workbench.html','order-exception-workbench.html'],
   ['/order-execution-workbench.html','order-execution-workbench.html'],
   ['/order-binding-workbench.html','order-binding-workbench.html'],
+  ['/orders-command-center.html','orders-command-center.html'],
+  ['/orders-command-center-local-api-client.js','orders-command-center-local-api-client.js'],
+  ['/orders-command-center.js','orders-command-center.js'],
   ['/order-binding-local-api-client.js','order-binding-local-api-client.js'],
   ['/order-binding-workbench.js','order-binding-workbench.js'],
   ['/order-execution-local-api-client.js','order-execution-local-api-client.js'],
@@ -164,6 +170,9 @@ const server=http.createServer(async(req,res)=>{
       const data=list('open');
       return send(res,200,{ok:true,data:{mode:'V7_DISPOSABLE_LOCAL_ENGINEERING',database:sql('select current_database();'),tenant_id:TENANT,open_cases:data?.summary?.total ?? null,production_reachable:false}});
     }
+    if(req.method==='GET' && url.pathname==='/orders-command-center-local-engineering-config.js'){
+      return send(res,200,"window.RUNLU_V7_ORDERS_COMMAND_CENTER_LOCAL_CONFIG = Object.freeze({endpoint:'/api/orders-command-center'});\n",'application/javascript; charset=utf-8');
+    }
     if(req.method==='GET' && url.pathname==='/order-binding-local-engineering-config.js'){
       return send(res,200,"window.RUNLU_V7_ORDER_BINDING_LOCAL_CONFIG = Object.freeze({endpoint:'/api/order-binding'});\n",'application/javascript; charset=utf-8');
     }
@@ -172,6 +181,12 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='GET' && url.pathname==='/order-exception-local-engineering-config.js'){
       return send(res,200,"window.RUNLU_V7_LOCAL_ENGINEERING_CONFIG = Object.freeze({endpoint:'/api/order-exception'});\n",'application/javascript; charset=utf-8');
+    }
+    if(url.pathname==='/api/orders-command-center' && req.method==='GET'){
+      return send(res,200,{ok:true,data:commandCenter()});
+    }
+    if(url.pathname==='/api/orders-command-center'){
+      return send(res,405,{error:'COMMAND_CENTER_READ_ONLY'});
     }
     if(url.pathname==='/api/order-binding' && req.method==='GET'){
       const action=url.searchParams.get('action') || 'list';

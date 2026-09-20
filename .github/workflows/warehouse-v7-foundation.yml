@@ -23,6 +23,7 @@ jobs:
       - run: node tests/v7-order-execution-bridge.mjs
       - run: node tests/v7-order-execution-workbench.mjs
       - run: node tests/v7-order-binding-workbench.mjs
+      - run: node tests/v7-orders-command-center.mjs
       - run: node tests/v7-order-source-audit.mjs
       - run: node tests/v7-order-migration-rehearsal.mjs
       - run: node tests/v7-order-exception-workbench.mjs

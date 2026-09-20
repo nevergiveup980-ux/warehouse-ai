@@ -110,6 +110,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/order-execution-bridge-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-execution-workbench-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/order-binding-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/orders-command-center-1.0.sql
 
       - name: Rehearse strict V6 order migration
         run: |
@@ -189,6 +190,10 @@ jobs:
             --base-url http://127.0.0.1:8787 \
             --tenant 45454545-4545-4454-8454-454545454545 \
             --report /tmp/v7-order-binding-local-http-e2e-report.json
+          python3 v7/orders-command-center-local-e2e.py \
+            --base-url http://127.0.0.1:8787 \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --report /tmp/v7-orders-command-center-local-http-e2e-report.json
           cat /tmp/v7-local-workbench-server.log
 
       - name: Rehearse one real-evidence exception resolution
@@ -211,6 +216,7 @@ jobs:
             /tmp/v7-order-exception-local-http-e2e-report.json
             /tmp/v7-order-execution-local-http-e2e-report.json
             /tmp/v7-order-binding-local-http-e2e-report.json
+            /tmp/v7-orders-command-center-local-http-e2e-report.json
             /tmp/v7-local-workbench-server.log
           if-no-files-found: ignore
           retention-days: 7
@@ -227,4 +233,5 @@ jobs:
             /tmp/v7-order-exception-local-http-e2e-report.json \
             /tmp/v7-order-execution-local-http-e2e-report.json \
             /tmp/v7-order-binding-local-http-e2e-report.json \
+            /tmp/v7-orders-command-center-local-http-e2e-report.json \
             /tmp/v7-local-workbench-server.log
