@@ -39,6 +39,7 @@ jobs:
       - run: node tests/v7-incremental-shadow-bridge.mjs
       - run: node tests/v7-snapshot-bridge.mjs
       - run: node tests/v7-core-lifecycle-attack.mjs
+      - run: node tests/v7-carpet-identity-v2.mjs
       - run: node tests/v7-snapshot-transformer.mjs
       - run: node tests/v7-snapshot-envelope.mjs
       - run: node tests/v7-inventory-alias-transformer.mjs
