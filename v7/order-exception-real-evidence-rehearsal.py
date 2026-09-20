@@ -46,7 +46,7 @@ def inventory_state(tenant):
         select count(*)::int n,
                coalesce(md5(string_agg(
                  concat_ws('|',id::text,product_id::text,location_id::text,
-                 remaining_length::text,version::text,lifecycle),
+                 remaining_sixteenths::text,version::text,lifecycle),
                  E'\\n' order by id
                )),'') fp
         from warehouse_v7.carpet_roll
