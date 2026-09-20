@@ -29,10 +29,45 @@ create table if not exists warehouse_v7.order_record (
   unique(tenant_id,order_kind,source_identity_key)
 );
 
+create table if not exists warehouse_v7.order_exception_case (
+  tenant_id uuid not null,
+  id uuid not null default gen_random_uuid(),
+  case_key text not null,
+  source_dataset text not null,
+  reason text not null check(reason in (
+    'STRUCTURED_STATUS_MISSING',
+    'IDENTITY_CRITICAL_FIELDS_CONFLICT',
+    'STRUCTURED_STATUS_MOVED_BACKWARD',
+    'WEAK_SOURCE_IDENTITY',
+    'UNKNOWN_STRUCTURED_STATUS'
+  )),
+  status text not null default 'open'
+    check(status in ('open','resolved','needs_review')),
+  group_fingerprint text not null,
+  evidence_count integer not null check(evidence_count>0),
+  required_confirmation jsonb not null default '[]',
+  display_context jsonb not null default '{}',
+  version bigint not null default 1 check(version>0),
+  resolved_order_id uuid,
+  resolution_summary jsonb,
+  opened_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  primary key(tenant_id,id),
+  unique(tenant_id,case_key),
+  foreign key(tenant_id,resolved_order_id)
+    references warehouse_v7.order_record(tenant_id,id)
+    on delete restrict
+);
+
+create index if not exists order_exception_case_queue_idx
+  on warehouse_v7.order_exception_case(tenant_id,status,reason,updated_at);
+
 create table if not exists warehouse_v7.order_source_evidence (
   tenant_id uuid not null,
   id uuid not null default gen_random_uuid(),
   order_id uuid,
+  exception_case_id uuid,
   source_dataset text not null,
   source_record_id text not null,
   recovery_key text,
@@ -53,12 +88,78 @@ create table if not exists warehouse_v7.order_source_evidence (
   unique(tenant_id,source_dataset,source_record_id,source_fingerprint),
   foreign key(tenant_id,order_id)
     references warehouse_v7.order_record(tenant_id,id)
-    on delete restrict
+    on delete restrict,
+  foreign key(tenant_id,exception_case_id)
+    references warehouse_v7.order_exception_case(tenant_id,id)
+    on delete restrict,
+  check (
+    (order_id is not null and exception_case_id is null)
+    or (order_id is null and exception_case_id is not null)
+  )
 );
 
 create index if not exists order_source_evidence_recovery_idx
   on warehouse_v7.order_source_evidence(tenant_id,recovery_key)
   where recovery_key is not null;
+
+create table if not exists warehouse_v7.order_exception_decision (
+  tenant_id uuid not null,
+  id uuid not null default gen_random_uuid(),
+  case_id uuid not null,
+  command_id uuid not null,
+  decision text not null check(decision in ('RESOLVE_CREATE_ORDER')),
+  payload jsonb not null default '{}',
+  actor_id uuid not null,
+  created_at timestamptz not null default now(),
+  primary key(tenant_id,id),
+  unique(tenant_id,command_id),
+  foreign key(tenant_id,case_id)
+    references warehouse_v7.order_exception_case(tenant_id,id)
+    on delete restrict,
+  foreign key(tenant_id,command_id)
+    references warehouse_v7.command(tenant_id,id)
+    on delete restrict
+);
+
+create or replace function warehouse_v7.reject_order_exception_decision_mutation()
+returns trigger language plpgsql security invoker as $order_exception_decision_guard$
+begin
+  raise exception using errcode='55000',message='ORDER_EXCEPTION_DECISION_APPEND_ONLY';
+end
+$order_exception_decision_guard$;
+
+drop trigger if exists order_exception_decision_append_only
+on warehouse_v7.order_exception_decision;
+create trigger order_exception_decision_append_only
+before update or delete on warehouse_v7.order_exception_decision
+for each row execute function warehouse_v7.reject_order_exception_decision_mutation();
+
+create or replace view warehouse_v7.order_exception_queue
+with (security_invoker=true)
+as
+select
+  c.tenant_id,
+  c.id as case_id,
+  c.case_key,
+  c.source_dataset,
+  c.reason,
+  c.status,
+  c.evidence_count,
+  c.required_confirmation,
+  c.display_context,
+  c.version,
+  c.resolved_order_id,
+  c.opened_at,
+  c.updated_at,
+  c.resolved_at,
+  count(e.id)::integer as linked_evidence_rows
+from warehouse_v7.order_exception_case c
+left join warehouse_v7.order_source_evidence e
+  on e.tenant_id=c.tenant_id and e.exception_case_id=c.id
+group by
+  c.tenant_id,c.id,c.case_key,c.source_dataset,c.reason,c.status,
+  c.evidence_count,c.required_confirmation,c.display_context,c.version,
+  c.resolved_order_id,c.opened_at,c.updated_at,c.resolved_at;
 
 create or replace function warehouse_v7.reject_order_source_evidence_mutation()
 returns trigger language plpgsql security invoker as $order_evidence_guard$
@@ -227,3 +328,200 @@ begin
   perform warehouse_v7.commit_command(p_tenant,p_command,out_result);
   return out_result;
 end $$;
+
+
+create or replace function warehouse_v7.resolve_order_exception_create_order(
+  p_tenant uuid,
+  p_command uuid,
+  p_case uuid,
+  p_expected_version bigint,
+  p_order_kind text,
+  p_lifecycle text,
+  p_fulfillment text,
+  p_fields jsonb,
+  p_resolution_note text,
+  p_actor uuid,
+  p_device text
+)
+returns jsonb
+language plpgsql
+security invoker
+as $order_exception_resolve$
+declare
+  cmd warehouse_v7.command;
+  x warehouse_v7.order_exception_case;
+  new_order uuid:=gen_random_uuid();
+  v_quantity numeric;
+  out_result jsonb;
+begin
+  perform warehouse_v7.assert_command_identity(p_tenant,p_actor);
+
+  if not warehouse_v7.has_tenant_role(p_tenant,ARRAY['owner','admin']) then
+    raise exception using errcode='42501',message='ORDER_EXCEPTION_REVIEW_ROLE_REQUIRED';
+  end if;
+
+  if p_order_kind not in ('STANDARD','SPECIAL') then
+    raise exception using errcode='22023',message='INVALID_ORDER_KIND';
+  end if;
+  if p_lifecycle not in ('draft','in_progress','completed','archived') then
+    raise exception using errcode='22023',message='INVALID_ORDER_LIFECYCLE';
+  end if;
+  if p_fulfillment not in (
+    'unverified','pending','received','backorder',
+    'ready_for_pickup','picked_up','completed'
+  ) then
+    raise exception using errcode='22023',message='INVALID_ORDER_FULFILLMENT';
+  end if;
+  if p_lifecycle='draft' and p_fulfillment<>'unverified' then
+    raise exception using errcode='22023',message='DRAFT_ORDER_REQUIRES_UNVERIFIED_FULFILLMENT';
+  end if;
+  if p_lifecycle in ('completed','archived') and p_fulfillment<>'completed' then
+    raise exception using errcode='22023',message='COMPLETED_ORDER_REQUIRES_COMPLETED_FULFILLMENT';
+  end if;
+  if jsonb_typeof(coalesce(p_fields,'{}'::jsonb))<>'object' then
+    raise exception using errcode='22023',message='ORDER_EXCEPTION_FIELDS_MUST_BE_OBJECT';
+  end if;
+  if nullif(trim(coalesce(p_resolution_note,'')),'') is null then
+    raise exception using errcode='22023',message='ORDER_EXCEPTION_RESOLUTION_NOTE_REQUIRED';
+  end if;
+
+  if nullif(trim(coalesce(p_fields->>'quantity','')),'') is not null then
+    begin
+      v_quantity:=(p_fields->>'quantity')::numeric;
+    exception when invalid_text_representation then
+      raise exception using errcode='22023',message='INVALID_ORDER_RESOLUTION_QUANTITY';
+    end;
+    if v_quantity<0 then
+      raise exception using errcode='22023',message='INVALID_ORDER_RESOLUTION_QUANTITY';
+    end if;
+  end if;
+
+  cmd:=warehouse_v7.begin_command(
+    p_tenant,p_command,'ORDER_EXCEPTION_RESOLVE','order_exception',p_case,p_expected_version,
+    jsonb_build_object(
+      'decision','RESOLVE_CREATE_ORDER',
+      'order_kind',p_order_kind,
+      'lifecycle',p_lifecycle,
+      'fulfillment_status',p_fulfillment,
+      'fields',coalesce(p_fields,'{}'::jsonb),
+      'resolution_note',trim(p_resolution_note)
+    ),
+    p_actor,p_device
+  );
+
+  if cmd.status='committed' then return cmd.result; end if;
+  if cmd.status='rejected' then
+    return jsonb_build_object(
+      'status','rejected','code',cmd.rejection_code,'result',cmd.result
+    );
+  end if;
+
+  select * into x
+  from warehouse_v7.order_exception_case
+  where tenant_id=p_tenant and id=p_case
+  for update;
+
+  if not found then
+    perform warehouse_v7.reject_command(p_tenant,p_command,'ORDER_EXCEPTION_NOT_FOUND');
+    return jsonb_build_object('status','rejected','code','ORDER_EXCEPTION_NOT_FOUND');
+  end if;
+
+  if x.version<>p_expected_version then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'STALE_VERSION',
+      jsonb_build_object('current_version',x.version)
+    );
+    return jsonb_build_object(
+      'status','rejected','code','STALE_VERSION','current_version',x.version
+    );
+  end if;
+
+  if x.status='resolved' then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'ORDER_EXCEPTION_ALREADY_RESOLVED',
+      jsonb_build_object('resolved_order_id',x.resolved_order_id)
+    );
+    return jsonb_build_object(
+      'status','rejected','code','ORDER_EXCEPTION_ALREADY_RESOLVED',
+      'resolved_order_id',x.resolved_order_id
+    );
+  end if;
+
+  if x.status='needs_review' and x.resolved_order_id is not null then
+    perform warehouse_v7.reject_command(
+      p_tenant,p_command,'ORDER_EXCEPTION_REVIEW_REQUIRES_ORDER_AMENDMENT',
+      jsonb_build_object('resolved_order_id',x.resolved_order_id)
+    );
+    return jsonb_build_object(
+      'status','rejected','code','ORDER_EXCEPTION_REVIEW_REQUIRES_ORDER_AMENDMENT'
+    );
+  end if;
+
+  insert into warehouse_v7.order_record(
+    tenant_id,id,order_kind,source_identity_key,recovery_key,
+    sales_order_number,purchase_order_number,customer_label,product_label,
+    source_location,quantity,unit,lifecycle,fulfillment_status,version
+  ) values(
+    p_tenant,new_order,p_order_kind,'exception:'||x.case_key,
+    nullif(trim(coalesce(p_fields->>'recovery_key','')),''),
+    nullif(trim(coalesce(p_fields->>'sales_order_number','')),''),
+    nullif(trim(coalesce(p_fields->>'purchase_order_number','')),''),
+    nullif(trim(coalesce(p_fields->>'customer_label','')),''),
+    nullif(trim(coalesce(p_fields->>'product_label','')),''),
+    nullif(trim(coalesce(p_fields->>'source_location','')),''),
+    v_quantity,
+    nullif(upper(trim(coalesce(p_fields->>'unit',''))),''),
+    p_lifecycle,p_fulfillment,1
+  );
+
+  insert into warehouse_v7.order_exception_decision(
+    tenant_id,case_id,command_id,decision,payload,actor_id
+  ) values(
+    p_tenant,p_case,p_command,'RESOLVE_CREATE_ORDER',
+    jsonb_build_object(
+      'resolution_note',trim(p_resolution_note),
+      'order_id',new_order,
+      'order_kind',p_order_kind,
+      'lifecycle',p_lifecycle,
+      'fulfillment_status',p_fulfillment,
+      'fields',coalesce(p_fields,'{}'::jsonb)
+    ),
+    p_actor
+  );
+
+  update warehouse_v7.order_exception_case
+  set status='resolved',
+      version=version+1,
+      resolved_order_id=new_order,
+      resolution_summary=jsonb_build_object(
+        'decision','RESOLVE_CREATE_ORDER',
+        'resolution_note',trim(p_resolution_note),
+        'actor_id',p_actor,
+        'command_id',p_command
+      ),
+      resolved_at=now(),
+      updated_at=now()
+  where tenant_id=p_tenant and id=p_case;
+
+  insert into warehouse_v7.event(
+    tenant_id,command_id,entity_type,entity_id,event_type,entity_version,payload
+  ) values(
+    p_tenant,p_command,'order_exception',p_case,'ORDER_EXCEPTION_RESOLVED',x.version+1,
+    jsonb_build_object(
+      'reason',x.reason,
+      'order_id',new_order,
+      'resolution_note',trim(p_resolution_note)
+    )
+  );
+
+  out_result:=jsonb_build_object(
+    'status','committed',
+    'case_id',p_case,
+    'order_id',new_order,
+    'case_status','resolved',
+    'new_case_version',x.version+1
+  );
+  perform warehouse_v7.commit_command(p_tenant,p_command,out_result);
+  return out_result;
+end
+$order_exception_resolve$;
