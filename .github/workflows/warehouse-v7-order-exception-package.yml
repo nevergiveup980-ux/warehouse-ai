@@ -10,6 +10,7 @@ on:
       - 'v7/order-exception-workbench-adapter.js'
       - 'v7/order-exception-api-client.js'
       - 'v7/order-exception-engineering-auth.js'
+      - 'v7/order-exception-engineering-config.js'
       - 'v7/order-exception-engineering-config.example.js'
       - 'v7/order-exception-engineering-manifest.json'
       - 'v7/ORDER_EXCEPTION_WORKBENCH_ENGINEERING.md'
@@ -34,6 +35,7 @@ jobs:
             v7/order-exception-workbench-adapter.js
             v7/order-exception-api-client.js
             v7/order-exception-engineering-auth.js
+            v7/order-exception-engineering-config.js
             v7/order-exception-engineering-config.example.js
             v7/order-exception-engineering-manifest.json
             v7/ORDER_EXCEPTION_WORKBENCH_ENGINEERING.md
