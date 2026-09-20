@@ -20,6 +20,7 @@ jobs:
       - run: node tests/v7-return-engine.mjs
       - run: node tests/v7-supplier-return-engine.mjs
       - run: node tests/v7-order-engine.mjs
+      - run: node tests/v7-order-execution-bridge.mjs
       - run: node tests/v7-order-source-audit.mjs
       - run: node tests/v7-order-migration-rehearsal.mjs
       - run: node tests/v7-order-exception-workbench.mjs
