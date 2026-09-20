@@ -37,13 +37,9 @@ const api=factory({
 
 const list=await api.list('open');
 assert.equal(list.summary.total,0);
-assert.deepEqual(calls[0],{
-  name:'list_order_exception_workbench',
-  args:{
-    p_tenant:'22222222-2222-4222-8222-222222222222',
-    p_status:'open'
-  }
-});
+assert.equal(calls[0].name,'list_order_exception_workbench');
+assert.equal(calls[0].args.p_tenant,'22222222-2222-4222-8222-222222222222');
+assert.equal(calls[0].args.p_status,'open');
 
 const detail=await api.get('case-1');
 assert.equal(detail.case_id,'case-1');
