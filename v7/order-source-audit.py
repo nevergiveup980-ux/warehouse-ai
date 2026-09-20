@@ -128,6 +128,16 @@ def main():
     if len(rows)!=int(integ.get("total_live_rows",-1)):
         raise RuntimeError("ORDER_SHADOW_COUNT_MISMATCH")
 
+    source_md5=[]
+    for row in sorted(rows,key=lambda r:(norm(r.get("dataset_key")),norm(r.get("record_id")))):
+        fp=norm(row.get("source_row_md5")).lower()
+        if len(fp)!=32 or any(ch not in "0123456789abcdef" for ch in fp):
+            raise RuntimeError("ORDER_SHADOW_ROW_FINGERPRINT_INVALID")
+        source_md5.append(fp)
+    chain=hashlib.md5("\n".join(source_md5).encode("utf-8")).hexdigest()
+    if chain!=norm(integ.get("snapshot_md5")).lower():
+        raise RuntimeError("ORDER_SHADOW_FINGERPRINT_MISMATCH")
+
     groups=defaultdict(list)
     weak_rows=[]
     dataset_counts=defaultdict(int)
@@ -214,6 +224,7 @@ def main():
             "snapshot_md5":integ.get("snapshot_md5"),
             "total_live_rows":int(integ.get("total_live_rows",-1)),
             "postgres_jsonb_text_verified":integ.get("postgres_jsonb_text_verified") is True,
+            "row_md5_chain_verified":True,
         },
         "observed":{
             "rows":len(rows),
