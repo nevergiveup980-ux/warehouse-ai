@@ -17,6 +17,14 @@ for (const x of [
   'ORDER_NO_STATE_CHANGE',
   'ORDER_SOURCE_EVIDENCE_APPEND_ONLY',
   'ORDER_RECORD_DELETE_FORBIDDEN_USE_ARCHIVE',
+  'order_exception_case',
+  'order_exception_decision',
+  'order_exception_queue',
+  'resolve_order_exception_create_order',
+  'ORDER_EXCEPTION_RESOLVE',
+  'ORDER_EXCEPTION_RESOLVED',
+  'ORDER_EXCEPTION_REVIEW_ROLE_REQUIRED',
+  'ORDER_EXCEPTION_DECISION_APPEND_ONLY',
   'STALE_VERSION'
 ]) assert.ok(s.includes(x),x);
 
