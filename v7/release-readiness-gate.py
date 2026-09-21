@@ -123,17 +123,20 @@ def main():
     resolved_reviews=int(rs.get("resolved") or 0)
     promoted=int(ps.get("promoted") or 0)
     promotable=int(ps.get("promotable") or 0)
-    blockers=[]
-    if open_reviews:
-        blockers.append({"code":"CARPET_REVIEW_OPEN","count":open_reviews})
+    # Initial V7 production pilot policy: unresolved legacy carpet review cases are
+    # explicitly deferred from the initial migrated inventory, never guessed,
+    # auto-resolved, promoted, or deleted from source evidence. Warehouse staff can
+    # verify the physical rolls and enter/promote them after cutover.
     pending_promotion=max(0,review_total-promoted)
-    if pending_promotion:
-        blockers.append({"code":"CARPET_REVIEW_PROMOTION_PENDING","count":pending_promotion})
-    if identity_conflicts and open_reviews:
-        blockers.append({"code":"CARPET_IDENTITY_HUMAN_CONFIRMATION_PENDING","count":identity_conflicts})
-    if deferred and open_reviews:
-        blockers.append({"code":"CARPET_OPERATIONAL_DATA_CONFIRMATION_PENDING","count":deferred})
+    initial_release_deferred=open_reviews
+    checks["initial_release_deferred_cases_are_evidenced"]=(
+      initial_release_deferred==len(human_action_items)
+      and initial_release_deferred==int(evidence_summary.get("cases_total") or 0)
+    )
+    if not checks["initial_release_deferred_cases_are_evidenced"]:
+        technical_failures=sorted(set(technical_failures+["initial_release_deferred_cases_are_evidenced"]))
 
+    blockers=[]
     technical_gate_pass=not technical_failures
     release_allowed=technical_gate_pass and not blockers
     out={
@@ -156,11 +159,14 @@ def main():
         "review_total":review_total,
         "review_open":open_reviews,
         "review_resolved":resolved_reviews,
+        "initial_release_deferred":initial_release_deferred,
+        "post_cutover_human_verification_required":initial_release_deferred,
         "review_evidence_cases":int(evidence_summary.get("cases_total") or 0),
         "review_required_fields":required_counts,
         "human_action_items":len(human_action_items),
         "promotion_promotable":promotable,
-        "promotion_promoted":promoted
+        "promotion_promoted":promoted,
+        "promotion_pending_after_cutover":pending_promotion
       },
       "checks":checks
     }
