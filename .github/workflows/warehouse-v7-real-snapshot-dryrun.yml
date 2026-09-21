@@ -1,0 +1,601 @@
+name: Warehouse V7 Real Snapshot Dry Run
+on:
+  workflow_dispatch:
+    inputs:
+      expected_snapshot_md5:
+        description: Optional approved V6 snapshot MD5 lock for controlled-cutover preflight
+        required: false
+        type: string
+  push:
+    branches: [warehouse-v7-foundation]
+    paths:
+      - 'v7/**'
+      - 'tests/v7-db/**'
+      - '.github/workflows/warehouse-v7-real-snapshot-dryrun.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: warehouse-v7-real-snapshot-dryrun-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-snapshot-dry-run:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+      SNAPSHOT_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-snapshot-bridge
+      EXPECTED_SNAPSHOT_MD5: ${{ github.event.inputs.expected_snapshot_md5 || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch production V6 snapshot through GitHub OIDC bridge
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Accept: application/json"             "$SNAPSHOT_URL"             -o /tmp/v7-real-snapshot-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-real-snapshot-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          json.dump(rows,open('/tmp/v7-real-snapshot.json','w'),separators=(',',':'))
+          json.dump(integ,open('/tmp/v7-real-source-integrity.json','w'),indent=2)
+          print('secure snapshot received:',len(rows))
+          print('source start fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Audit company-owned carpet roll numbers
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-roll-number-audit.py /tmp/v7-real-snapshot.json \
+            --report /tmp/v7-carpet-roll-number-audit.json
+
+      - name: Upload company roll-number audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-company-carpet-roll-number-audit
+          path: /tmp/v7-carpet-roll-number-audit.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Reconcile carpet identity V2 from company roll numbers
+        run: |
+          set -euo pipefail
+          node v7/carpet-identity-v2-cli.mjs /tmp/v7-real-snapshot.json \
+            --report /tmp/v7-carpet-identity-v2-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-carpet-identity-v2-report.json'))
+          assert r['mode']=='V7_CARPET_IDENTITY_V2_REHEARSAL'
+          assert r['production_writes']==0
+          assert r['identity_contract']['manufacturer_roll_role']=='reference_only'
+          assert r['identity_contract']['source_roll_role']=='lineage_reference_only'
+          print('carpet identity V2 accepted physical instances:',r['counts']['accepted_physical_instances'])
+          print('carpet identity V2 conflicts:',r['counts']['conflict_groups'])
+          PY
+
+      - name: Audit future Cloud Carpet Record Contract V2
+        run: |
+          set -euo pipefail
+          node v7/cloud-carpet-record-contract-v2-cli.mjs /tmp/v7-real-snapshot.json \
+            --identity-report /tmp/v7-carpet-identity-v2-report.json \
+            --report /tmp/v7-cloud-carpet-record-contract-v2-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-cloud-carpet-record-contract-v2-report.json'))
+          assert r['mode']=='V7_CLOUD_CARPET_RECORD_CONTRACT_V2_AUDIT'
+          assert r['production_writes']==0
+          assert r['contract']['manufacturer_roll_role']=='reference_only'
+          assert r['contract']['source_roll_role']=='lineage_reference_only'
+          assert r['identity_v2_reconciliation_pass'] is True
+          print('cloud contract V2 projected physical instances:',r['counts']['accepted_physical_instances'])
+          print('cloud contract V2 conflict groups:',r['counts']['conflict_groups'])
+          PY
+
+      - name: Build and verify real migration manifest
+        id: manifest
+        run: |
+          set -euo pipefail
+          node v7/snapshot-manifest-cli.mjs /tmp/v7-real-snapshot.json > /tmp/v7-real-manifest.json
+          python3 - <<'PY'
+          import json,os
+          m=json.load(open('/tmp/v7-real-manifest.json'))
+          edge=json.load(open('/tmp/v7-real-source-integrity.json'))
+          got=m['source_integrity']
+          assert got['snapshot_md5']==edge['snapshot_md5']
+          assert got['total_live_rows']==edge['total_live_rows']
+          edge_ds={x['dataset_key']:x for x in edge['datasets']}
+          for k,v in got['datasets'].items():
+              assert int(v['live_rows'])==int(edge_ds[k]['live_rows'])
+              assert v['content_md5']==edge_ds[k]['content_md5']
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('snapshot_md5='+got['snapshot_md5']+'\n')
+          print('source fingerprint verified:',got['snapshot_md5'])
+          print('classification summary:',json.dumps(m['summary'],sort_keys=True))
+          PY
+
+
+      - name: Fetch sanitized V6 CUT shadow feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=cut-shadow" \
+            -o /tmp/v7-cut-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-cut-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_CUT_SHADOW'
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('sanitized CUT shadow rows:',len(rows))
+          print('CUT shadow source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+
+      - name: Fetch sanitized V6 RECEIVE shadow feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=receive-shadow" \
+            -o /tmp/v7-receive-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-receive-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_RECEIVE_SHADOW'
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('sanitized RECEIVE shadow rows:',len(rows))
+          print('RECEIVE shadow source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+
+      - name: Fetch sanitized V6 operation shadow feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=operation-shadow" \
+            -o /tmp/v7-operation-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-operation-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_OPERATION_SHADOW'
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('sanitized operation shadow rows:',len(rows))
+          print('operation shadow source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Fetch sanitized V6 ORDER shadow feed
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=order-shadow" \
+            -o /tmp/v7-order-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-order-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_ORDER_SHADOW'
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('sanitized ORDER shadow rows:',len(rows))
+          print('ORDER shadow source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Install disposable V7 database
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/inventory-command-center-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-review-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-review-promotion-gate-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/supplier-return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
+
+
+      - name: Replay real V6 CUT history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/cut-shadow-replay.py /tmp/v7-cut-shadow-envelope.json \
+            --report /tmp/v7-cut-shadow-report.json \
+            --tenant 77777777-7777-4777-8777-777777777777 \
+            --actor 88888888-8888-4888-8888-888888888888
+
+
+      - name: Replay real V6 RECEIVE history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/receive-shadow-replay.py /tmp/v7-receive-shadow-envelope.json \
+            --report /tmp/v7-receive-shadow-report.json \
+            --tenant 99999999-9999-4999-8999-999999999999 \
+            --actor aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+
+
+      - name: Replay real V6 SHIPPING history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/shipping-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-shipping-shadow-report.json \
+            --tenant bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb \
+            --actor cccccccc-cccc-4ccc-8ccc-cccccccccccc
+
+
+      - name: Replay real V6 TRANSFER history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/transfer-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-transfer-shadow-report.json \
+            --tenant dddddddd-dddd-4ddd-8ddd-dddddddddddd \
+            --actor eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+
+
+      - name: Replay real V6 RETURN history through V7 shadow engine
+        run: |
+          set -euo pipefail
+          python3 v7/return-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-return-shadow-report.json \
+            --tenant ffffffff-ffff-4fff-8fff-ffffffffffff \
+            --actor 11111111-2222-4333-8444-555555555555
+
+
+
+      - name: Audit real V6 ORDER identity, dedup, and lifecycle evidence
+        run: |
+          set -euo pipefail
+          python3 v7/order-source-audit.py /tmp/v7-order-shadow-envelope.json \
+            --report /tmp/v7-order-source-audit-report.json
+
+      - name: Replay real V6 SUPPLIER RETURN history through V7 shadow audit
+        run: |
+          set -euo pipefail
+          python3 v7/supplier-return-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-supplier-return-shadow-report.json \
+            --tenant 12121212-1212-4212-8212-121212121212 \
+            --actor 34343434-3434-4434-8434-343434343434
+
+      - name: Replay real V6 CARPET transfer and return history through V7 shadow engines
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-lifecycle-shadow-replay.py /tmp/v7-operation-shadow-envelope.json \
+            --report /tmp/v7-carpet-lifecycle-shadow-report.json \
+            --tenant 22222222-3333-4444-8555-666666666666 \
+            --actor 77777777-8888-4999-8aaa-bbbbbbbbbbbb \
+            --expected-transfer-count 4 \
+            --expected-return-count 4
+
+      - name: Run real V6 snapshot through disposable V7 migration
+        run: |
+          set -euo pipefail
+          python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report-1.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
+
+      - name: Replay the same real snapshot against the same disposable V7 database
+        run: |
+          set -euo pipefail
+          python3 v7/dry-run-loader.py /tmp/v7-real-manifest.json             --report /tmp/v7-real-dry-run-report-2.json             --expected-source-md5 "${{ steps.manifest.outputs.snapshot_md5 }}"             --tenant 33333333-3333-4333-8333-333333333333             --actor 44444444-4444-4444-8444-444444444444
+
+      - name: Verify real dry-run acceptance and replay gates
+        run: |
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-real-dry-run-report-1.json'))
+          b=json.load(open('/tmp/v7-real-dry-run-report-2.json'))
+          for r in (a,b):
+              assert r['mode']=='DISPOSABLE_POSTGRES_DRY_RUN'
+              assert r['production_writes']==0
+              assert r['source_integrity']['postgres_jsonb_text_verified'] is True
+              assert r['reconciliation']['pass'] is True
+              assert r['reconciliation']['actual']['invalid_with_canonical_link']==0
+          assert a['source_integrity']['snapshot_md5']==b['source_integrity']['snapshot_md5']
+          assert a['manifest_summary']==b['manifest_summary']
+          assert a['reconciliation']['expected']==b['reconciliation']['expected']
+          assert a['reconciliation']['actual']==b['reconciliation']['actual']
+          assert a['reconciliation']['checks']==b['reconciliation']['checks']
+          print('REAL V6 -> disposable V7 reconciliation + replay: PASS')
+          print(json.dumps({
+            'source_integrity':a['source_integrity'],
+            'manifest_summary':a['manifest_summary'],
+            'reconciliation':a['reconciliation']
+          },indent=2))
+          PY
+
+      - name: Rehearse operational Carpet Identity V2 in isolated disposable tenant
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-operational-v2-rehearsal.py \
+            /tmp/v7-real-snapshot.json /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 78787878-7878-4787-8787-787878787878 \
+            --actor 89898989-8989-4898-8989-898989898989 \
+            --report /tmp/v7-carpet-operational-v2-rehearsal-1.json
+
+      - name: Replay operational Carpet Identity V2 rehearsal
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-operational-v2-rehearsal.py \
+            /tmp/v7-real-snapshot.json /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 78787878-7878-4787-8787-787878787878 \
+            --actor 89898989-8989-4898-8989-898989898989 \
+            --report /tmp/v7-carpet-operational-v2-rehearsal-2.json
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-carpet-operational-v2-rehearsal-1.json'))
+          b=json.load(open('/tmp/v7-carpet-operational-v2-rehearsal-2.json'))
+          for r in (a,b):
+              assert r['mode']=='V7_CARPET_IDENTITY_V2_OPERATIONAL_REHEARSAL'
+              assert r['production_writes']==0
+              assert r['database']=='warehouse_v7_test'
+              assert r['pass'] is True
+              assert r['ordinary_duplicate_roll_groups']==0
+          assert a['fingerprint']==b['fingerprint']
+          assert a['readiness']==b['readiness']
+          assert a['after']==b['after']
+          assert b['new_rows']=={'products':0,'locations':0,'carpet_rolls':0,'commands':0,'movements':0,'events':0}
+          print('CARPET V2 OPERATIONAL REPLAY + IDEMPOTENCY: PASS')
+          print(json.dumps({'readiness':a['readiness'],'after':a['after'],'shared':a['shared_roll_instances']},indent=2))
+          PY
+
+      - name: Build Carpet Review evidence pack from sanitized history
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-review-evidence.py \
+            /tmp/v7-real-snapshot.json \
+            /tmp/v7-cut-shadow-envelope.json \
+            /tmp/v7-operation-shadow-envelope.json \
+            /tmp/v7-carpet-identity-v2-report.json \
+            /tmp/v7-carpet-operational-v2-rehearsal-1.json \
+            --report /tmp/v7-carpet-review-evidence-report.json
+
+      - name: Stage Carpet Identity V2 for read-only Inventory Command Center
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-identity-v2-stage.py /tmp/v7-carpet-identity-v2-report.json \
+            --tenant 33333333-3333-4333-8333-333333333333 \
+            --actor 44444444-4444-4444-8444-444444444444 \
+            --report /tmp/v7-carpet-identity-v2-stage-report.json
+
+      - name: Stage Carpet Review Queue from operational deferrals
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-review-queue-stage.py \
+            /tmp/v7-carpet-identity-v2-report.json \
+            /tmp/v7-carpet-operational-v2-rehearsal-1.json \
+            --tenant 33333333-3333-4333-8333-333333333333 \
+            --actor 44444444-4444-4444-8444-444444444444 \
+            --report /tmp/v7-carpet-review-queue-stage-report.json
+
+      - name: Stage Carpet Review evidence into disposable workbench
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-review-evidence-stage.py \
+            /tmp/v7-carpet-review-evidence-report.json \
+            --tenant 33333333-3333-4333-8333-333333333333 \
+            --actor 44444444-4444-4444-8444-444444444444 \
+            --report /tmp/v7-carpet-review-evidence-stage-report.json
+
+      - name: Verify real Carpet Review Workbench
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-review-workbench-verify.py \
+            /tmp/v7-carpet-review-queue-stage-report.json \
+            --tenant 33333333-3333-4333-8333-333333333333 \
+            --actor 44444444-4444-4444-8444-444444444444 \
+            --report /tmp/v7-carpet-review-workbench-report.json
+
+      - name: Verify real Carpet Review Promotion Gate stays closed
+        run: |
+          set -euo pipefail
+          python3 v7/carpet-review-promotion-gate-verify.py \
+            /tmp/v7-carpet-review-workbench-report.json \
+            --tenant 33333333-3333-4333-8333-333333333333 \
+            --actor 44444444-4444-4444-8444-444444444444 \
+            --report /tmp/v7-carpet-review-promotion-gate-report.json
+
+      - name: Exercise real Carpet Review Workbench on disposable localhost PostgreSQL
+        env:
+          RUNLU_V7_TENANT: 33333333-3333-4333-8333-333333333333
+          RUNLU_V7_ACTOR: 44444444-4444-4444-8444-444444444444
+          RUNLU_V7_INVENTORY_PORT: 8789
+        run: |
+          set -euo pipefail
+          node v7/inventory-command-center-local-server.mjs > /tmp/v7-carpet-review-real-http-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8789/healthz >/dev/null; then break; fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then cat /tmp/v7-carpet-review-real-http-server.log; exit 1; fi
+            sleep 0.25
+          done
+          python3 v7/carpet-review-workbench-http-e2e.py \
+            --base-url http://127.0.0.1:8789 \
+            --mode real \
+            --review-report /tmp/v7-carpet-review-queue-stage-report.json \
+            --report /tmp/v7-carpet-review-real-http-e2e.json
+          cat /tmp/v7-carpet-review-real-http-server.log
+
+      - name: Exercise real Inventory Command Center on disposable localhost PostgreSQL
+        env:
+          RUNLU_V7_TENANT: 33333333-3333-4333-8333-333333333333
+          RUNLU_V7_ACTOR: 44444444-4444-4444-8444-444444444444
+          RUNLU_V7_INVENTORY_PORT: 8788
+        run: |
+          set -euo pipefail
+          node v7/inventory-command-center-local-server.mjs > /tmp/v7-inventory-command-center-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8788/healthz >/dev/null; then break; fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then cat /tmp/v7-inventory-command-center-server.log; exit 1; fi
+            sleep 0.25
+          done
+          curl -fsS http://127.0.0.1:8788/healthz
+          python3 v7/inventory-command-center-local-e2e.py \
+            --base-url http://127.0.0.1:8788 \
+            --identity-report /tmp/v7-carpet-identity-v2-report.json \
+            --operational-report /tmp/v7-carpet-operational-v2-rehearsal-1.json \
+            --report /tmp/v7-inventory-command-center-http-e2e-report.json
+          cat /tmp/v7-inventory-command-center-server.log
+
+      - name: Build V7 engineering release-readiness verdict
+        run: |
+          set -euo pipefail
+          python3 v7/release-readiness-gate.py \
+            --dry-run-1 /tmp/v7-real-dry-run-report-1.json \
+            --dry-run-2 /tmp/v7-real-dry-run-report-2.json \
+            --identity /tmp/v7-carpet-identity-v2-report.json \
+            --operational /tmp/v7-carpet-operational-v2-rehearsal-1.json \
+            --review /tmp/v7-carpet-review-workbench-report.json \
+            --review-evidence /tmp/v7-carpet-review-evidence-report.json \
+            --promotion /tmp/v7-carpet-review-promotion-gate-report.json \
+            --inventory-http /tmp/v7-inventory-command-center-http-e2e-report.json \
+            --review-http /tmp/v7-carpet-review-real-http-e2e.json \
+            --cut-shadow /tmp/v7-cut-shadow-report.json \
+            --receive-shadow /tmp/v7-receive-shadow-report.json \
+            --shipping-shadow /tmp/v7-shipping-shadow-report.json \
+            --transfer-shadow /tmp/v7-transfer-shadow-report.json \
+            --return-shadow /tmp/v7-return-shadow-report.json \
+            --supplier-return-shadow /tmp/v7-supplier-return-shadow-report.json \
+            --carpet-lifecycle-shadow /tmp/v7-carpet-lifecycle-shadow-report.json \
+            --order-audit /tmp/v7-order-source-audit-report.json \
+            --report /tmp/v7-release-readiness-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-release-readiness-report.json'))
+          assert r['production_writes']==0
+          assert r['technical_gate_pass'] is True
+          print('release verdict:',r['verdict'])
+          print('release blockers:',json.dumps(r['release_blockers']))
+          PY
+
+      - name: Capture V6 source again for cutover drift detection
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preflight]')
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3             -H "Authorization: Bearer $OIDC_TOKEN"             -H "Accept: application/json"             "$SNAPSHOT_URL"             -o /tmp/v7-preflight-end-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-preflight-end-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert isinstance(rows,list) and rows
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          json.dump(integ,open('/tmp/v7-preflight-end-integrity.json','w'),indent=2)
+          print('source end fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Evaluate controlled-cutover automatic stop conditions
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preflight]')
+        run: |
+          set -euo pipefail
+          python3 v7/cutover-preflight.py             --start-integrity /tmp/v7-real-source-integrity.json             --end-integrity /tmp/v7-preflight-end-integrity.json             --dry-run-1 /tmp/v7-real-dry-run-report-1.json             --dry-run-2 /tmp/v7-real-dry-run-report-2.json             --release-readiness /tmp/v7-release-readiness-report.json             --report /tmp/v7-controlled-cutover-preflight-report.json             --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5"
+
+      - name: Upload sanitized real dry-run and preflight reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-real-snapshot-dry-run-replay-report
+          path: |
+            /tmp/v7-real-dry-run-report-1.json
+            /tmp/v7-real-dry-run-report-2.json
+            /tmp/v7-controlled-cutover-preflight-report.json
+            /tmp/v7-cut-shadow-report.json
+            /tmp/v7-receive-shadow-report.json
+            /tmp/v7-shipping-shadow-report.json
+            /tmp/v7-transfer-shadow-report.json
+            /tmp/v7-return-shadow-report.json
+            /tmp/v7-supplier-return-shadow-report.json
+            /tmp/v7-order-source-audit-report.json
+            /tmp/v7-carpet-lifecycle-shadow-report.json
+            /tmp/v7-carpet-roll-number-audit.json
+            /tmp/v7-carpet-identity-v2-report.json
+            /tmp/v7-cloud-carpet-record-contract-v2-report.json
+            /tmp/v7-carpet-identity-v2-stage-report.json
+            /tmp/v7-carpet-operational-v2-rehearsal-1.json
+            /tmp/v7-carpet-operational-v2-rehearsal-2.json
+            /tmp/v7-carpet-review-queue-stage-report.json
+            /tmp/v7-carpet-review-evidence-report.json
+            /tmp/v7-carpet-review-evidence-stage-report.json
+            /tmp/v7-carpet-review-workbench-report.json
+            /tmp/v7-carpet-review-promotion-gate-report.json
+            /tmp/v7-carpet-review-real-http-e2e.json
+            /tmp/v7-carpet-review-real-http-server.log
+            /tmp/v7-inventory-command-center-http-e2e-report.json
+            /tmp/v7-release-readiness-report.json
+            /tmp/v7-inventory-command-center-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Destroy transient warehouse snapshot files
+        if: always()
+        run: |
+          rm -f             /tmp/v7-real-snapshot-envelope.json             /tmp/v7-real-snapshot.json             /tmp/v7-real-source-integrity.json             /tmp/v7-real-manifest.json             /tmp/v7-cut-shadow-envelope.json             /tmp/v7-cut-shadow-report.json             /tmp/v7-receive-shadow-envelope.json             /tmp/v7-receive-shadow-report.json             /tmp/v7-operation-shadow-envelope.json             /tmp/v7-shipping-shadow-report.json             /tmp/v7-transfer-shadow-report.json             /tmp/v7-return-shadow-report.json             /tmp/v7-supplier-return-shadow-report.json             /tmp/v7-order-shadow-envelope.json             /tmp/v7-order-source-audit-report.json             /tmp/v7-carpet-lifecycle-shadow-report.json             /tmp/v7-carpet-roll-number-audit.json             /tmp/v7-carpet-identity-v2-report.json             /tmp/v7-cloud-carpet-record-contract-v2-report.json             /tmp/v7-carpet-identity-v2-stage-report.json             /tmp/v7-carpet-operational-v2-rehearsal-1.json             /tmp/v7-carpet-operational-v2-rehearsal-2.json             /tmp/v7-carpet-review-queue-stage-report.json             /tmp/v7-carpet-review-evidence-report.json             /tmp/v7-carpet-review-evidence-stage-report.json             /tmp/v7-carpet-review-workbench-report.json             /tmp/v7-carpet-review-promotion-gate-report.json             /tmp/v7-carpet-review-real-http-e2e.json             /tmp/v7-carpet-review-real-http-server.log             /tmp/v7-inventory-command-center-http-e2e-report.json             /tmp/v7-release-readiness-report.json             /tmp/v7-inventory-command-center-server.log             /tmp/v7-real-dry-run-report-1.json             /tmp/v7-real-dry-run-report-2.json             /tmp/v7-preflight-end-envelope.json             /tmp/v7-preflight-end-integrity.json             /tmp/v7-controlled-cutover-preflight-report.json

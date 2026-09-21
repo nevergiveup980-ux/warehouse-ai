@@ -1,0 +1,11 @@
+import fs from'node:fs';import assert from'node:assert/strict';
+const s=fs.readFileSync('v7/cut-engine-1.0.sql','utf8');
+for(const x of ['for update','STALE_VERSION','INSUFFICIENT_ROLL_LENGTH','INVALID_CUT_LENGTH','CUT_CONSUME',"'CUT'","version=version+1"])assert.ok(s.toLowerCase().includes(x.toLowerCase()));
+assert.match(s,/if c\.status='committed' then return c\.result/);
+assert.match(s,/new_remaining:=r\.remaining_sixteenths-p_deduct_sixteenths/);
+assert.match(s,/p_deduct_sixteenths>r\.remaining_sixteenths/);
+assert.equal((s.match(/update warehouse_v7\.carpet_roll/g)||[]).length,1);
+assert.equal((s.match(/insert into warehouse_v7\.inventory_movement/g)||[]).length,1);
+assert.equal((s.match(/insert into warehouse_v7\.event/g)||[]).length,1);
+assert.doesNotMatch(s,/localStorage|global_pause|cloud_master/i);
+console.log('V7 CUT Engine 1.0 static attack contract: PASS');

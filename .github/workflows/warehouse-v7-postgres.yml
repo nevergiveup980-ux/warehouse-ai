@@ -1,0 +1,171 @@
+name: Warehouse V7 Disposable Postgres
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [warehouse-v7-foundation]
+    paths: ['v7/**','tests/v7-db/**','.github/workflows/warehouse-v7-postgres.yml']
+  workflow_dispatch:
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install V7 database
+        run: |
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/migration-staging-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/inventory-command-center-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-review-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-review-promotion-gate-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/supplier-return-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-exception-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-execution-bridge-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-execution-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-binding-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/orders-command-center-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-transfer-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-return-engine-1.0.sql
+      - name: Migration quarantine attack
+        run: python3 tests/v7-db/migration_staging_attack.py
+      - name: Migration classification isolation attack
+        run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/migration_classification_attack.sql
+      - name: Migration source evidence immutability attack
+        run: python3 tests/v7-db/migration_source_immutability.py
+      - name: Derived Carpet Product staging attack
+        run: python3 tests/v7-db/migration_derived_carpet_product.py
+      - name: Valid-only Product import attack
+        run: python3 tests/v7-db/migration_valid_product_import.py
+      - name: Valid-only Location import attack
+        run: python3 tests/v7-db/migration_valid_location_import.py
+      - name: Valid-only Stock Item import attack
+        run: python3 tests/v7-db/migration_valid_stock_import.py
+      - name: Valid-only Carpet Roll import attack
+        run: python3 tests/v7-db/migration_valid_carpet_import.py
+      - name: Disposable snapshot dry-run loader
+        run: |
+          node v7/snapshot-manifest-cli.mjs tests/v7-db/fixtures/snapshot-small.json > /tmp/v7-manifest.json
+          python3 v7/dry-run-loader.py /tmp/v7-manifest.json --report /tmp/v7-dry-run-1.json --tenant 11111111-1111-4111-8111-111111111111 --actor 22222222-2222-4222-8222-222222222222
+          python3 v7/dry-run-loader.py /tmp/v7-manifest.json --report /tmp/v7-dry-run-2.json --tenant 11111111-1111-4111-8111-111111111111 --actor 22222222-2222-4222-8222-222222222222
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-dry-run-1.json'))
+          b=json.load(open('/tmp/v7-dry-run-2.json'))
+          assert a['reconciliation']['pass'] and b['reconciliation']['pass']
+          assert a['reconciliation']['actual']==b['reconciliation']['actual']
+          print('V7 disposable snapshot dry-run + replay: PASS')
+          PY
+      - name: Upload dry-run reconciliation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-disposable-dry-run-report
+          path: |
+            /tmp/v7-manifest.json
+            /tmp/v7-dry-run-1.json
+            /tmp/v7-dry-run-2.json
+          retention-days: 7
+      - name: RECEIVE create/update event-version regression
+        run: python3 tests/v7-db/receiving_event_version.py
+      - name: Quantity-aware stock transfer regression
+        run: python3 tests/v7-db/transfer_quantity_regression.py
+      - name: Supplier return regression
+        run: python3 tests/v7-db/supplier_return_regression.py
+      - name: Order lifecycle regression
+        run: python3 tests/v7-db/order_lifecycle_regression.py
+      - name: Order cross-tenant RLS attack
+        run: python3 tests/v7-db/order_cross_tenant_rls.py
+      - name: Order evidence immutability attack
+        run: python3 tests/v7-db/order_evidence_immutability.py
+      - name: Order exception resolution regression
+        run: python3 tests/v7-db/order_exception_resolution.py
+      - name: Order exception workbench regression
+        run: python3 tests/v7-db/order_exception_workbench.py
+      - name: Order execution bridge regression
+        run: python3 tests/v7-db/order_execution_bridge.py
+      - name: Order execution workbench regression
+        run: python3 tests/v7-db/order_execution_workbench.py
+      - name: Order binding workbench regression
+        run: python3 tests/v7-db/order_binding_workbench.py
+      - name: Orders command center regression
+        run: python3 tests/v7-db/orders_command_center.py
+      - name: Inventory command center regression
+        run: python3 tests/v7-db/inventory_command_center.py
+      - name: Carpet review workbench regression
+        run: python3 tests/v7-db/carpet_review_workbench.py
+      - name: Carpet review promotion gate regression
+        run: python3 tests/v7-db/carpet_review_promotion_gate.py
+      - name: Carpet review workbench localhost HTTP E2E
+        env:
+          RUNLU_V7_TENANT: 57575757-5757-4757-8757-575757575757
+          RUNLU_V7_ACTOR: 68686868-6868-4868-8868-686868686868
+          RUNLU_V7_INVENTORY_PORT: 8788
+        run: |
+          set -euo pipefail
+          node v7/inventory-command-center-local-server.mjs > /tmp/v7-carpet-review-http-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8788/healthz >/dev/null; then break; fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then cat /tmp/v7-carpet-review-http-server.log; exit 1; fi
+            sleep 0.25
+          done
+          python3 v7/carpet-review-workbench-http-e2e.py \
+            --base-url http://127.0.0.1:8788 \
+            --mode synthetic \
+            --report /tmp/v7-carpet-review-http-e2e.json
+          cat /tmp/v7-carpet-review-http-server.log
+
+      - name: Carpet transfer return lifecycle regression
+        run: python3 tests/v7-db/carpet_transfer_return_regression.py
+      - name: Database smoke and integrity tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/smoke.sql
+      - name: Same UUID real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_uuid.py
+      - name: Same stock version real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_stock.py
+      - name: Same roll version real concurrency attack
+        run: python3 tests/v7-db/concurrency_same_roll.py
+      - name: Concurrent over-return attack
+        run: python3 tests/v7-db/concurrency_over_return.py
+      - name: Append-only ledger attack
+        run: python3 tests/v7-db/append_only_ledger.py
+      - name: Movement causal uniqueness attack
+        run: python3 tests/v7-db/movement_causal_uniqueness.py
+      - name: Cross-tenant RLS attack
+        run: python3 tests/v7-db/cross_tenant_rls.py
+      - name: Cross-tenant WRITE attack
+        run: python3 tests/v7-db/cross_tenant_write.py
+      - name: Command identity spoof attack
+        run: python3 tests/v7-db/command_identity_spoof.py
+      - name: Lifecycle auth pre-mutation attack
+        run: python3 tests/v7-db/lifecycle_auth_pre_mutation.py
+      - name: Admin role boundary attack
+        run: python3 tests/v7-db/admin_role_boundary.py

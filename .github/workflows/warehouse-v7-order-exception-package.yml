@@ -1,0 +1,67 @@
+name: Warehouse V7 Order Exception Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [warehouse-v7-foundation]
+    paths:
+      - 'v7/order-exception-workbench.html'
+      - 'v7/order-exception-workbench.js'
+      - 'v7/order-exception-workbench-adapter.js'
+      - 'v7/order-exception-api-client.js'
+      - 'v7/order-exception-engineering-auth.js'
+      - 'v7/order-exception-engineering-config.js'
+      - 'v7/order-exception-engineering-config.example.js'
+      - 'v7/order-exception-engineering-manifest.json'
+      - 'v7/ORDER_EXCEPTION_WORKBENCH_ENGINEERING.md'
+      - '.github/workflows/warehouse-v7-order-exception-package.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify engineering package contains no secrets or production activation
+        run: |
+          set -euo pipefail
+          FILES=(
+            v7/order-exception-workbench.html
+            v7/order-exception-workbench.js
+            v7/order-exception-workbench-adapter.js
+            v7/order-exception-api-client.js
+            v7/order-exception-engineering-auth.js
+            v7/order-exception-engineering-config.js
+            v7/order-exception-engineering-config.example.js
+            v7/order-exception-engineering-manifest.json
+            v7/ORDER_EXCEPTION_WORKBENCH_ENGINEERING.md
+          )
+          ! grep -Ei 'sb_secret_|service_role|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS' "${FILES[@]}"
+          ! grep -Ei 'password[[:space:]]*[:=][[:space:]]*["'"'"'][^<[:space:]]+' v7/order-exception-engineering-config.example.js
+          grep -q '<engineering-project-ref>' v7/order-exception-engineering-config.example.js
+          grep -q 'PRODUCTION_PROJECT_FORBIDDEN' v7/ORDER_EXCEPTION_WORKBENCH_ENGINEERING.md
+
+      - name: Build standalone engineering package
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/runlu-v7-order-exception-workbench
+          cp             v7/order-exception-workbench.html             v7/order-exception-workbench.js             v7/order-exception-workbench-adapter.js             v7/order-exception-api-client.js             v7/order-exception-engineering-auth.js             v7/order-exception-engineering-config.example.js             v7/order-exception-engineering-manifest.json             v7/ORDER_EXCEPTION_WORKBENCH_ENGINEERING.md             /tmp/runlu-v7-order-exception-workbench/
+          (
+            cd /tmp
+            zip -qr runlu-v7-order-exception-workbench-engineering.zip               runlu-v7-order-exception-workbench
+          )
+          sha256sum /tmp/runlu-v7-order-exception-workbench-engineering.zip             > /tmp/runlu-v7-order-exception-workbench-engineering.sha256
+
+      - name: Upload engineering workbench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: runlu-v7-order-exception-workbench-engineering
+          path: |
+            /tmp/runlu-v7-order-exception-workbench-engineering.zip
+            /tmp/runlu-v7-order-exception-workbench-engineering.sha256
+          if-no-files-found: error
+          retention-days: 14

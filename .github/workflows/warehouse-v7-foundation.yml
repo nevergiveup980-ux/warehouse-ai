@@ -1,0 +1,58 @@
+name: Warehouse V7 Foundation
+on:
+  push: {branches: [warehouse-v7-foundation]}
+  pull_request: {paths: ['v7/**','tests/v7-*.mjs','.github/workflows/warehouse-v7-foundation.yml']}
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node tests/v7-foundation-schema.mjs
+      - run: node tests/v7-architecture-contracts.mjs
+      - run: node tests/v7-schema-2.mjs
+      - run: node tests/v7-command-engine.mjs
+      - run: node tests/v7-cut-engine.mjs
+      - run: node tests/v7-receiving-engine.mjs
+      - run: node tests/v7-transfer-engine.mjs
+      - run: node tests/v7-shipping-engine.mjs
+      - run: node tests/v7-return-engine.mjs
+      - run: node tests/v7-supplier-return-engine.mjs
+      - run: node tests/v7-order-engine.mjs
+      - run: node tests/v7-order-execution-bridge.mjs
+      - run: node tests/v7-order-execution-workbench.mjs
+      - run: node tests/v7-order-binding-workbench.mjs
+      - run: node tests/v7-orders-command-center.mjs
+      - run: node tests/v7-order-source-audit.mjs
+      - run: node tests/v7-order-migration-rehearsal.mjs
+      - run: node tests/v7-order-exception-workbench.mjs
+      - run: node tests/v7-order-exception-api-edge.mjs
+      - run: node tests/v7-order-exception-api-client.mjs
+      - run: node tests/v7-order-exception-engineering-auth.mjs
+      - run: node tests/v7-order-exception-engineering-activation.mjs
+      - run: node tests/v7-order-exception-workbench-adapter.mjs
+      - run: node tests/v7-order-exception-real-evidence-rehearsal.mjs
+      - run: node tests/v7-order-exception-local-engineering.mjs
+      - run: node tests/v7-carpet-transfer-engine.mjs
+      - run: node tests/v7-carpet-return-engine.mjs
+      - run: node tests/v7-incremental-shadow-bridge.mjs
+      - run: node tests/v7-snapshot-bridge.mjs
+      - run: node tests/v7-core-lifecycle-attack.mjs
+      - run: node tests/v7-carpet-identity-v2.mjs
+      - run: node tests/v7-cloud-carpet-record-contract-v2.mjs
+      - run: node tests/v7-carpet-operational-v2-rehearsal.mjs
+      - run: node tests/v7-inventory-command-center.mjs
+      - run: node tests/v7-carpet-review-evidence.mjs
+      - run: node tests/v7-carpet-review-workbench.mjs
+      - run: node tests/v7-carpet-review-promotion-gate.mjs
+      - run: node tests/v7-carpet-review-workbench-ui.mjs
+      - run: node tests/v7-release-readiness-gate.mjs
+      - run: node tests/v7-cutover-preflight.mjs
+      - run: node tests/v7-snapshot-transformer.mjs
+      - run: node tests/v7-snapshot-envelope.mjs
+      - run: node tests/v7-inventory-alias-transformer.mjs
+      - run: node tests/v7-product-unit-policy.mjs
+      - name: Ensure V7 cannot touch V6 sync/cache architecture
+        run: |
+          ! grep -R --include="*.js" --include="*.ts" --include="*.sql" "runlu_cloud_master_offline_queue_v680\|warehouse_apply_mutation\|localStorage" v7

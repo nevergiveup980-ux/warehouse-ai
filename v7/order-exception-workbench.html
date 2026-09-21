@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RUNLU V7 — Order Exception Workbench</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17202a;background:#f3f5f7;--card:#fff;--line:#dfe4e8;--muted:#68737d;--accent:#17324d;--danger:#8f2d2d;--warn:#895c16}
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7}.shell{max-width:1180px;margin:auto;padding:18px}
+header{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;margin:8px 0 18px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;color:#607080}h1{margin:5px 0 3px;font-size:28px;line-height:1.05}.sub{color:var(--muted);font-size:14px}.mode-badge{padding:8px 10px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}.mode-badge.demo{background:#fff0cd;color:#6d4a00}.mode-badge.live{background:#ddf5e5;color:#155a2a}.mode-badge.offline{background:#e8ecef;color:#4d5861}
+.status-banner{border-radius:12px;padding:12px 14px;margin:0 0 14px;border:1px solid var(--line);background:#fff}.status-banner.warn{background:#fff8e8;border-color:#edd9a7}.status-banner.danger{background:#fff0f0;border-color:#efbcbc}.status-banner.success{background:#edf9f0;border-color:#b8dfc2}.auth-card{max-width:520px;margin:16px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}.auth-card h2{margin:0 0 5px}.auth-card .field{margin-top:10px}.auth-actions{display:flex;gap:8px;margin-top:12px}.header-actions{display:flex;align-items:center;gap:8px}.hidden{display:none!important}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}.metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px}.metric b{display:block;font-size:24px}.metric span{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0}.filters{display:flex;gap:7px;flex-wrap:wrap}.filters button,.ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;color:#34414c}.filters button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.case-card{appearance:none;text-align:left;background:var(--card);border:1px solid var(--line);border-left:4px solid #82909d;border-radius:15px;padding:15px;color:inherit;box-shadow:0 2px 8px rgba(20,35,50,.04)}.case-card.danger{border-left-color:#a23838}.case-card.warn{border-left-color:#b37b22}.case-card.soft{border-left-color:#56728c}.case-card:hover{transform:translateY(-1px);box-shadow:0 7px 20px rgba(20,35,50,.08)}.card-top,.card-foot,.order-meta{display:flex;justify-content:space-between;gap:8px}.reason-pill{font-size:11px;font-weight:800;letter-spacing:.02em}.evidence,.card-foot{font-size:11px;color:var(--muted)}.order-title{font-weight:800;font-size:17px;margin:14px 0 7px}.order-meta{font-size:12px;color:#4d5963;flex-wrap:wrap}.reason-summary{font-size:13px;color:#5c6872;line-height:1.4;min-height:38px;margin:12px 0}.card-foot{border-top:1px solid #edf0f2;padding-top:10px}.empty{grid-column:1/-1;background:#fff;border:1px dashed #cbd2d8;padding:36px;text-align:center;border-radius:14px;color:var(--muted)}
+.backdrop{position:fixed;inset:0;background:rgba(19,28,36,.32);z-index:20}.drawer{position:fixed;z-index:21;top:0;right:0;height:100%;width:min(620px,100%);background:#fff;transform:translateX(101%);transition:.2s ease;box-shadow:-14px 0 50px rgba(0,0,0,.14);display:flex;flex-direction:column}.drawer.open{transform:none}.drawer-head{padding:18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.drawer-head h2{margin:4px 0 5px}.drawer-body{padding:18px;overflow:auto}.reason-box{background:#f5f7f9;border-radius:12px;padding:13px;margin-bottom:15px}.reason-box p{margin:5px 0}.muted{color:var(--muted);font-size:13px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:800;color:#55616b;text-transform:uppercase;letter-spacing:.05em}.field input,.field select,.field textarea{width:100%;border:1px solid #cfd6dc;border-radius:10px;padding:10px;font:inherit;background:#fff}.field textarea{min-height:82px;resize:vertical}.section-title{font-size:13px;font-weight:850;margin:18px 0 8px}.required{margin:0;padding-left:19px;color:#4f5c66;font-size:13px}.evidence-row{border:1px solid var(--line);border-radius:11px;margin:8px 0;overflow:hidden}.evidence-row>div{padding:9px 10px;display:flex;justify-content:space-between;font-size:12px}.evidence-row pre{margin:0;background:#f7f8f9;padding:10px;font-size:11px;overflow:auto}.resolve-bar{position:sticky;bottom:-18px;margin:18px -18px -18px;padding:13px 18px;background:#fff;border-top:1px solid var(--line)}.primary{width:100%;border:0;border-radius:11px;padding:12px;font-weight:850;background:var(--accent);color:#fff}.primary:disabled{background:#b5bdc4}.resolve-hint{text-align:center;color:var(--muted);font-size:11px;margin-top:7px}
+@media(max-width:850px){.metrics{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.shell{padding:12px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}header{align-items:center}h1{font-size:23px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.drawer{width:100%}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div>
+    <div class="eyebrow">RUNLU WAREHOUSE OS · V7 WAVE 2</div>
+    <h1>Order Exception Workbench</h1>
+    <div class="sub">Resolve legacy order ambiguity without touching inventory.</div>
+  </div>
+  <div class="header-actions">
+    <a class="ghost" href="/orders-command-center.html" style="text-decoration:none">Command Center</a>
+    <a class="ghost" href="/order-binding-workbench.html" style="text-decoration:none">Binding</a>
+    <a class="ghost" href="/order-execution-workbench.html" style="text-decoration:none">Execution</a>
+    <span id="modeBadge" class="mode-badge offline">NOT CONNECTED</span>
+    <button id="signOutBtn" type="button" class="ghost hidden">Sign out</button>
+  </div>
+</header>
+
+<div id="statusBanner" class="status-banner" hidden></div>
+
+<section id="authCard" class="auth-card hidden" aria-label="Engineering sign in">
+  <div class="eyebrow">ISOLATED V7 ENGINEERING</div>
+  <h2>Administrator sign in</h2>
+  <div class="sub">Credentials are used only for the configured non-production Supabase project and are not stored by this page.</div>
+  <div class="field"><label>Email</label><input id="engineeringEmail" type="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+  <div class="field"><label>Password</label><input id="engineeringPassword" type="password" autocomplete="current-password"></div>
+  <div class="auth-actions"><button id="engineeringSignInBtn" type="button" class="primary">Sign in to engineering</button></div>
+</section>
+
+<section class="metrics" aria-label="Exception summary">
+  <div class="metric"><b id="totalCount">0</b><span>Open cases</span></div>
+  <div class="metric"><b id="statusCount">0</b><span>Missing status</span></div>
+  <div class="metric"><b id="conflictCount">0</b><span>Identity conflict</span></div>
+  <div class="metric"><b id="regressionCount">0</b><span>Lifecycle regression</span></div>
+  <div class="metric"><b id="weakCount">0</b><span>Weak identity</span></div>
+</section>
+
+<div class="toolbar">
+  <div id="filterBar" class="filters">
+    <button type="button" class="active" data-status="open">Open</button>
+    <button type="button" data-status="needs_review">Needs review</button>
+    <button type="button" data-status="resolved">Resolved</button>
+  </div>
+  <button id="refreshBtn" type="button" class="ghost">Refresh</button>
+</div>
+
+<main id="caseGrid" class="grid"></main>
+</div>
+
+<div id="drawerBackdrop" class="backdrop" hidden></div>
+<aside id="drawer" class="drawer" aria-label="Order exception case">
+  <div class="drawer-head">
+    <div>
+      <div class="eyebrow">EXCEPTION CASE <span id="drawerCaseVersion"></span></div>
+      <h2 id="drawerTitle">Review</h2>
+    </div>
+    <button id="closeDrawer" type="button" class="ghost">Close</button>
+  </div>
+  <div class="drawer-body">
+    <div class="reason-box">
+      <p id="drawerReason"></p>
+      <p id="drawerAction" class="muted"></p>
+      <p class="muted"><strong id="drawerEvidenceCount">0</strong> linked evidence rows</p>
+    </div>
+
+    <div class="section-title">Required confirmation</div>
+    <ul id="requiredList" class="required"></ul>
+
+    <div class="section-title">Canonical order</div>
+    <div class="form-grid">
+      <div class="field"><label>Order kind</label><select id="orderKind"><option>STANDARD</option><option>SPECIAL</option></select></div>
+      <div class="field"><label>Lifecycle</label><select id="lifecycle"><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="archived">Archived</option></select></div>
+      <div class="field"><label>Fulfillment</label><select id="fulfillment"><option value="unverified">Unverified</option><option value="pending">Pending</option><option value="received">Received</option><option value="backorder">Backorder</option><option value="ready_for_pickup">Ready for pickup</option><option value="picked_up">Picked up</option><option value="completed">Completed</option></select></div>
+      <div class="field"><label>Recovery key</label><input id="recoveryKey"></div>
+      <div class="field"><label>PO number</label><input id="poNumber"></div>
+      <div class="field"><label>SO number</label><input id="soNumber"></div>
+      <div class="field"><label>Customer</label><input id="customerLabel"></div>
+      <div class="field"><label>Product</label><input id="productLabel"></div>
+      <div class="field"><label>Location</label><input id="sourceLocation"></div>
+      <div class="field"><label>Quantity</label><input id="quantity" inputmode="decimal"></div>
+      <div class="field"><label>Unit</label><input id="unit"></div>
+      <div class="field full"><label>Resolution note</label><textarea id="resolutionNote" placeholder="Why is this the correct canonical order?"></textarea></div>
+    </div>
+
+    <div class="section-title">Source evidence</div>
+    <div id="evidenceList"></div>
+
+    <div class="resolve-bar">
+      <button id="resolveBtn" type="button" class="primary" disabled>Resolve & create canonical order</button>
+      <div id="resolveHint" class="resolve-hint">Owner/Admin role is required.</div>
+    </div>
+  </div>
+</aside>
+<script src="./order-exception-local-engineering-config.js"></script>
+<script src="./order-exception-local-api-client.js"></script>
+<script src="./order-exception-engineering-config.js"></script>
+<script src="./order-exception-workbench-adapter.js"></script>
+<script src="./order-exception-api-client.js"></script>
+<script src="./order-exception-engineering-auth.js"></script>
+<script src="./order-exception-workbench.js"></script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+name: Warehouse V7 Order Shadow
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  push:
+    branches: [warehouse-v7-foundation]
+    paths:
+      - 'v7/order-*'
+      - 'v7/orders-*'
+      - 'v7/snapshot-bridge.ts'
+      - 'tests/v7-order-*'
+      - 'tests/v7-orders-*'
+      - '.github/workflows/warehouse-v7-order-shadow.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: warehouse-v7-order-shadow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  order-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_v7_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d warehouse_v7_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SNAPSHOT_URL: https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-snapshot-bridge
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: warehouse_v7_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch full read-only V6 order lineage
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-snapshot")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
+          curl -fsS --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Accept: application/json" \
+            "$SNAPSHOT_URL?scope=order-shadow" \
+            -o /tmp/v7-order-shadow-envelope.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          env=json.load(open('/tmp/v7-order-shadow-envelope.json'))
+          rows=env.get('rows'); integ=env.get('source_integrity') or {}
+          assert env.get('mode')=='READ_ONLY_V6_ORDER_SHADOW'
+          assert isinstance(rows,list)
+          assert len(rows)==int(integ.get('total_live_rows',-1))
+          assert integ.get('algorithm')=='postgres-jsonb-row-md5-chain-v1'
+          assert integ.get('postgres_jsonb_text_verified') is True
+          print('ORDER shadow rows:',len(rows))
+          print('ORDER source fingerprint:',integ.get('snapshot_md5'))
+          PY
+
+      - name: Classify order identity, dedup, and lifecycle evidence
+        run: |
+          python3 v7/order-source-audit.py /tmp/v7-order-shadow-envelope.json --report /tmp/v7-order-source-audit-report.json
+
+      - name: Verify order shadow safety gate
+        run: |
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v7-order-source-audit-report.json'))
+          assert r.get('mode')=='V7_ORDER_SOURCE_AUDIT'
+          assert r.get('production_writes')==0
+          assert r.get('canonical_order_writes')==0
+          assert r.get('verdict')=='SHADOW_PASS'
+          assert not r.get('stop_reasons')
+          p=r.get('policy') or {}
+          assert p.get('notes_are_not_status_evidence') is True
+          assert p.get('conflicting_identity_groups_auto_import') is False
+          assert p.get('lifecycle_regressions_auto_import') is False
+          assert p.get('weak_identity_rows_auto_import') is False
+          print('V7 ORDER SHADOW SAFETY GATE: PASS')
+          PY
+
+      - name: Install disposable V7 order database
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f v7/schema-2.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/ledger-guards-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/tenant-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/command-auth-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-rls-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-exception-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-execution-bridge-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-execution-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/order-binding-workbench-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/orders-command-center-1.0.sql
+
+      - name: Rehearse strict V6 order migration
+        run: |
+          python3 v7/order-migration-rehearsal.py \
+            /tmp/v7-order-shadow-envelope.json \
+            --report /tmp/v7-order-migration-rehearsal-1.json \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --actor 56565656-5656-4565-8565-565656565656
+
+      - name: Replay identical order migration against same disposable database
+        run: |
+          python3 v7/order-migration-rehearsal.py \
+            /tmp/v7-order-shadow-envelope.json \
+            --report /tmp/v7-order-migration-rehearsal-2.json \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --actor 56565656-5656-4565-8565-565656565656
+
+      - name: Verify order migration reconciliation and replay
+        run: |
+          python3 - <<'PY'
+          import json
+          a=json.load(open('/tmp/v7-order-migration-rehearsal-1.json'))
+          b=json.load(open('/tmp/v7-order-migration-rehearsal-2.json'))
+          for r in (a,b):
+              assert r.get('mode')=='V7_ORDER_MIGRATION_REHEARSAL'
+              assert r.get('production_writes')==0
+              assert r.get('inventory_writes')==0
+              assert r.get('verdict')=='REHEARSAL_PASS'
+              assert not r.get('stop_reasons')
+          assert a['expected']==b['expected']
+          assert a['actual']==b['actual']
+          assert a['actual']['order_fingerprint']==b['actual']['order_fingerprint']
+          assert a['actual']['evidence_fingerprint']==b['actual']['evidence_fingerprint']
+          assert a['actual']['exception_fingerprint']==b['actual']['exception_fingerprint']
+          assert b['new_rows']['canonical_orders']==0
+          assert b['new_rows']['source_evidence']==0
+          assert b['new_rows']['exception_cases']==0
+          print('V7 ORDER MIGRATION RECONCILIATION + REPLAY: PASS')
+          PY
+
+      - name: Seed disposable execution UI fixture
+        env:
+          RUNLU_V7_TENANT: 45454545-4545-4454-8454-454545454545
+          RUNLU_V7_ACTOR: 56565656-5656-4565-8565-565656565656
+        run: python3 v7/order-execution-local-fixture.py
+
+      - name: Seed disposable binding UI fixture
+        env:
+          RUNLU_V7_TENANT: 45454545-4545-4454-8454-454545454545
+          RUNLU_V7_ACTOR: 56565656-5656-4565-8565-565656565656
+        run: python3 v7/order-binding-local-fixture.py
+
+      - name: Exercise Exception + Binding + Execution Workbenches on disposable localhost PostgreSQL
+        env:
+          RUNLU_V7_TENANT: 45454545-4545-4454-8454-454545454545
+          RUNLU_V7_ACTOR: 56565656-5656-4565-8565-565656565656
+        run: |
+          set -euo pipefail
+          node v7/order-exception-local-engineering-server.mjs > /tmp/v7-local-workbench-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8787/healthz >/dev/null; then break; fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then cat /tmp/v7-local-workbench-server.log; exit 1; fi
+            sleep 0.25
+          done
+          curl -fsS http://127.0.0.1:8787/healthz
+          python3 v7/order-exception-local-e2e.py \
+            --base-url http://127.0.0.1:8787 \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --report /tmp/v7-order-exception-local-http-e2e-report.json
+          python3 v7/order-execution-local-e2e.py \
+            --base-url http://127.0.0.1:8787 \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --report /tmp/v7-order-execution-local-http-e2e-report.json
+          python3 v7/order-binding-local-e2e.py \
+            --base-url http://127.0.0.1:8787 \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --report /tmp/v7-order-binding-local-http-e2e-report.json
+          python3 v7/orders-command-center-local-e2e.py \
+            --base-url http://127.0.0.1:8787 \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --report /tmp/v7-orders-command-center-local-http-e2e-report.json
+          cat /tmp/v7-local-workbench-server.log
+
+      - name: Rehearse one real-evidence exception resolution
+        run: |
+          python3 v7/order-exception-real-evidence-rehearsal.py \
+            --tenant 45454545-4545-4454-8454-454545454545 \
+            --actor 56565656-5656-4565-8565-565656565656 \
+            --report /tmp/v7-order-exception-real-evidence-report.json
+
+      - name: Upload sanitized order audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-order-shadow-audit-report
+          path: |
+            /tmp/v7-order-source-audit-report.json
+            /tmp/v7-order-migration-rehearsal-1.json
+            /tmp/v7-order-migration-rehearsal-2.json
+            /tmp/v7-order-exception-real-evidence-report.json
+            /tmp/v7-order-exception-local-http-e2e-report.json
+            /tmp/v7-order-execution-local-http-e2e-report.json
+            /tmp/v7-order-binding-local-http-e2e-report.json
+            /tmp/v7-orders-command-center-local-http-e2e-report.json
+            /tmp/v7-local-workbench-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Destroy transient order source
+        if: always()
+        run: |
+          rm -f \
+            /tmp/v7-order-shadow-envelope.json \
+            /tmp/v7-order-source-audit-report.json \
+            /tmp/v7-order-migration-rehearsal-1.json \
+            /tmp/v7-order-migration-rehearsal-2.json \
+            /tmp/v7-order-exception-real-evidence-report.json \
+            /tmp/v7-order-exception-local-http-e2e-report.json \
+            /tmp/v7-order-execution-local-http-e2e-report.json \
+            /tmp/v7-order-binding-local-http-e2e-report.json \
+            /tmp/v7-orders-command-center-local-http-e2e-report.json \
+            /tmp/v7-local-workbench-server.log
