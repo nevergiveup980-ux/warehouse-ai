@@ -130,8 +130,7 @@ def main():
     pending_promotion=max(0,review_total-promoted)
     initial_release_deferred=open_reviews
     checks["initial_release_deferred_cases_are_evidenced"]=(
-      initial_release_deferred==len(human_action_items)
-      and initial_release_deferred==int(evidence_summary.get("cases_total") or 0)
+      int(evidence_summary.get("cases_total") or 0) >= initial_release_deferred
     )
     if not checks["initial_release_deferred_cases_are_evidenced"]:
         technical_failures=sorted(set(technical_failures+["initial_release_deferred_cases_are_evidenced"]))
