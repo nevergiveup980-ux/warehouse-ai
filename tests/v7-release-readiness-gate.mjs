@@ -55,9 +55,11 @@ assert.equal(out.carpet.post_cutover_human_verification_required,14);
 assert.equal(out.carpet.promotion_pending_after_cutover,14);
 
 const readyReview={...review,summary:{total:14,open:0,resolved:14}};
+const readyEvidence={...evidence,summary:{...evidence.summary,cases_total:0,cases_with_confirmation_plan:0,required_field_counts:{}},cases:[]};
 const readyPromotion={...promotion,summary:{total:14,promoted:14,promotable:0}};
 const readyArgs=[...args];
 readyArgs[readyArgs.indexOf('--review')+1]=write('review-ready.json',readyReview);
+readyArgs[readyArgs.indexOf('--review-evidence')+1]=write('evidence-ready.json',readyEvidence);
 readyArgs[readyArgs.indexOf('--promotion')+1]=write('promotion-ready.json',readyPromotion);
 readyArgs[readyArgs.indexOf('--report')+1]=path.join(dir,'ready.json');
 const rr=spawnSync('python3',readyArgs,{encoding:'utf8'});
