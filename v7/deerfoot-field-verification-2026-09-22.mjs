@@ -34,6 +34,7 @@ export function deerfootFieldDecision(payload={}){
   if(rules.usedUpCompanyRolls.has(base)) return {kind:'used_up',companyRollNumber:base};
   if(base==='CHC023' && String(payload.location||'').trim().toUpperCase()==='7B') return {kind:'used_up',companyRollNumber:'CHC023',location:'7B'};
   if(rules.sharedCompanyRollNumbers.has(base)) return {kind:'shared_company_roll',companyRollNumber:base};
-  if(base.startsWith('RC')&&!rules.companyRollFormat.test(base)) return {kind:'invalid_rc_format',companyRollNumber:base};
+  // Only flag malformed numeric Deerfoot RC labels. Synthetic/test labels such as RC-A are outside this business rule.
+  if(/^RC\\d+$/.test(base)&&!rules.companyRollFormat.test(base)) return {kind:'invalid_rc_format',companyRollNumber:base};
   return rules.verified[base]?{kind:'verified',companyRollNumber:base,...rules.verified[base]}:null;
 }
