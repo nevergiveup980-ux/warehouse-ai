@@ -2,6 +2,10 @@ name: Warehouse V7 Real Snapshot Dry Run
 on:
   workflow_dispatch:
     inputs:
+      production_opening_import:
+        description: Type PRODUCTION_OPENING_IMPORT to execute locked production opening cutover
+        required: false
+        type: string
       expected_snapshot_md5:
         description: Optional approved V6 snapshot MD5 lock for controlled-cutover preflight
         required: false
@@ -558,6 +562,31 @@ jobs:
         run: |
           set -euo pipefail
           python3 v7/cutover-preflight.py             --start-integrity /tmp/v7-real-source-integrity.json             --end-integrity /tmp/v7-preflight-end-integrity.json             --dry-run-1 /tmp/v7-real-dry-run-report-1.json             --dry-run-2 /tmp/v7-real-dry-run-report-2.json             --release-readiness /tmp/v7-release-readiness-report.json             --report /tmp/v7-controlled-cutover-preflight-report.json             --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5"
+
+      - name: Execute locked production opening import
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.production_opening_import == 'PRODUCTION_OPENING_IMPORT' }}
+        env:
+          PRODUCTION_DB_URL: ${{ secrets.WAREHOUSE_V7_PRODUCTION_DB_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$PRODUCTION_DB_URL"
+          python3 v7/manifest-to-import-sql.py /tmp/v7-real-manifest.json --output /tmp/v7-production-opening.sql
+          python3 - <<'PY'
+          import os,urllib.parse as u
+          x=u.urlparse(os.environ["PRODUCTION_DB_URL"])
+          with open(os.environ["GITHUB_ENV"],"a") as f:
+            f.write("PGHOST="+(x.hostname or "")+"\n")
+            f.write("PGPORT="+str(x.port or 5432)+"\n")
+            f.write("PGDATABASE="+((x.path or "/postgres").lstrip("/"))+"\n")
+            f.write("PGUSER="+u.unquote(x.username or "postgres")+"\n")
+            f.write("PGPASSWORD="+u.unquote(x.password or "")+"\n")
+          PY
+          python3 v7/production-opening-import.py /tmp/v7-production-opening.sql \
+            --tenant e2d45722-186b-4b4f-af16-38709a0113ee \
+            --actor b360c5a0-1736-4e17-b82c-22ea720603c1 \
+            --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5" \
+            --expected-source-rows 787 \
+            --confirm PRODUCTION_OPENING_IMPORT
 
       - name: Upload sanitized real dry-run and preflight reports
         if: always()
