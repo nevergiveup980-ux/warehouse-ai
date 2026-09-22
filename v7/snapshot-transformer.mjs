@@ -263,7 +263,7 @@ export function classifySnapshot(rows){
 
     const p=members[0].p, source=members[0].source, loc=key(p.location), measure=key(p.measure).toUpperCase();
     const sourceProduct=derivedBySource.get(source);
-    const mv=carpetMeasureValidity(effective,measure);
+    const mv=carpetMeasureValidity(p,measure);
     let classification='valid',reason='CARPET_LEGACY_ALIAS_GROUP_READY';
     if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
     else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
