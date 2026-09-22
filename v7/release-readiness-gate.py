@@ -169,6 +169,12 @@ def main():
       },
       "checks":checks
     }
+    # Preserve the exact verified opening manifest inside the readiness artifact so
+    # production cutover can consume the same payload that passed both replays.
+    # This remains a zero-production-write rehearsal artifact.
+    manifest_path=Path("/tmp/v7-real-manifest.json")
+    if manifest_path.exists():
+        out["verified_opening_manifest"]=json.loads(manifest_path.read_text(encoding="utf-8"))
     Path(args.report).write_text(json.dumps(out,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     print(json.dumps(out,indent=2,ensure_ascii=False))
     if technical_failures:
