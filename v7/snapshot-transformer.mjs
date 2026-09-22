@@ -282,8 +282,8 @@ export function classifySnapshot(rows){
       },
       classification,reason,
       transformed:{
-        product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(effective.roll),
-        physical_key:physical,manufacturer_roll:key(effective.manufacturerRoll)||null,source_roll:key(effective.sourceRoll)||source||null,
+        product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(p.roll),
+        physical_key:physical,manufacturer_roll:key(p.manufacturerRoll)||null,source_roll:key(p.sourceRoll)||source||null,
         original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure
       }
     });
@@ -311,12 +311,12 @@ export function classifySnapshot(rows){
     else if(!physical){classification='deferred';reason='CARPET_PHYSICAL_IDENTITY_WEAK';}
     else if(group&&group.sigs.size>1){classification='conflict';reason='CARPET_PHYSICAL_STATE_DIVERGENCE';}
     else if(group&&group.n>1){classification='duplicate';reason='CARPET_PHYSICAL_REPLAY';}
-    const mv=carpetMeasureValidity(p,measure);
+    const mv=carpetMeasureValidity(effective,measure);
     if(classification==='valid'&&!mv.ok){classification='conflict';reason=mv.reason;}
     return {dataset:r.dataset_key,record_id:r.record_id,source_payload:p,classification,reason,
       derived_group_id:aliasGroup||null,
-      transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(p.roll),
-        physical_key:physical,manufacturer_roll:key(p.manufacturerRoll)||null,source_roll:key(p.sourceRoll)||source||null,
+      transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(effective.roll),
+        physical_key:physical,manufacturer_roll:key(effective.manufacturerRoll)||null,source_roll:key(effective.sourceRoll)||source||null,
         original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure}};
   });
 
