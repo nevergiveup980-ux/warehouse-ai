@@ -1,3 +1,4 @@
+import {deerfootFieldDecision} from './deerfoot-field-verification-2026-09-22.mjs';
 // Warehouse OS V7 read-only snapshot transformer.
 // Input: rows shaped like public.warehouse_records.
 // Output: migration manifest only. Never writes production.
@@ -229,7 +230,7 @@ export function classifySnapshot(rows){
   });
   const derivedBySource=new Map(derivedProducts.map(x=>[x.transformed.source_code,x]));
 
-  const active=carpets.filter(r=>(r.payload||{}).status==='Active').map(r=>({
+  const active=carpets.filter(r=>(r.payload||{}).status==='Active' && deerfootFieldDecision(r.payload||{})?.kind!=='used_up').map(r=>({
     r,p:r.payload||{},physical:carpetPhysicalKey(r.payload||{}),source:carpetSourceCode(r.payload||{})
   }));
   const physicalGroups=new Map();
@@ -262,7 +263,7 @@ export function classifySnapshot(rows){
 
     const p=members[0].p, source=members[0].source, loc=key(p.location), measure=key(p.measure).toUpperCase();
     const sourceProduct=derivedBySource.get(source);
-    const mv=carpetMeasureValidity(p,measure);
+    const mv=carpetMeasureValidity(effective,measure);
     let classification='valid',reason='CARPET_LEGACY_ALIAS_GROUP_READY';
     if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
     else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
@@ -281,8 +282,8 @@ export function classifySnapshot(rows){
       },
       classification,reason,
       transformed:{
-        product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(p.roll),
-        physical_key:physical,manufacturer_roll:key(p.manufacturerRoll)||null,source_roll:key(p.sourceRoll)||source||null,
+        product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(effective.roll),
+        physical_key:physical,manufacturer_roll:key(effective.manufacturerRoll)||null,source_roll:key(effective.sourceRoll)||source||null,
         original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure
       }
     });
@@ -290,11 +291,19 @@ export function classifySnapshot(rows){
   }
 
   const carpetManifest=carpets.map(r=>{
-    const p=r.payload||{}, source=carpetSourceCode(p), physical=carpetPhysicalKey(p), status=key(p.status), measure=key(p.measure).toUpperCase(), loc=key(p.location);
+    const p=r.payload||{}, field=deerfootFieldDecision(p);
+    const effective={...p};
+    if(field?.kind==='corrected_company_roll') effective.roll=field.to;
+    if(field?.location) effective.location=field.location;
+    if(field?.measure) effective.measure=field.measure;
+    if(Number.isFinite(field?.remainingFeet)) effective.length=field.remainingFeet;
+    const source=carpetSourceCode(effective), physical=carpetPhysicalKey(effective), status=key(effective.status), measure=key(effective.measure).toUpperCase(), loc=key(effective.location);
     const sourceProduct=derivedBySource.get(source), group=physical?physicalGroups.get(physical):null;
     const aliasGroup=safeReplayByRecord.get(String(r.record_id));
     let classification='valid',reason='CARPET_READY';
-    if(status!=='Active'){classification='deferred';reason='NON_ACTIVE_LEGACY_STATUS';}
+    if(field?.kind==='used_up'){classification='deferred';reason='FIELD_VERIFIED_USED_UP';}
+    else if(field?.kind==='invalid_rc_format'){classification='conflict';reason='INVALID_DEERFOOT_RC_FORMAT';}
+    else if(status!=='Active'){classification='deferred';reason='NON_ACTIVE_LEGACY_STATUS';}
     else if(aliasGroup){classification='duplicate';reason='CARPET_LEGACY_ALIAS_REPLAY';}
     else if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
     else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
