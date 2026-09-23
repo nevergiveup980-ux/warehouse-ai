@@ -59,4 +59,15 @@ assert.equal(alias.transformed.physical_key,'legacy_alias:LEGACY-900');
 assert.deepEqual(alias.source_payload.member_record_ids,['LEGACY-900','RC900']);
 assert.equal(m.carpet.find(x=>x.record_id==='RC900').reason,'CARPET_LEGACY_ALIAS_REPLAY');
 
+const sharedRows=[
+ R('runlu_carpet_inventory_v52','SH1',{status:'Active',sourceRoll:'CHC022',manufacturerRoll:'5292',roll:'CHC022-5292',collection:'Wrong Legacy Label',colour:'Wrong',location:'14D',length:'10',originalLength:'10',measure:'FULL'}),
+ R('runlu_carpet_inventory_v52','SH2',{status:'Active',sourceRoll:'CHC022',manufacturerRoll:'5275',roll:'CHC022-P52425',collection:'Another Legacy Label',colour:'Other',location:'14D',length:'10',originalLength:'10',measure:'FULL'})
+];
+const sm=classifySnapshot(sharedRows);
+const sp=sm.derived_carpet_products.find(x=>x.record_id==='CARPET_SOURCE:CHC022');
+assert.equal(sp.classification,'valid');
+assert.equal(sp.reason,'FIELD_VERIFIED_SHARED_PRODUCT');
+assert.deepEqual(sp.evidence,[{name:'CLASSIC CUT',colour:'FROSTED SLATE 935'}]);
+assert.equal(sp.transformed.name,'CLASSIC CUT');
+assert.equal(sp.transformed.colour,'FROSTED SLATE 935');
 console.log('V7 snapshot transformer classification contract: PASS');

@@ -222,12 +222,12 @@ export function classifySnapshot(rows){
     const labels=[...g.labels.values()];
     const verified=DEERFOOT_FIELD_VERIFICATION_20260922.verifiedProducts[g.source]||null;
     const conflict=!verified&&labels.length>1;
-    const name=verified?.collection||labels.find(x=>key(x.name))?.name||'';
+    const name=verified?.name||labels.find(x=>key(x.name))?.name||'';
     const colour=verified?.colour||labels[0]?.colour||null;
     return {dataset:'derived_carpet_product_v6',record_id:'CARPET_SOURCE:'+g.source,
       source_payload:{source_code:g.source,observed_labels:labels},classification:conflict?'conflict':(name?'valid':'deferred'),
       reason:verified?'FIELD_VERIFIED_SHARED_PRODUCT':(conflict?'CARPET_SOURCE_LABEL_VARIANT':(name?'DERIVED_PRODUCT_READY':'CARPET_SOURCE_NAME_MISSING')),
-      evidence:verified?{observed_labels:labels,field_verified:verified}:labels,
+      evidence:verified?[verified]:labels,
       transformed:{source_code:g.source,name,colour,base_unit:'1/16_IN',lifecycle:'active'}};
   });
   const derivedBySource=new Map(derivedProducts.map(x=>[x.transformed.source_code,x]));
