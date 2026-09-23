@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=fs.readFileSync('index.html','utf8');
+const v7=fs.readFileSync('v7/warehouse-v7.html','utf8');
+assert.match(root,/id="v7ProductionLaunch"/);
+assert.match(root,/href="v7\/warehouse-v7\.html"/);
+assert.match(root,/V7 PRODUCTION CORE · LIVE/);
+assert.match(root,/V6 remains available here as the operational fallback/);
+assert.match(v7,/Production Command Center/);
+assert.match(v7,/production-api-client\.js/);
+console.log('V7 production launch/fallback contract: PASS');
