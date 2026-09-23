@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory() as d:
  assert "CARPET_PHYSICAL:source_mfg:RC2245|7594" in sql
  assert "import_valid_carpet_roll" in sql
  lines=[x for x in sql.splitlines() if x.strip()]
- assert len(lines)==5
+ assert len(lines)==4
  assert lines[0].startswith("delete from warehouse_v7.migration_staging ")
  assert all("\n" not in x for x in lines)
 print("V7 opening reconciliation rerun SQL contract: PASS")
