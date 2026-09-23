@@ -564,7 +564,7 @@ jobs:
           python3 v7/cutover-preflight.py             --start-integrity /tmp/v7-real-source-integrity.json             --end-integrity /tmp/v7-preflight-end-integrity.json             --dry-run-1 /tmp/v7-real-dry-run-report-1.json             --dry-run-2 /tmp/v7-real-dry-run-report-2.json             --release-readiness /tmp/v7-release-readiness-report.json             --report /tmp/v7-controlled-cutover-preflight-report.json             --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5"
 
       - name: Execute locked production opening import
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.production_opening_import == 'PRODUCTION_OPENING_IMPORT' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_opening_import == 'PRODUCTION_OPENING_IMPORT' }}
         run: |
           set -euo pipefail
           python3 v7/manifest-to-import-sql.py /tmp/v7-real-manifest.json --output /tmp/v7-production-opening.sql
