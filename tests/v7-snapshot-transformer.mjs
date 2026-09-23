@@ -67,7 +67,7 @@ const sm=classifySnapshot(sharedRows);
 const sp=sm.derived_carpet_products.find(x=>x.record_id==='CARPET_SOURCE:CHC022');
 assert.equal(sp.classification,'valid');
 assert.equal(sp.reason,'FIELD_VERIFIED_SHARED_PRODUCT');
-assert.deepEqual(sp.evidence,[{collection:'CLASSIC CUT',colour:'FROSTED SLATE 935'}]);
+assert.deepEqual(sp.evidence,[{name:'CLASSIC CUT',colour:'FROSTED SLATE 935'}]);
 assert.equal(sp.transformed.name,'CLASSIC CUT');
 assert.equal(sp.transformed.colour,'FROSTED SLATE 935');
 console.log('V7 snapshot transformer classification contract: PASS');
