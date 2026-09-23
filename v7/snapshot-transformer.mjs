@@ -1,4 +1,4 @@
-import {deerfootFieldDecision} from './deerfoot-field-verification-2026-09-22.mjs';
+import {deerfootFieldDecision,DEERFOOT_FIELD_VERIFICATION_20260922} from './deerfoot-field-verification-2026-09-22.mjs';
 // Warehouse OS V7 read-only snapshot transformer.
 // Input: rows shaped like public.warehouse_records.
 // Output: migration manifest only. Never writes production.
@@ -220,13 +220,15 @@ export function classifySnapshot(rows){
   }
   const derivedProducts=[...sourceGroups.values()].map(g=>{
     const labels=[...g.labels.values()];
-    const conflict=labels.length>1;
-    const name=labels.find(x=>key(x.name))?.name||'';
+    const verified=DEERFOOT_FIELD_VERIFICATION_20260922.verifiedProducts[g.source]||null;
+    const conflict=!verified&&labels.length>1;
+    const name=verified?.collection||labels.find(x=>key(x.name))?.name||'';
+    const colour=verified?.colour||labels[0]?.colour||null;
     return {dataset:'derived_carpet_product_v6',record_id:'CARPET_SOURCE:'+g.source,
       source_payload:{source_code:g.source,observed_labels:labels},classification:conflict?'conflict':(name?'valid':'deferred'),
-      reason:conflict?'CARPET_SOURCE_LABEL_VARIANT':(name?'DERIVED_PRODUCT_READY':'CARPET_SOURCE_NAME_MISSING'),
-      evidence:labels,
-      transformed:{source_code:g.source,name,colour:labels[0]?.colour||null,base_unit:'1/16_IN',lifecycle:'active'}};
+      reason:verified?'FIELD_VERIFIED_SHARED_PRODUCT':(conflict?'CARPET_SOURCE_LABEL_VARIANT':(name?'DERIVED_PRODUCT_READY':'CARPET_SOURCE_NAME_MISSING')),
+      evidence:verified?{observed_labels:labels,field_verified:verified}:labels,
+      transformed:{source_code:g.source,name,colour,base_unit:'1/16_IN',lifecycle:'active'}};
   });
   const derivedBySource=new Map(derivedProducts.map(x=>[x.transformed.source_code,x]));
 
@@ -237,7 +239,7 @@ export function classifySnapshot(rows){
   for(const x of active){
     if(!x.physical) continue;
     const sig=JSON.stringify({location:key(x.p.location),length:key(x.p.length),originalLength:key(x.p.originalLength),measure:key(x.p.measure),status:key(x.p.status),manufacturerRoll:key(x.p.manufacturerRoll),sourceRoll:key(x.p.sourceRoll)});
-    const g=physicalGroups.get(x.physical)||{sigs:new Set(),n:0};g.n++;g.sigs.add(sig);physicalGroups.set(x.physical,g);
+    const g=physicalGroups.get(x.physical)||{sigs:new Set(),n:0,members:[]};g.n++;g.sigs.add(sig);g.members.push(x);physicalGroups.set(x.physical,g);
   }
 
   // Legacy replay alias detection is deliberately stricter than ordinary duplicate detection.
@@ -253,7 +255,40 @@ export function classifySnapshot(rows){
     if(pid){const s=idSigs.get(pid)||new Set();s.add(sig);idSigs.set(pid,s);}
   }
   const safeReplayByRecord=new Map();
+  const strongReplayByRecord=new Map();
   const derivedCarpetRolls=[];
+
+  // Strong physical replays need one canonical derived physical instance.
+  // Previously every repeated row was marked duplicate without creating the one
+  // operational roll it represented, which could silently drop live carpet rolls.
+  for(const [physical,g] of physicalGroups){
+    if(g.n<2||g.sigs.size!==1) continue;
+    const members=g.members||[], x=members[0], p=x.p, source=x.source;
+    const field=deerfootFieldDecision(p)||null;
+    const loc=key(field?.location||p.location), measure=key(field?.measure||p.measure).toUpperCase();
+    const effective={...p};
+    if(field?.location) effective.location=field.location;
+    if(field?.measure) effective.measure=field.measure;
+    if(Number.isFinite(field?.remainingFeet)) effective.length=field.remainingFeet;
+    const sourceProduct=derivedBySource.get(source), mv=carpetMeasureValidity(effective,measure);
+    let classification='valid',reason='CARPET_PHYSICAL_REPLAY_GROUP_READY';
+    if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
+    else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
+    else if(!['FULL','CAL','TM'].includes(measure)){classification='deferred';reason='CARPET_MEASURE_REVIEW';}
+    else if(!mv.ok){classification='conflict';reason=mv.reason;}
+    const shared=DEERFOOT_FIELD_VERIFICATION_20260922.sharedCompanyRollNumbers.has(source);
+    const recordId='CARPET_PHYSICAL:'+physical;
+    derivedCarpetRolls.push({
+      dataset:'derived_carpet_roll_v6',record_id:recordId,
+      source_payload:{physical_key:physical,member_record_ids:members.map(m=>String(m.r.record_id)).sort()},
+      classification,reason,
+      transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,
+        roll_number:shared?source:key(effective.roll),physical_key:physical,
+        manufacturer_roll:key(effective.manufacturerRoll)||null,source_roll:source||null,
+        original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure}
+    });
+    for(const m of members) strongReplayByRecord.set(String(m.r.record_id),recordId);
+  }
   for(const [sig,members] of weakBySig){
     if(members.length!==2) continue;
     const payloadId=sameNonblank(members,'id');
@@ -300,10 +335,12 @@ export function classifySnapshot(rows){
     const source=carpetSourceCode(effective), physical=carpetPhysicalKey(effective), status=key(effective.status), measure=key(effective.measure).toUpperCase(), loc=key(effective.location);
     const sourceProduct=derivedBySource.get(source), group=physical?physicalGroups.get(physical):null;
     const aliasGroup=safeReplayByRecord.get(String(r.record_id));
+    const strongGroup=strongReplayByRecord.get(String(r.record_id));
     let classification='valid',reason='CARPET_READY';
     if(field?.kind==='used_up'){classification='deferred';reason='FIELD_VERIFIED_USED_UP';}
     else if(field?.kind==='invalid_rc_format'){classification='conflict';reason='INVALID_DEERFOOT_RC_FORMAT';}
     else if(status!=='Active'){classification='deferred';reason='NON_ACTIVE_LEGACY_STATUS';}
+    else if(strongGroup){classification='duplicate';reason='CARPET_PHYSICAL_REPLAY';}
     else if(aliasGroup){classification='duplicate';reason='CARPET_LEGACY_ALIAS_REPLAY';}
     else if(!sourceProduct||sourceProduct.classification!=='valid'){classification='conflict';reason='CARPET_PRODUCT_SOURCE_CONFLICT';}
     else if(!loc){classification='orphan';reason='CARPET_LOCATION_MISSING';}
@@ -314,8 +351,9 @@ export function classifySnapshot(rows){
     const mv=carpetMeasureValidity(effective,measure);
     if(classification==='valid'&&!mv.ok){classification='conflict';reason=mv.reason;}
     return {dataset:r.dataset_key,record_id:r.record_id,source_payload:p,classification,reason,
-      derived_group_id:aliasGroup||null,
-      transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,roll_number:key(effective.roll),
+      derived_group_id:strongGroup||aliasGroup||null,
+      transformed:{product_legacy_record_id:'CARPET_SOURCE:'+source,location_code:loc||null,
+        roll_number:DEERFOOT_FIELD_VERIFICATION_20260922.sharedCompanyRollNumbers.has(source)?source:key(effective.roll),
         physical_key:physical,manufacturer_roll:key(effective.manufacturerRoll)||null,source_roll:key(effective.sourceRoll)||source||null,
         original_sixteenths:mv.original,remaining_sixteenths:mv.remaining,measure_status:measure}};
   });
