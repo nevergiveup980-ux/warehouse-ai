@@ -6,9 +6,9 @@ export const DEERFOOT_FIELD_VERIFICATION_20260922 = Object.freeze({
   invalidAliases: Object.freeze({RC22220:'RC2220'}),
   sharedCompanyRollNumbers: new Set(['CHC022','CHC023','SPO11']),
   verifiedProducts: Object.freeze({
-    CHC022:{collection:'CLASSIC CUT',colour:'FROSTED SLATE 935'},
-    CHC023:{collection:'CLASSIC CUT',colour:'RUSTIC STONE (BROWN) 858'},
-    SPO11:{collection:'RELAXING GETAWAY',colour:'74562 - WARM GREY'}
+    CHC022:{name:'CLASSIC CUT',colour:'FROSTED SLATE 935'},
+    CHC023:{name:'CLASSIC CUT',colour:'RUSTIC STONE (BROWN) 858'},
+    SPO11:{name:'RELAXING GETAWAY',colour:'74562 - WARM GREY'}
   }),
   usedUpCompanyRolls: new Set(['RC1904','RC2331','RC2332','RC2340','RC2341','RC2342']),
   verified: Object.freeze({
