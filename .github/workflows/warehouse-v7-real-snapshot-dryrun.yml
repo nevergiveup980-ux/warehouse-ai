@@ -565,28 +565,37 @@ jobs:
 
       - name: Execute locked production opening import
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.production_opening_import == 'PRODUCTION_OPENING_IMPORT' }}
-        env:
-          PRODUCTION_DB_URL: ${{ secrets.WAREHOUSE_V7_PRODUCTION_DB_URL }}
         run: |
           set -euo pipefail
-          test -n "$PRODUCTION_DB_URL"
           python3 v7/manifest-to-import-sql.py /tmp/v7-real-manifest.json --output /tmp/v7-production-opening.sql
+          OIDC_JSON="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=warehouse-v7-cutover")"
+          OIDC_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$OIDC_JSON")"
           python3 - <<'PY'
-          import os,urllib.parse as u
-          x=u.urlparse(os.environ["PRODUCTION_DB_URL"])
-          with open(os.environ["GITHUB_ENV"],"a") as f:
-            f.write("PGHOST="+(x.hostname or "")+"\n")
-            f.write("PGPORT="+str(x.port or 5432)+"\n")
-            f.write("PGDATABASE="+((x.path or "/postgres").lstrip("/"))+"\n")
-            f.write("PGUSER="+u.unquote(x.username or "postgres")+"\n")
-            f.write("PGPASSWORD="+u.unquote(x.password or "")+"\n")
+          import json
+          body={
+            "confirm":"PRODUCTION_OPENING_IMPORT",
+            "tenant":"e2d45722-186b-4b4f-af16-38709a0113ee",
+            "actor":"b360c5a0-1736-4e17-b82c-22ea720603c1",
+            "expected_source_md5":"27f36fc740ac29800d7463bfe6fec140",
+            "expected_source_rows":787,
+            "import_sql":open("/tmp/v7-production-opening.sql",encoding="utf-8").read()
+          }
+          json.dump(body,open("/tmp/v7-cutover-request.json","w"),separators=(",",":"))
           PY
-          python3 v7/production-opening-import.py /tmp/v7-production-opening.sql \
-            --tenant e2d45722-186b-4b4f-af16-38709a0113ee \
-            --actor b360c5a0-1736-4e17-b82c-22ea720603c1 \
-            --expected-source-md5 "$EXPECTED_SNAPSHOT_MD5" \
-            --expected-source-rows 787 \
-            --confirm PRODUCTION_OPENING_IMPORT
+          curl -fsS --retry 1 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/v7-cutover-request.json \
+            "https://ekrnknlawekeoszzkamd.supabase.co/functions/v1/warehouse-v7-cutover-bridge" \
+            -o /tmp/v7-cutover-response.json
+          unset OIDC_TOKEN OIDC_JSON
+          python3 - <<'PY'
+          import json
+          r=json.load(open("/tmp/v7-cutover-response.json"))
+          assert r.get("status")=="PRODUCTION_OPENING_IMPORT_RECONCILED",r
+          print(r["status"],json.dumps(r.get("counts"),sort_keys=True))
+          PY
+          rm -f /tmp/v7-production-opening.sql /tmp/v7-cutover-request.json /tmp/v7-cutover-response.json
 
       - name: Upload sanitized real dry-run and preflight reports
         if: always()
