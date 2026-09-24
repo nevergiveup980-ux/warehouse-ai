@@ -1242,6 +1242,27 @@ function runluV7RenderCarpetCanonical(){
 }
 const runluLegacyRenderCarpetInventory=window.renderCarpetInventory;
 window.renderCarpetInventory=function(){if(typeof runluLegacyRenderCarpetInventory==='function')runluLegacyRenderCarpetInventory();runluV7RenderCarpetCanonical()}
+function runluV7RenderMapCanonical(){
+ const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;if(!data||!$('mapList'))return;
+ const stock=Array.isArray(data.stock)?data.stock:[],carpet=Array.isArray(data.carpet)?data.carpet:[],locations=Array.isArray(data.locations)?data.locations:[];
+ $('mapList').innerHTML=locations.slice().sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),undefined,{numeric:true})).map(loc=>{
+  const code=String(loc.code||''),general=stock.filter(x=>String(x.location_id||'')===String(loc.id)||String(x.location_code||'')===code),rolls=carpet.filter(x=>String(x.location_id||'')===String(loc.id)||String(x.location_code||'')===code);
+  const feet=Math.round(rolls.reduce((n,x)=>n+runluV7Feet(x.remaining_sixteenths),0)*100)/100;
+  return '<button class="rack spaceLoc" onclick="runluV7ShowRackCanonical('+JSON.stringify(code).replace(/"/g,'&quot;')+')"><b>'+esc(code||'UNASSIGNED')+'</b><span>'+general.length+' product record(s) · '+rolls.length+' carpet roll(s)</span><span>'+feet+"′ carpet remaining"+'</span><span class="mapStatus">V7 CANONICAL</span></button>';
+ }).join('')||'<div class="empty">No V7 locations available.</div>';
+ if($('mapDetail'))$('mapDetail').classList.add('hidden');
+}
+window.runluV7ShowRackCanonical=function(code){
+ const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;if(!data)return;
+ const stock=(data.stock||[]).filter(x=>String(x.location_code||'')===String(code)),carpet=(data.carpet||[]).filter(x=>String(x.location_code||'')===String(code));
+ const detail=$('mapDetail');if(!detail)return;detail.classList.remove('hidden');
+ detail.innerHTML='<button class="back" onclick="this.parentElement.classList.add(\'hidden\')">‹ Back</button><h2>Rack '+esc(code)+'</h2><div class="meta">V7 canonical production · read-only</div>'+
+ (carpet.length?'<h3>Carpet</h3>'+carpet.map(x=>'<div class="item"><b>'+esc(x.roll_number||'')+'</b> · '+esc(x.product_name||'')+(x.colour?' · '+esc(x.colour):'')+'<div class="meta">'+esc(x.measure_status||'')+' · '+runluV7Feet(x.remaining_sixteenths)+"′ remaining"+'</div></div>').join(''):'')+
+ (stock.length?'<h3>Stock</h3>'+stock.map(x=>'<div class="item"><b>'+esc(x.product_name||'')+'</b>'+(x.colour?' · '+esc(x.colour):'')+'<div class="meta">'+esc(x.quantity)+' '+esc(x.unit||'')+'</div></div>').join(''):'')+
+ (!stock.length&&!carpet.length?'<div class="empty">No canonical inventory at this location.</div>':'');
+};
+const runluLegacyRenderMap=window.renderMap;
+window.renderMap=function(){if(typeof runluLegacyRenderMap==='function')runluLegacyRenderMap();runluV7RenderMapCanonical()}
 setTimeout(runluV7RefreshReadOnly,0);
 </script>
 <script>
