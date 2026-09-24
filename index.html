@@ -1266,6 +1266,21 @@ async function runluV7ShipOperation(r){
  const fresh=await RUNLU_V7_API.bootstrap();window.RUNLU_V7_READONLY={data:fresh,error:'',loadedAt:Date.now()};runluV7RenderCanonical();runluV7RenderMapCanonical();runluV7CanonicalUi();
  r.impactApplied=true;r.appliedAt=new Date().toISOString();r.v7CommandId=result?.command?.id||result?.id||'';r.impactResult='V7 canonical ship -'+q+' '+(row.unit||r.unit||'')+' · '+row.product_name;return true;
 }
+async function runluV7ReturnOperation(r){
+ const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;
+ if(!data||!window.RUNLU_V7_API)throw new Error('V7 canonical session is not ready. Confirm V7 LIVE before returning stock.');
+ const q=Number(operationStockQuantity(r));if(!(q>0))throw new Error('Return quantity must be greater than zero.');
+ const destKey=normKey(r.toLocation||r.location||'Receiving'),dest=(data.locations||[]).filter(x=>normKey(x.code)===destKey);if(dest.length!==1)throw new Error('V7 return location match is not unique. Choose an exact V7 location.');
+ const key=normKey([r.product,r.collection,r.colour].filter(Boolean).join(' '));
+ let stock=(data.stock||[]).filter(x=>String(x.id)===String(r.inventoryRecordId||''));if(stock.length!==1)stock=(data.stock||[]).filter(x=>normKey([x.product_name,x.colour].filter(Boolean).join(' '))===key);
+ if(stock.length!==1)throw new Error('V7 return stock item match is not unique. Choose an exact existing inventory record.');
+ const row=stock[0],ships=(data.recent||[]).filter(x=>x.command_type==='SHIP'&&x.status==='committed'&&String(x.result?.stock_item_id||'')===String(row.id));
+ if(!ships.length)throw new Error('No committed V7 ship command was found for this stock item. Return is stopped rather than inventing an origin.');
+ const original=ships[0];
+ const result=await RUNLU_V7_API.call({action:'return_stock',stock_item_id:row.id,expected_version:row.version,quantity:q,unit:row.unit||r.unit,to_location_id:dest[0].id,original_ship_command:original.id,payload:{source:'V7_FAMILIAR_COMMAND_CENTER',po:r.po||'',customer:r.customer||'',operator:r.operator||'',legacy_operation_id:String(r.id||'')}});
+ const fresh=await RUNLU_V7_API.bootstrap();window.RUNLU_V7_READONLY={data:fresh,error:'',loadedAt:Date.now()};runluV7RenderCanonical();runluV7RenderMapCanonical();runluV7CanonicalUi();
+ r.impactApplied=true;r.appliedAt=new Date().toISOString();r.v7CommandId=result?.command?.id||result?.id||'';r.impactResult='V7 canonical return +'+q+' '+(row.unit||r.unit||'')+' → '+dest[0].code;return true;
+}
 function runluV7Feet(sixteenths){return Math.round((Number(sixteenths||0)/192)*100)/100}
 function runluV7RenderCanonical(){
  const state=window.RUNLU_V7_READONLY,data=state&&state.data;
@@ -3590,6 +3605,7 @@ async function saveOperation(){
   const v7SingleCut=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Carpet Cutting'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleTransfer=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Inventory Transfer'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleShip=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Shipping'&&!(Array.isArray(x.items)&&x.items.length);
+  const v7SingleReturn=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Customer Return'&&!(Array.isArray(x.items)&&x.items.length);
   if(v7SingleReceive&&runluV7CanonicalReady()){
    try{await runluV7ReceiveOperation(x)}catch(error){alert('V7 RECEIVE STOPPED: '+(error?.message||error));return}
   }else if(v7SingleCut&&runluV7CanonicalReady()){
@@ -3598,6 +3614,8 @@ async function saveOperation(){
    try{await runluV7TransferOperation(x)}catch(error){alert('V7 TRANSFER STOPPED: '+(error?.message||error));return}
   }else if(v7SingleShip&&runluV7CanonicalReady()){
    try{await runluV7ShipOperation(x)}catch(error){alert('V7 SHIP STOPPED: '+(error?.message||error));return}
+  }else if(v7SingleReturn&&runluV7CanonicalReady()){
+   try{await runluV7ReturnOperation(x)}catch(error){alert('V7 RETURN STOPPED: '+(error?.message||error));return}
   }else if(!applyOperationImpact(x))return
  }if(!save(LOGDB,a))return;const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
 }
