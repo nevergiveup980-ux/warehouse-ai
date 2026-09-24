@@ -1231,6 +1231,17 @@ const runluLegacyRenderDashboard=window.renderDashboard;
 window.renderDashboard=function(){if(typeof runluLegacyRenderDashboard==='function')runluLegacyRenderDashboard();runluV7RenderCanonical()}
 const runluLegacyRenderInventory=window.renderInventory;
 window.renderInventory=function(){if(typeof runluLegacyRenderInventory==='function')runluLegacyRenderInventory();runluV7RenderCanonical()}
+function runluV7RenderCarpetCanonical(){
+ const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;if(!data)return;
+ const all=Array.isArray(data.carpet)?data.carpet:[],q=String(($('carpetFilter')||{}).value||'').trim().toLowerCase();
+ const rows=all.filter(x=>!q||JSON.stringify(x).toLowerCase().includes(q)).sort((a,b)=>String(a.location_code||'').localeCompare(String(b.location_code||''),undefined,{numeric:true})||String(a.roll_number||'').localeCompare(String(b.roll_number||''),undefined,{numeric:true}));
+ const needTM=all.filter(x=>String(x.measure_status||'').toUpperCase()==='CAL'&&runluV7Feet(x.remaining_sixteenths)<=50),under50=all.filter(x=>runluV7Feet(x.remaining_sixteenths)<=50);
+ if($('carpetCount'))$('carpetCount').textContent=rows.length+' V7 canonical roll'+(rows.length===1?'':'s')+' shown · production read-only view';
+ if($('carpetStats'))$('carpetStats').innerHTML='<div class="carpetStat"><b>'+all.length+'</b><span>Active Rolls</span></div><div class="carpetStat alert"><b>'+needTM.length+'</b><span>Need TM</span></div><div class="carpetStat alert"><b>'+under50.length+'</b><span>Under 50′</span></div><div class="carpetStat"><b>'+new Set(all.map(x=>x.location_code).filter(Boolean)).size+'</b><span>Rack Locations</span></div>';
+ if($('carpetInventoryList'))$('carpetInventoryList').innerHTML=rows.length?rows.map(x=>{const rem=runluV7Feet(x.remaining_sixteenths),tm=String(x.measure_status||'').toUpperCase()==='CAL'&&rem<=50;return '<div class="compactRow '+(rem<=50?'lowStock':'')+'"><div class="compactMain"><div class="compactTitle">'+esc(x.roll_number||'No roll #')+'</div><div class="compactSub">'+esc(x.product_name||'Unknown Product')+(x.colour?' · '+esc(x.colour):'')+(tm?' · TRUE MEASURE REQUIRED':'')+'</div></div><div class="compactRight"><div class="compactQty">'+esc(rem)+"′"+'</div><span class="compactUnit">'+esc(x.measure_status||'')+'</span><div class="compactLoc">📍 '+esc(x.location_code||'No location')+'</div></div></div>'}).join(''):'<div class="empty">No matching V7 carpet rolls.</div>';
+}
+const runluLegacyRenderCarpetInventory=window.renderCarpetInventory;
+window.renderCarpetInventory=function(){if(typeof runluLegacyRenderCarpetInventory==='function')runluLegacyRenderCarpetInventory();runluV7RenderCarpetCanonical()}
 setTimeout(runluV7RefreshReadOnly,0);
 </script>
 <script>
