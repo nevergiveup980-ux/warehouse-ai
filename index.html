@@ -1196,6 +1196,9 @@ img,video,canvas,svg{max-width:100%}
 /* V7 UI Parity — read-only canonical bridge.
    No V7 write command is issued here. The mature operator UI remains intact. */
 window.RUNLU_V7_READONLY={data:null,error:'',loadedAt:0};
+function runluV7AuthCard(){let card=document.getElementById('runluV7AuthCard');if(card)return card;card=document.createElement('div');card.id='runluV7AuthCard';card.style.cssText='display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99999;padding:18px;overflow:auto';card.innerHTML='<div style="max-width:430px;margin:8vh auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.22)"><h3 style="margin-top:0">V7 Warehouse Sign In</h3><p style="color:#64748b">Connect this familiar Warehouse screen to the V7 canonical inventory engine.</p><label>Email</label><input id="runluV7Email" type="email" autocomplete="username" style="width:100%;margin:6px 0 12px"><label>Password</label><input id="runluV7Password" type="password" autocomplete="current-password" style="width:100%;margin:6px 0 12px"><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" id="runluV7AuthCancel">Cancel</button><button type="button" id="runluV7AuthGo">Sign In to V7</button></div><div id="runluV7AuthMsg" style="margin-top:10px;color:#64748b"></div></div>';document.body.appendChild(card);card.querySelector('#runluV7AuthCancel').onclick=()=>card.style.display='none';card.querySelector('#runluV7AuthGo').onclick=async()=>{const msg=card.querySelector('#runluV7AuthMsg'),btn=card.querySelector('#runluV7AuthGo');try{btn.disabled=true;msg.textContent='Signing in…';await RUNLU_V7_API.signIn(card.querySelector('#runluV7Email').value.trim(),card.querySelector('#runluV7Password').value);card.querySelector('#runluV7Password').value='';await runluV7RefreshReadOnly();msg.textContent='V7 connected.';setTimeout(()=>card.style.display='none',350)}catch(e){msg.textContent='Sign in failed: '+(e?.message||e)}finally{btn.disabled=false}};return card}
+function runluV7ShowAuth(){runluV7AuthCard().style.display='block'}
+
 window.RUNLU_V7_CANONICAL_MODE=true;
 function runluV7CanonicalReady(){return !!(window.RUNLU_V7_CANONICAL_MODE&&window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data)}
 function runluV7CanonicalUi(){
@@ -1390,6 +1393,7 @@ async function runluV7RefreshReadOnly(){
  }catch(e){
   window.RUNLU_V7_READONLY={data:null,error:String(e&&e.message||e),loadedAt:Date.now()};
   console.warn('[V7 parity read-only] canonical bootstrap unavailable:',e);
+  if(window.RUNLU_V7_READONLY.error==='SIGN_IN_REQUIRED')runluV7ShowAuth();
  }
 }
 const runluLegacyRenderDashboard=window.renderDashboard;
@@ -3685,7 +3689,8 @@ function runluV7OperationNeedsCanonical(r){
 function runluV7RequireCanonicalForWrite(r){
  if(!runluV7OperationNeedsCanonical(r))return true;
  if(runluV7CanonicalReady())return true;
- alert('V7 CANONICAL REQUIRED: This inventory operation is migrated to V7 and cannot fall back to legacy local inventory. Sign in / restore V7 LIVE, then retry.');
+ alert('V7 CANONICAL REQUIRED: This inventory operation is migrated to V7 and cannot fall back to legacy local inventory. Sign in to V7, then retry.');
+ runluV7ShowAuth();
  return false;
 }
 let runluV7WriteInFlight=false;
