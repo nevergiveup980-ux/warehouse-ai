@@ -8,8 +8,7 @@ select gen_random_uuid() as product \gset
 select gen_random_uuid() as roll \gset
 select gen_random_uuid() as pcmd \gset
 select gen_random_uuid() as rcmd \gset
-insert into warehouse_v7.tenant(id,name) values(:'tenant','T');
-insert into warehouse_v7.tenant_membership(tenant_id,user_id,role) values(:'tenant',:'actor','owner');
+insert into warehouse_v7.tenant_member(tenant_id,user_id,role) values(:'tenant',:'actor','owner');
 insert into warehouse_v7.location(tenant_id,id,code) values(:'tenant',:'loc','7B');
 set local request.jwt.claim.sub = :'actor';
 select warehouse_v7.create_product(:'tenant',:'pcmd',:'product','Marshall 30 OZ/SY','Ice Breaker 2653',null,'1/16_IN',null,'{}'::jsonb,:'actor','test');
