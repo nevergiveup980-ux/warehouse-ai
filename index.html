@@ -1297,6 +1297,22 @@ async function runluV7BatchReceiveOperation(r){
  }
  r.status=derivePartialOrderStatus(items,r.status);r.impactApplied=r.status==='Completed'&&items.every(x=>x.impactApplied||!operationItemIsReceived(x));r.appliedAt=new Date().toISOString();return true;
 }
+async function runluV7BatchShipOperation(r){
+ const items=Array.isArray(r.items)?r.items:[];if(!items.length)throw new Error('No batch items were found.');
+ const eligible=items.map((item,index)=>({item,index})).filter(x=>operationItemIsReceived(x.item)&&!x.item.impactApplied);
+ if(!eligible.length){r.status=derivePartialOrderStatus(items,r.status);r.impactApplied=r.status==='Completed'&&items.every(x=>x.impactApplied||!operationItemIsReceived(x));return true}
+ for(const entry of eligible){
+  const item=entry.item,child={...r,...item,id:Number(r.id)+((entry.index+1)/1000),items:[],impactApplied:false,status:'Completed',po:r.po,customer:r.customer,operator:r.operator,type:item.type||r.type};
+  if(child.inventoryMode!=='Stock'||child.type!=='Shipping')throw new Error('Batch V7 Shipping currently accepts only Stock shipping lines. Other line types remain untouched.');
+  try{await runluV7ShipOperation(child)}catch(error){
+   r.status='Partial';r.impactApplied=false;r.impactResult=items.filter(x=>x.impactResult).map(x=>x.impactResult).join(' | ');r.appliedAt=new Date().toISOString();
+   throw new Error('Line '+(entry.index+1)+' stopped: '+(error?.message||error)+'. Earlier committed V7 ship lines are marked complete and will not be replayed.');
+  }
+  Object.assign(item,{impactApplied:true,impactResult:child.impactResult,appliedAt:child.appliedAt,v7CommandId:child.v7CommandId});
+  r.impactResult=items.filter(x=>x.impactResult).map(x=>x.impactResult).join(' | ');
+ }
+ r.status=derivePartialOrderStatus(items,r.status);r.impactApplied=r.status==='Completed'&&items.every(x=>x.impactApplied||!operationItemIsReceived(x));r.appliedAt=new Date().toISOString();return true;
+}
 function runluV7Feet(sixteenths){return Math.round((Number(sixteenths||0)/192)*100)/100}
 function runluV7RenderCanonical(){
  const state=window.RUNLU_V7_READONLY,data=state&&state.data;
@@ -3623,6 +3639,7 @@ async function saveOperation(){
   const v7SingleShip=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Shipping'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleReturn=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Customer Return'&&!(Array.isArray(x.items)&&x.items.length);
   const v7BatchReceive=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Supplier Pickup / Receiving / Put-away'&&(item.inventoryMode||x.inventoryMode)==='Stock');
+  const v7BatchShip=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Shipping'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   if(v7SingleReceive&&runluV7CanonicalReady()){
    try{await runluV7ReceiveOperation(x)}catch(error){alert('V7 RECEIVE STOPPED: '+(error?.message||error));return}
   }else if(v7SingleCut&&runluV7CanonicalReady()){
@@ -3635,6 +3652,8 @@ async function saveOperation(){
    try{await runluV7ReturnOperation(x)}catch(error){alert('V7 RETURN STOPPED: '+(error?.message||error));return}
   }else if(v7BatchReceive&&runluV7CanonicalReady()){
    try{await runluV7BatchReceiveOperation(x)}catch(error){save(LOGDB,a);alert('V7 BATCH RECEIVE PAUSED: '+(error?.message||error));renderDashboard();return}
+  }else if(v7BatchShip&&runluV7CanonicalReady()){
+   try{await runluV7BatchShipOperation(x)}catch(error){save(LOGDB,a);alert('V7 BATCH SHIP PAUSED: '+(error?.message||error));renderDashboard();return}
   }else if(!applyOperationImpact(x))return
  }if(!save(LOGDB,a))return;const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
 }
