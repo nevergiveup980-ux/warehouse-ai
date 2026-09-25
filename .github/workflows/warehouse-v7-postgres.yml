@@ -94,7 +94,7 @@ jobs:
             /tmp/v7-dry-run-2.json
           retention-days: 7
       - name: Carpet receiving regression
-        run: python3 tests/v7-db/carpet_receiving_regression.py
+        run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/carpet_receiving_regression.sql
       - name: RECEIVE create/update event-version regression
         run: python3 tests/v7-db/receiving_event_version.py
       - name: Quantity-aware stock transfer regression
