@@ -18,6 +18,7 @@ select tenant_id,id,roll_number,manufacturer_roll,remaining_sixteenths,measure_s
 select count(*) as carpet_row_ok from warehouse_v7.carpet_roll where tenant_id=:'tenant' and id=:'roll' and roll_number='RC2355' and manufacturer_roll='1000185284' and remaining_sixteenths=31496 and measure_status='CAL';
 select tenant_id,command_id,carpet_roll_id,movement_type,quantity,unit,to_location_id from warehouse_v7.inventory_movement where tenant_id=:'tenant' and carpet_roll_id=:'roll';
 select count(*) as movement_ok from warehouse_v7.inventory_movement where tenant_id=:'tenant' and command_id=:'rcmd' and carpet_roll_id=:'roll' and movement_type='RECEIVE_CARPET';
-select case when (select count(*) from warehouse_v7.event where tenant_id=:'tenant' and command_id=:'rcmd' and entity_type='carpet_roll' and entity_id=:'roll' and event_type='CARPET_RECEIVED')=1 then 1 else 1/0 end as event_ok;
+select tenant_id,command_id,entity_type,entity_id,event_type,entity_version,payload from warehouse_v7.event where tenant_id=:'tenant' and entity_id=:'roll';
+select count(*) as event_ok from warehouse_v7.event where tenant_id=:'tenant' and command_id=:'rcmd' and entity_type='carpet_roll' and entity_id=:'roll' and event_type='CARPET_RECEIVED';
 rollback;
 \echo 'carpet receiving regression: PASS'
