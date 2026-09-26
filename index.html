@@ -1192,6 +1192,20 @@ const WAREHOUSE_TAG_BASE_URL='https://warehouse.runlu.ca/';
 const SCANDICT='runlu_scan_learning_dictionary';
 const SCANTEMPLATES='runlu_scan_supplier_templates_v1';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB,SCANDICT,SCANTEMPLATES];
+const CLEAN_BREAK_KEY='runlu_clean_cloud_cutover_20260926_v1';
+function enforceCleanCloudCutover(){
+ if(localStorage.getItem(CLEAN_BREAK_KEY)==='1')return;
+ const preserve=new Set(['runlu_cloud_session_v54','runlu_access_role_v620','runlu_access_trusted_v620']);
+ const prefixes=['runlu_cloud_dirty_','runlu_cloud_dataset_conflicts_','runlu_cloud_dataset_seen_','runlu_cloud_local_updated_','runlu_cloud_dataset_push_'];
+ const exact=new Set([...DATA_KEYS,SNAPDB,PROTECTDB,OPDRAFTDB,'runlu_cloud_sync_enabled_v54','runlu_cloud_last_pull_v54','runlu_cloud_last_push_v54','runlu_cloud_summary_v5544','runlu_cloud_last_error_v5544']);
+ const remove=[];
+ for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&!preserve.has(k)&&(exact.has(k)||prefixes.some(p=>k.startsWith(p))))remove.push(k)}
+ remove.forEach(k=>localStorage.removeItem(k));
+ localStorage.setItem('runlu_cloud_sync_enabled_v54','0');
+ localStorage.setItem(CLEAN_BREAK_KEY,'1');
+ try{sessionStorage.clear()}catch{}
+}
+enforceCleanCloudCutover();
 
 const ACCESS_ROLE_KEY='runlu_access_role_v620', ACCESS_TRUSTED_KEY='runlu_access_trusted_v620';
 // Build049 — Private Administrator Mode. Public / View Only access is retired.
