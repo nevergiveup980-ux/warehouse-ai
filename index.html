@@ -1225,6 +1225,31 @@ async function runluV7ReceiveOperation(r){
  r.impactApplied=true;r.appliedAt=new Date().toISOString();r.v7CommandId=result?.command?.id||result?.id||'';r.impactResult='V7 canonical receive +'+q+' '+unit+' · '+(location.code||r.location);
  return true;
 }
+async function runluV7CarpetReceiveOperation(r){
+ const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;
+ if(!data||!window.RUNLU_V7_API)throw new Error('V7 canonical session is not ready. Confirm V7 LIVE before receiving carpet.');
+ const rollNumber=String(r.roll||'').trim(),manufacturer=cleanManufacturerRoll(r.manufacturerRoll||''),feet=Number(r.quantity||0);
+ if(!rollNumber)throw new Error('Enter the Deerfoot Roll Number, for example RC2355.');
+ if(!(feet>0))throw new Error('Enter a carpet roll length greater than zero.');
+ const locs=(data.locations||[]).filter(x=>normKey(x.code)===normKey(r.location||''));if(locs.length!==1)throw new Error('Choose an exact V7 rack location.');
+ if((data.carpet||[]).some(x=>normKey(x.roll_number||'')===normKey(rollNumber)))throw new Error('Active Deerfoot Roll Number already exists: '+rollNumber);
+ if(manufacturer&&(data.carpet||[]).some(x=>normKey(x.manufacturer_roll||'')===normKey(manufacturer)))throw new Error('Active manufacturer roll barcode already exists: '+manufacturer);
+ let products=(data.products||[]).filter(x=>normKey(x.name||'')===normKey(r.product||r.collection||'')&&normKey(x.colour||'')===normKey(r.colour||''));
+ let product=products.length===1?products[0]:null;
+ if(!product){
+  const productName=String(r.product||r.collection||'').trim(),colour=String(r.colour||'').trim();
+  if(!productName)throw new Error('Enter the new carpet Product name before receiving.');
+  if(!confirm('This carpet product is not in V7 Product Master. Create new product "'+productName+(colour?' · '+colour:'')+'"?'))throw new Error('New product creation cancelled.');
+  const created=await RUNLU_V7_API.call({action:'create_product',product_id:crypto.randomUUID(),name:productName,colour,sku:'',base_unit:'1/16_IN',coverage_unit:'',payload:{source:'V7_FAMILIAR_CARPET_RECEIVING',po:r.po||'',operator:r.operator||''}});
+  const productId=created?.result?.product_id||created?.product_id;if(!productId)throw new Error('V7 product creation did not return a product id.');
+  product={id:productId,name:productName,colour};
+ }
+ const sixteenths=Math.round(feet*12*16);
+ const result=await RUNLU_V7_API.call({action:'receive_carpet',roll_id:crypto.randomUUID(),roll_number:rollNumber,manufacturer_roll:manufacturer,product_id:product.id,location_id:locs[0].id,original_sixteenths:sixteenths,measure_status:'CAL',payload:{source:'V7_FAMILIAR_CARPET_RECEIVING',po:r.po||'',operator:r.operator||'',legacy_operation_id:String(r.id||''),width:r.width||'',lot:r.lot||''}});
+ const fresh=await RUNLU_V7_API.bootstrap();window.RUNLU_V7_READONLY={data:fresh,error:'',loadedAt:Date.now()};runluV7RenderCanonical();runluV7RenderCarpetCanonical();runluV7CanonicalUi();
+ r.impactApplied=true;r.appliedAt=new Date().toISOString();r.v7CommandId=result?.command_id||'';r.impactResult='V7 canonical carpet receive '+rollNumber+' · '+feet+' ft · '+locs[0].code;
+ return true;
+}
 async function runluV7CutOperation(r){
  const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;
  if(!data||!window.RUNLU_V7_API)throw new Error('V7 canonical session is not ready. Confirm V7 LIVE before cutting.');
@@ -3677,6 +3702,7 @@ function runluV7MigratedWriteKind(r){
  if(!r||r.inventoryMode!=='Stock')return '';
  const type=String(r.type||'');
  if(type==='Supplier Pickup / Receiving / Put-away')return 'RECEIVE';
+ if(type==='Carpet Receiving')return 'CARPET RECEIVE';
  if(type==='Carpet Cutting')return 'CARPET CUT';
  if(type==='Inventory Transfer')return 'TRANSFER';
  if(type==='Shipping')return 'SHIP';
@@ -3720,6 +3746,7 @@ async function saveOperation(){
   if(v7WriteGuarded)runluV7SetWriteBusy(true);
   try{
   const v7SingleReceive=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Supplier Pickup / Receiving / Put-away'&&!(Array.isArray(x.items)&&x.items.length);
+  const v7SingleCarpetReceive=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Carpet Receiving'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleCut=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Carpet Cutting'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleTransfer=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Inventory Transfer'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleShip=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Shipping'&&!(Array.isArray(x.items)&&x.items.length);
@@ -3731,6 +3758,8 @@ async function saveOperation(){
   const v7BatchCut=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Carpet Cutting'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   if(v7SingleReceive&&runluV7CanonicalReady()){
    try{await runluV7ReceiveOperation(x)}catch(error){alert('V7 RECEIVE STOPPED: '+(error?.message||error));return}
+  }else if(v7SingleCarpetReceive&&runluV7CanonicalReady()){
+   try{await runluV7CarpetReceiveOperation(x)}catch(error){alert('V7 CARPET RECEIVE STOPPED: '+(error?.message||error));return}
   }else if(v7SingleCut&&runluV7CanonicalReady()){
    try{await runluV7CutOperation(x)}catch(error){alert('V7 CUT STOPPED: '+(error?.message||error));return}
   }else if(v7SingleTransfer&&runluV7CanonicalReady()){
