@@ -1399,12 +1399,12 @@ function pruneLocalApplicationCache(force=false){
 }
 function save(k,v){
  const encoded=JSON.stringify(v),before=load(k);
- try{localStorage.setItem(k,encoded);queueRecordDeltaSave(k,before,v);return true;}
+ try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);return true;}
  catch(err){
   console.error('Storage save failed:',err);
   if(isQuotaError(err)){
    const normal=pruneLocalApplicationCache(true),deep=aggressiveSafeStorageCleanup();
-   try{localStorage.setItem(k,encoded);queueRecordDeltaSave(k,before,v);renderBackupStatus();return true}catch(retryErr){
+   try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);renderBackupStatus();return true}catch(retryErr){
     console.error('Storage save retry failed:',retryErr);
     const freed=(normal.reclaimedBytes||0)+(deep.reclaimedBytes||0);
     alert('This browser cannot save more local app data.'+(freed?` Automatic cleanup recovered ${(freed/1024/1024).toFixed(1)} MB, but the browser still needs more room.`:'')+' Cloud data was not deleted. Keep this page open, confirm Cloud ✓, then use Settings → Download Upgrade Backup before clearing this site’s browser data.');
