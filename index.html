@@ -1225,6 +1225,28 @@ async function runluV7ReceiveOperation(r){
  r.impactApplied=true;r.appliedAt=new Date().toISOString();r.v7CommandId=result?.command?.id||result?.id||'';r.impactResult='V7 canonical receive +'+q+' '+unit+' · '+(location.code||r.location);
  return true;
 }
+async function runluV7CarpetReceiveOperation(r){
+ const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;
+ if(!data||!window.RUNLU_V7_API)throw new Error('V7 canonical session is not ready. Confirm V7 LIVE before receiving carpet.');
+ const rollNumber=String(r.roll||'').trim(),manufacturer=cleanManufacturerRoll(r.manufacturerRoll||''),locationKey=normKey(r.location||''),q=Number(r.quantity||0);
+ if(!rollNumber)throw new Error('Enter the Deerfoot Roll Number (for example RC2355).');
+ if(!(q>0))throw new Error('Enter the carpet roll length in feet.');
+ const locations=(data.locations||[]).filter(x=>normKey(x.code)===locationKey);if(locations.length!==1)throw new Error('Choose an exact V7 rack location.');
+ let products=(data.products||[]).filter(x=>normKey(x.name||'')===normKey(r.collection||r.product||'')&&normKey(x.colour||'')===normKey(r.colour||''));
+ let product=products.length===1?products[0]:null;
+ if(!product){
+  const name=String(r.collection||r.product||'').trim(),colour=String(r.colour||'').trim();
+  if(!name)throw new Error('Enter the new carpet product name/collection.');
+  if(!confirm('Product not found in V7. Create new Carpet Product Master?\n\n'+name+(colour?' · '+colour:'')))throw new Error('New product creation cancelled.');
+  const created=await RUNLU_V7_API.call({action:'create_product',product_id:crypto.randomUUID(),name,colour,sku:'',base_unit:'1/16_IN',coverage_unit:'',payload:{source:'V7_FAMILIAR_COMMAND_CENTER',po:r.po||'',supplier:r.supplier||'',operator:r.operator||''}});
+  const productId=created?.result?.product_id||created?.product_id;if(!productId)throw new Error('V7 did not return the new Product ID.');
+  product={id:productId,name,colour,version:1};
+ }
+ const originalSixteenths=Math.round(q*12*16),rollId=crypto.randomUUID();
+ const result=await RUNLU_V7_API.call({action:'receive_carpet',roll_id:rollId,roll_number:rollNumber,manufacturer_roll:manufacturer,product_id:product.id,location_id:locations[0].id,original_sixteenths:originalSixteenths,measure_status:'CAL',payload:{source:'V7_FAMILIAR_COMMAND_CENTER',po:r.po||'',supplier:r.supplier||'',operator:r.operator||'',dye_lot:r.lot||'',width:r.width||'',legacy_operation_id:String(r.id||'')}});
+ const fresh=await RUNLU_V7_API.bootstrap();window.RUNLU_V7_READONLY={data:fresh,error:'',loadedAt:Date.now()};runluV7RenderCanonical();runluV7RenderCarpetCanonical();runluV7RenderMapCanonical();runluV7CanonicalUi();
+ r.productId=product.id;r.carpetRecordId=rollId;r.impactApplied=true;r.appliedAt=new Date().toISOString();r.v7CommandId=result?.command_id||'';r.impactResult='V7 canonical carpet receive · '+rollNumber+' · '+q+' ft · '+locations[0].code+' · CAL';return true;
+}
 async function runluV7CutOperation(r){
  const data=window.RUNLU_V7_READONLY&&window.RUNLU_V7_READONLY.data;
  if(!data||!window.RUNLU_V7_API)throw new Error('V7 canonical session is not ready. Confirm V7 LIVE before cutting.');
@@ -3677,6 +3699,7 @@ function runluV7MigratedWriteKind(r){
  if(!r||r.inventoryMode!=='Stock')return '';
  const type=String(r.type||'');
  if(type==='Supplier Pickup / Receiving / Put-away')return 'RECEIVE';
+ if(type==='Carpet Receiving')return 'CARPET RECEIVE';
  if(type==='Carpet Cutting')return 'CARPET CUT';
  if(type==='Inventory Transfer')return 'TRANSFER';
  if(type==='Shipping')return 'SHIP';
@@ -3720,17 +3743,21 @@ async function saveOperation(){
   if(v7WriteGuarded)runluV7SetWriteBusy(true);
   try{
   const v7SingleReceive=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Supplier Pickup / Receiving / Put-away'&&!(Array.isArray(x.items)&&x.items.length);
+  const v7SingleCarpetReceive=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Carpet Receiving'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleCut=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Carpet Cutting'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleTransfer=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Inventory Transfer'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleShip=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Shipping'&&!(Array.isArray(x.items)&&x.items.length);
   const v7SingleReturn=record.status==='Completed'&&x.inventoryMode==='Stock'&&x.type==='Customer Return'&&!(Array.isArray(x.items)&&x.items.length);
   const v7BatchReceive=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Supplier Pickup / Receiving / Put-away'&&(item.inventoryMode||x.inventoryMode)==='Stock');
+  const v7BatchCarpetReceive=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Carpet Receiving'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   const v7BatchShip=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Shipping'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   const v7BatchTransfer=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Inventory Transfer'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   const v7BatchReturn=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Customer Return'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   const v7BatchCut=Array.isArray(x.items)&&x.items.length>0&&x.items.every(item=>(item.type||x.type)==='Carpet Cutting'&&(item.inventoryMode||x.inventoryMode)==='Stock');
   if(v7SingleReceive&&runluV7CanonicalReady()){
    try{await runluV7ReceiveOperation(x)}catch(error){alert('V7 RECEIVE STOPPED: '+(error?.message||error));return}
+  }else if(v7SingleCarpetReceive&&runluV7CanonicalReady()){
+   try{await runluV7CarpetReceiveOperation(x)}catch(error){alert('V7 CARPET RECEIVE STOPPED: '+(error?.message||error));return}
   }else if(v7SingleCut&&runluV7CanonicalReady()){
    try{await runluV7CutOperation(x)}catch(error){alert('V7 CUT STOPPED: '+(error?.message||error));return}
   }else if(v7SingleTransfer&&runluV7CanonicalReady()){
@@ -3739,6 +3766,9 @@ async function saveOperation(){
    try{await runluV7ShipOperation(x)}catch(error){alert('V7 SHIP STOPPED: '+(error?.message||error));return}
   }else if(v7SingleReturn&&runluV7CanonicalReady()){
    try{await runluV7ReturnOperation(x)}catch(error){alert('V7 RETURN STOPPED: '+(error?.message||error));return}
+  }else if(v7BatchCarpetReceive&&runluV7CanonicalReady()){
+   try{for(const item of x.items){if(item.v7Applied)continue;await runluV7CarpetReceiveOperation({...x,...item,id:x.id});item.v7Applied=true;item.v7AppliedAt=new Date().toISOString();save(LOGDB,a)}}catch(error){save(LOGDB,a);alert('V7 BATCH CARPET RECEIVE PAUSED: '+(error?.message||error));renderDashboard();return}
+   x.impactApplied=true;x.appliedAt=new Date().toISOString();x.impactResult='V7 canonical carpet receive · '+x.items.length+' roll(s)';
   }else if(v7BatchReceive&&runluV7CanonicalReady()){
    try{await runluV7BatchReceiveOperation(x)}catch(error){save(LOGDB,a);alert('V7 BATCH RECEIVE PAUSED: '+(error?.message||error));renderDashboard();return}
   }else if(v7BatchShip&&runluV7CanonicalReady()){
