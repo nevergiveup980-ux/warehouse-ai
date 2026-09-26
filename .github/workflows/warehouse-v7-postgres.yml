@@ -41,6 +41,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f v7/carpet-review-promotion-gate-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/cut-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/receiving-engine-1.0.sql
+          psql -v ON_ERROR_STOP=1 -f v7/carpet-receiving-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/transfer-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/shipping-engine-1.0.sql
           psql -v ON_ERROR_STOP=1 -f v7/return-engine-1.0.sql
@@ -92,6 +93,8 @@ jobs:
             /tmp/v7-dry-run-1.json
             /tmp/v7-dry-run-2.json
           retention-days: 7
+      - name: Carpet receiving regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/v7-db/carpet_receiving_regression.sql
       - name: RECEIVE create/update event-version regression
         run: python3 tests/v7-db/receiving_event_version.py
       - name: Quantity-aware stock transfer regression
