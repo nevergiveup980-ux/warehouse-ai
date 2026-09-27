@@ -772,10 +772,10 @@ img,video,canvas,svg{max-width:100%}
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
 <label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
 <label>Cloud login password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password">
-<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="cloudSyncNow()">Sync Now</button><button class="primary" onclick="cloudUploadAll()">Upload This Device</button><button class="purple" onclick="cloudDownloadAll()">Download Cloud Data</button><button onclick="cloudSignOut()">Sign Out</button></div>
+<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="recordSyncNow(false)">Sync Now</button><button onclick="cloudSignOut()">Sign Out</button></div>
 <div id="cloudSyncDetails" class="notice" style="margin-top:10px">Sync details are loading...</div>
 <div id="cloudConflictActions" class="actions hidden" style="margin-top:10px"><button class="purple" onclick="cloudResolveConflictsFromCloud()">Keep Cloud for Conflict Only</button><button class="primary" onclick="cloudResolveConflictsFromDevice()">Keep This Device for Conflict Only</button></div>
-<div class="meta" style="margin-top:9px"><b>Sync Now</b> synchronizes non-conflicting datasets independently. Only a dataset changed on both this device and another device pauses for review. <b>Keep Cloud for Conflict Only</b> or <b>Keep This Device for Conflict Only</b> resolves only the listed dataset(s). Full Upload/Download remains available for intentional whole-device replacement. Never enter the Supabase dashboard password here unless you intentionally use the same password for the app login.</div>
+<div class="meta" style="margin-top:9px"><b>Sync Now</b> uses the Cloud Master record protocol: snapshot once, then record-level delta sync. Whole-device upload/download has been retired. Never enter the Supabase dashboard password here unless you intentionally use the same password for the app login.</div>
 <div class="sectionTitle">Change App Password</div>
 <div class="notice"><b>Backup access for a signed-in device.</b><br>This changes only the Warehouse App login password. It does not change Gmail, GitHub, Supabase Dashboard or warehouse data.</div>
 <div class="formgrid" style="margin-top:10px"><div><label>New App Password</label><input id="cloudNewPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"></div><div><label>Confirm New Password</label><input id="cloudConfirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Enter it again"></div></div>
@@ -1067,7 +1067,7 @@ img,video,canvas,svg{max-width:100%}
       if(typeof window.updateHeaderCloudPill==='function')window.updateHeaderCloudPill('syncing');
 
       // Pull cloud copy without blocking the Home screen.
-      await window.cloudDownloadAll(true);
+      await window.recordSyncNow(true);
 
       try{
         if(typeof window.renderDashboard==='function')window.renderDashboard();
