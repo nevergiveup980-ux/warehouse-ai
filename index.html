@@ -1550,6 +1550,12 @@ window.addEventListener('offline',()=>{updateHeaderCloudPill('auto');setTimeout(
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')cloudAutoRefresh(true)});
 
 function migrateLegacyCarpetData(showMessage=false){
+ if(recordSyncReady()){
+  const carpets=load(CARPETDB),cuts=load(CUTDB);
+  const status=$('carpetImportStatus');if(status)status.innerHTML=`Cloud Master owns carpet inventory: <b>${carpets.length} roll record(s)</b>. Legacy carpet seed import is retired.`;
+  if(showMessage)alert('Legacy carpet migration is retired. Carpet inventory now comes from Cloud Master Snapshot + Delta.');
+  return {addedRolls:0,addedCuts:0,retired:true};
+ }
  const seed=window.RUNLU_LEGACY_CARPET_DATA;
  if(!seed||!Array.isArray(seed.inventory)||!Array.isArray(seed.cuts)){if(showMessage)alert('The built-in carpet migration data is unavailable. Please confirm carpet_seed.js was uploaded.');return {addedRolls:0,addedCuts:0}}
  const carpets=load(CARPETDB),cuts=load(CUTDB);let addedRolls=0,addedCuts=0;
@@ -4795,7 +4801,7 @@ document.body.classList.remove('formEntry');
  ['migrateToV21',()=>migrateToV21()],
  ['migrateInventoryLifecycle',()=>migrateInventoryLifecycle()],
  ['migrateOperationsV52',()=>migrateOperationsV52()],
- ['migrateLegacyCarpetData',()=>migrateLegacyCarpetData(false)],
+ ['migrateLegacyCarpetData',()=>({retired:true,reason:'Cloud Master snapshot owns carpet bootstrap'} )],
  ['repairMissingCarpetRollsFromReceiving',()=>repairMissingCarpetRollsFromReceiving(true)],
  ['recoverOrderLibraries',()=>recoverOrderLibraries(false)],
  ['restoreConversationOrders',()=>restoreConversationOrders(false)],
