@@ -1481,6 +1481,20 @@ async function flushAndVerifyDatasets(keys){
 }
 function cloudDeviceId(){let id=localStorage.getItem('runlu_cloud_device_id_v54');if(!id){id=(crypto.randomUUID?.()||('device-'+Date.now()+'-'+Math.random()));localStorage.setItem('runlu_cloud_device_id_v54',id)}return id}
 const RECORD_SYNC_OUTBOX_KEY='runlu_record_sync_outbox_v1', RECORD_SYNC_CURSOR_KEY='runlu_record_sync_cursor_v1';
+const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC_GENERATION_KEY='runlu_record_sync_generation_v1', RECORD_SYNC_GENERATION='20260926-clean407-v2';
+function recordSyncPrepareGeneration(){
+ if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
+ cloudApplying=true;try{
+  for(const k of DATA_KEYS)localStorage.removeItem(k);
+  localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
+  localStorage.removeItem(RECORD_SYNC_CURSOR_KEY);
+  localStorage.removeItem(RECORD_SYNC_BOOTSTRAP_KEY);
+  localStorage.removeItem('runlu_cloud_device_id_v54');
+  try{setCloudDirtyKeys([]);setCloudConflictKeys([])}catch{}
+  localStorage.setItem(RECORD_SYNC_GENERATION_KEY,RECORD_SYNC_GENERATION);
+ }finally{cloudApplying=false}
+ return true
+}
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
 function recordSyncOutbox(){try{return JSON.parse(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)||'[]')}catch{return[]}}
 function setRecordSyncOutbox(v){localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON.stringify(v));updateHeaderCloudPill('auto')}
@@ -1503,17 +1517,17 @@ async function recordSyncBootstrap(){
   for(const r of rows)if(grouped.has(r.dataset_key))grouped.get(r.dataset_key).push(await cloudHydratePayload(r.payload,s));
   for(const [k,v] of grouped)localStorage.setItem(k,JSON.stringify(v));
   localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(Number(snap?.cursor||0)));
-  localStorage.setItem('runlu_record_sync_bootstrapped_v1','1');
+  localStorage.setItem(RECORD_SYNC_BOOTSTRAP_KEY,'1');
  }finally{cloudApplying=false}
  return rows.length
 }
 async function recordSyncPull(){
  const s=await cloudEnsureSession();if(!s)return 0;
- if(localStorage.getItem('runlu_record_sync_bootstrapped_v1')!=='1')await recordSyncBootstrap();
+ recordSyncPrepareGeneration();if(localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)!=='1')await recordSyncBootstrap();
  let cursor=Number(localStorage.getItem(RECORD_SYNC_CURSOR_KEY)||0),count=0;
  while(true){const rows=await cloudRequest('/rest/v1/rpc/warehouse_get_delta',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_after_seq:cursor,p_limit:500})});if(!Array.isArray(rows)||!rows.length)break;cloudApplying=true;try{for(const r of rows){if(!DATA_KEYS.includes(r.dataset_key))continue;const list=load(r.dataset_key),idx=list.findIndex((x,i)=>recordSyncId(x,i)===String(r.record_id));if(r.deleted_at){if(idx>=0)list.splice(idx,1)}else if(idx>=0)list[idx]=await cloudHydratePayload(r.payload,s);else list.push(await cloudHydratePayload(r.payload,s));localStorage.setItem(r.dataset_key,JSON.stringify(list));cursor=Math.max(cursor,Number(r.change_seq||0));count++}localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor))}finally{cloudApplying=false}if(rows.length<500)break}return count
 }
-async function recordSyncNow(silent=true){if(cloudSyncBusy||!cloudSession())return;try{cloudSyncBusy=true;await recordSyncPush();if(!protectedInputActive())await recordSyncPull();localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!silent){renderDashboard();renderProducts();renderInventory();renderCarpetInventory()}}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message)}finally{cloudSyncBusy=false;updateHeaderCloudPill('auto')}}
+async function recordSyncNow(silent=true){if(cloudSyncBusy||!cloudSession())return;try{cloudSyncBusy=true;const reset=recordSyncPrepareGeneration();if(reset)await recordSyncBootstrap();else await recordSyncPush();if(!protectedInputActive())await recordSyncPull();localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!silent){renderDashboard();renderProducts();renderInventory();renderCarpetInventory()}}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message)}finally{cloudSyncBusy=false;updateHeaderCloudPill('auto')}}
 
 async function cloudUploadAll(){const s=await cloudEnsureSession();if(!s){alert('Sign in first.');return}if(!confirm('Make this device the authoritative cloud copy?\n\nUse this only when this device contains the newest complete data.'))return;try{cloudSyncBusy=true;for(const key of DATA_KEYS){let value;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{value=null}if(value!==null)await cloudPutDatasetInitial(key,value,s)}localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_PUSH_KEY,new Date().toISOString());setCloudDirtyKeys([]);setCloudConflictKeys([]);const rows=await cloudFetchRows();cloudRememberSummary(rows);rememberCloudDatasetVersions(rows,true);const newest=rows.reduce((m,r)=>Math.max(m,cloudRemoteMs(r)),0);localStorage.setItem(CLOUD_LAST_PULL_KEY,new Date(newest||Date.now()).toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);renderCloudStatus();startCloudPolling();alert('Cloud upload completed. This device is now the current cloud copy.')}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);alert('Cloud upload failed: '+e.message)}finally{cloudSyncBusy=false}}
 async function cloudPutDatasetInitial(key,value,s){const payload=await cloudPreparePayload(value,key,s);return cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})})}
