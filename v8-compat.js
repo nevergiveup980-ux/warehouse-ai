@@ -55,5 +55,17 @@
   recordSyncId=function(x,i=0){
     return String(x?.canonicalId??x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i));
   };
+
+  window.RUNLU_V8_CUT_PLAN=function(roll,requestedFeet,numberOfCuts){
+    const requested=Number(requestedFeet||0),cuts=Math.max(1,Math.floor(Number(numberOfCuts||1))),before=Number(roll?.length||0);
+    if(!roll?.canonicalId)throw new Error('Canonical roll identity missing');
+    if(!(Number(roll?._cloudVersion||0)>0))throw new Error('Cloud version missing');
+    if(!(requested>0))throw new Error('Cut length must be greater than zero');
+    const planned=Number((requested+cuts*0.25).toFixed(4));
+    if(planned>before+0.0001)throw new Error('Insufficient carpet balance');
+    const deduct=(before-planned>=0&&before-planned<3)?before:planned;
+    return {rollId:roll.canonicalId,expectedVersion:Number(roll._cloudVersion),requestedFeet:requested,numberOfCuts:cuts,allowanceInches:cuts*3,deductFeet:deduct,deductSixteenths:Math.round(deduct*192),beforeFeet:before,remainingFeet:Number((before-deduct).toFixed(4))};
+  };
+
   window.RUNLU_V8_COMPAT={phase:'read-model-1',locationCount:Object.keys(LOCATIONS).length,uiId,baseRecordSyncId};
 })();
