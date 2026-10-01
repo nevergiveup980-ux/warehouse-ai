@@ -67,5 +67,18 @@
     return {rollId:roll.canonicalId,expectedVersion:Number(roll._cloudVersion),requestedFeet:requested,numberOfCuts:cuts,allowanceInches:cuts*3,deductFeet:deduct,deductSixteenths:Math.round(deduct*192),beforeFeet:before,remainingFeet:Number((before-deduct).toFixed(4))};
   };
 
+
+  window.RUNLU_V8_BUILD_CUT_COMMAND=function(roll,requestedFeet,numberOfCuts,meta){
+    const plan=RUNLU_V8_CUT_PLAN(roll,requestedFeet,numberOfCuts),m=meta||{};
+    return {commandId:(crypto.randomUUID?crypto.randomUUID():'cmd-'+Date.now()),rollId:plan.rollId,expectedVersion:plan.expectedVersion,deductSixteenths:plan.deductSixteenths,payload:{source:'RUNLU_V8_PILOT',rollNumber:String(roll.roll||roll.rollNumber||''),requestedFeet:plan.requestedFeet,numberOfCuts:plan.numberOfCuts,allowanceInches:plan.allowanceInches,deductFeet:plan.deductFeet,operationId:String(m.operationId||''),po:String(m.po||''),customer:String(m.customer||''),notes:String(m.notes||'')}};
+  };
+  window.RUNLU_V8_VALIDATE_CUT_RESULT=function(plan,result){
+    const r=result||{},remaining=Number(r.remaining_sixteenths??r.remainingSixteenths),version=Number(r.new_version??r.newVersion);
+    const expectedRemaining=Math.round(plan.remainingFeet*192);
+    if(Number.isFinite(remaining)&&remaining!==expectedRemaining)throw new Error('V8 cut result balance mismatch');
+    if(Number.isFinite(version)&&version!==plan.expectedVersion+1)throw new Error('V8 cut result version mismatch');
+    return true;
+  };
+
   window.RUNLU_V8_COMPAT={phase:'read-model-1',locationCount:Object.keys(LOCATIONS).length,uiId,baseRecordSyncId};
 })();
