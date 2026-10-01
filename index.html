@@ -1502,8 +1502,8 @@ function setRecordSyncOutbox(v){localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON
 function queueRecordDeltaSave(key,before,after){
  if(cloudApplying||!recordSyncReady()||!DATA_KEYS.includes(key)||!Array.isArray(after))return;
  const a=new Map((Array.isArray(before)?before:[]).map((x,i)=>[recordSyncId(x,i),x])),b=new Map(after.map((x,i)=>[recordSyncId(x,i),x])),q=recordSyncOutbox(),device=cloudDeviceId();
- for(const [id,row] of b){const prior=a.get(id);if(JSON.stringify(prior)!==JSON.stringify(row))q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:row,base_version:null,delete:false,device_id:device})}
- for(const [id,row] of a)if(!b.has(id))q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:{...row,_runluDeleteIntent:'explicit-user-delete'},base_version:null,delete:true,device_id:device});
+ for(const [id,row] of b){const prior=a.get(id);if(JSON.stringify(prior)!==JSON.stringify(row)){const baseVersion=prior?Number(prior._cloudVersion||0):null;q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:row,base_version:baseVersion||null,delete:false,device_id:device})}}
+ for(const [id,row] of a)if(!b.has(id)){const baseVersion=Number(row?._cloudVersion||0);q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:{...row,_runluDeleteIntent:'explicit-user-delete'},base_version:baseVersion||null,delete:true,device_id:device})};
  setRecordSyncOutbox(q);if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50)
 }
 async function recordSyncPush(){
