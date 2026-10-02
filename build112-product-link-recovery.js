@@ -27,7 +27,12 @@
 
   function orphanInventory(products,inventory){
     const known=new Set(products.map(productId).filter(Boolean));
-    return inventory.filter(r=>inventoryProductId(r)&&!known.has(inventoryProductId(r)));
+    return inventory.filter(r=>{
+      const id=inventoryProductId(r);
+      if(!id||known.has(id))return false;
+      try{if(window.RUNLU_V8_RESOLVE_PRODUCT&&window.RUNLU_V8_RESOLVE_PRODUCT(id,products))return false}catch{}
+      return true;
+    });
   }
 
   function planRecovery(localProducts,localInventory,cloudRows){
