@@ -62,6 +62,23 @@
     return true;
   };
 
+  window.RUNLU_V8_CARPET_HEALTH=function(){
+    const raw=load(CARPETDB)||[],adapted=raw.map(RUNLU_V8_ADAPT_CARPET),ids=new Set(),collisions=[];
+    let canonical=0,location=0,version=0,remaining=0;
+    for(const x of adapted){
+      if(x.canonicalId)canonical++;
+      if(x.location&&x.location!=='UNASSIGNED')location++;
+      if(Number(x._cloudVersion||0)>0)version++;
+      if(Number.isFinite(Number(x.length)))remaining++;
+      if(ids.has(x.id))collisions.push({id:x.id,canonicalId:x.canonicalId,roll:x.roll});
+      ids.add(x.id);
+    }
+    const report={checkedAt:new Date().toISOString(),raw:raw.length,adapted:adapted.length,canonical,location,version,remaining,uiIdUnique:ids.size,collisions,ok:raw.length===adapted.length&&canonical===raw.length&&location===raw.length&&version===raw.length&&remaining===raw.length&&collisions.length===0};
+    try{sessionStorage.setItem('runlu_v8_carpet_health',JSON.stringify(report))}catch{}
+    if(!report.ok)console.warn('[V8 Pilot] carpet read-model health',report);else console.info('[V8 Pilot] carpet read-model health OK',report);
+    return report;
+  };
+
   window.RUNLU_V8_CUT_PLAN=function(roll,requestedFeet,numberOfCuts){
     const requested=Number(requestedFeet||0),cuts=Math.max(1,Math.floor(Number(numberOfCuts||1))),before=Number(roll?.length||0);
     if(!roll?.canonicalId)throw new Error('Canonical roll identity missing');
