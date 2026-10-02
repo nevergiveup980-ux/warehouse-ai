@@ -1299,7 +1299,8 @@ function accessHideGate(){
 }
 function accessOpenHomeFallback(){
  accessUnlocked=true;clearTimeout(accessBootTimer);const gate=$('accessGate');if(gate)gate.classList.add('hidden');
- try{document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const home=$('home');if(home)home.classList.remove('hidden');document.body.classList.remove('formEntry');window.scrollTo(0,0)}catch(e){console.error('Home fallback:',e)}
+ try{setTimeout(function(){try{var b=document.getElementById('bootStage'),a=document.getElementById('accessStage');if(b&&!b.classList.contains('done')){b.classList.add('done');if(a)a.classList.add('ready')}}catch(e){console.warn('V8 boot recovery',e)}},1800);
+document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const home=$('home');if(home)home.classList.remove('hidden');document.body.classList.remove('formEntry');window.scrollTo(0,0)}catch(e){console.error('Home fallback:',e)}
  try{renderDashboard()}catch(e){console.warn('Dashboard recovery:',e)}
  try{applyAccessUI()}catch(e){console.warn('Access UI recovery:',e)}
 }
