@@ -44,16 +44,22 @@
       sku:raw?.sku||p.sku||''
     };
   };
-  carpetRecords=function(){
-    const rows=load(CARPETDB)||[], seen=new Set();
-    return rows.map(RUNLU_V8_ADAPT_CARPET).map(x=>{
-      if(seen.has(x.id)) console.error('V8 UI identity collision',x.canonicalId);
-      seen.add(x.id); return x;
-    });
-  };
-  const baseRecordSyncId=recordSyncId;
-  recordSyncId=function(x,i=0){
-    return String(x?.canonicalId??x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i));
+  window.RUNLU_V8_INSTALL=function(){
+    if(window.RUNLU_V8_COMPAT?.installed)return true;
+    if(typeof carpetRecords!=='function'||typeof recordSyncId!=='function'||typeof load!=='function')return false;
+    const baseCarpetRecords=carpetRecords,baseRecordSyncId=recordSyncId;
+    carpetRecords=function(){
+      const rows=load(CARPETDB)||[],seen=new Set();
+      return rows.map(RUNLU_V8_ADAPT_CARPET).map(x=>{
+        if(seen.has(x.id))console.error('V8 UI identity collision',x.canonicalId);
+        seen.add(x.id);return x;
+      });
+    };
+    recordSyncId=function(x,i=0){
+      return String(x?.canonicalId??x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i));
+    };
+    window.RUNLU_V8_COMPAT={phase:'read-model-2',installed:true,locationCount:Object.keys(LOCATIONS).length,uiId,baseCarpetRecords,baseRecordSyncId};
+    return true;
   };
 
   window.RUNLU_V8_CUT_PLAN=function(roll,requestedFeet,numberOfCuts){
@@ -80,5 +86,5 @@
     return true;
   };
 
-  window.RUNLU_V8_COMPAT={phase:'read-model-1',locationCount:Object.keys(LOCATIONS).length,uiId,baseRecordSyncId};
+  if(typeof carpetRecords==='function'&&typeof recordSyncId==='function')RUNLU_V8_INSTALL();
 })();
