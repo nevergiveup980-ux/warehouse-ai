@@ -957,7 +957,7 @@ img,video,canvas,svg{max-width:100%}
 </div></footer>
 
 
-<script src="v8-compat.js" defer></script>\n<script>
+<script>
 /* RUNLU Build044 · Home First / Background Cloud Recovery */
 (function(){
   window.RUNLU_CORE_ENTRY_DIAG = {
@@ -4795,6 +4795,11 @@ function renderVoiceAssistant(){if(!$('voiceMic'))return;if(!$('voiceGateway').v
 function bindVoiceAssistant(){if(!$('voiceMic')||$('voiceMic').dataset.bound)return;$('voiceMic').dataset.bound='1';$('voiceMic').onclick=()=>{if(voiceListening||voiceStartInFlight){voiceMicWanted=false;voiceStopRecognition('user-stop');voiceSetState('idle','Stopped listening.')}else if(voiceSpeaking){voiceMicWanted=false;voiceStopSpeech();voiceSetState('idle','Stopped speaking.')}else{voiceMicWanted=true;voiceStartListening()}};$('voiceSoundTest').onclick=()=>{const prior=voiceLastAnswer||$('voiceAnswer')?.textContent||'';voiceSoundTesting=true;voiceStopRecognition('sound-test');voiceStopSpeech();const lang=voiceLastReplyLang||'zh-CN';voiceSetState('speaking',lang==='zh-CN'?'正在测试扬声器…':'Testing speaker…');if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(lang==='zh-CN'?'声音测试成功。':'Sound test successful.');u.lang=lang;const v=voiceChooseVoice(lang);if(v)u.voice=v;u.onend=u.onerror=()=>{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior;voiceSetState('idle',lang==='zh-CN'?'声音测试完成。':'Sound test complete.');if(voiceContinuous)voiceScheduleListening(500)};try{speechSynthesis.cancel();speechSynthesis.speak(u)}catch{voiceSoundTesting=false;if($('voiceAnswer'))$('voiceAnswer').textContent=prior}}};$('voiceStop').onclick=voiceStopAll;$('voiceToggle').onclick=()=>{voiceContinuous=!voiceContinuous;voiceMicWanted=voiceContinuous;$('voiceToggle').classList.toggle('on',voiceContinuous);$('voiceDetail').textContent=voiceContinuous?'Continuous conversation is on. Mic Controller keeps listening; Language Controller chooses the recognition lane independently.':'Continuous conversation is off.';if(voiceContinuous&&!voiceListening&&!voiceSpeaking&&!voiceAsking)voiceScheduleListening(250);else if(!voiceContinuous){clearTimeout(voiceRestartTimer);voiceRestartTimer=null;voiceStopRecognition('user-stop')}};$('voiceLanguage').onchange=()=>{const mode=$('voiceLanguage').value;localStorage.setItem(VOICE_LANGUAGE_KEY,mode);if(mode==='auto'){voiceLanguageController.reset();voiceSetState('idle','Dual Controller Auto is ready. 中文和 English 可以自然切换。')}else voiceLanguageController.set(mode,'manual');voiceApplyLanguage();voiceUpdateLaneStatus()};$('voiceSend').onclick=()=>{const v=$('voiceManual').value.trim();if(!v)return;$('voiceManual').value='';const lang=voiceDetectConversationLanguage(v,voiceLastDetectedLang||'zh-CN');voiceHandle(v,{detectedLang:lang})};$('voiceManual').addEventListener('keydown',e=>{if(e.key==='Enter')$('voiceSend').click()});if($('voiceGptToggle'))$('voiceGptToggle').onclick=()=>{const next=!voiceGptEnabled();localStorage.setItem(VOICE_GPT_ENABLED_KEY,next?'1':'0');voiceRenderAiControls();if(next&&($('voiceGateway')?.value||'').trim())voiceTestGateway()};if($('voiceAiPolicy'))$('voiceAiPolicy').onchange=()=>{localStorage.setItem(VOICE_AI_POLICY_KEY,$('voiceAiPolicy').value==='always'?'always':'hybrid');voiceRenderAiControls()};if($('voiceAiProvider'))$('voiceAiProvider').onchange=()=>{localStorage.setItem(VOICE_AI_PROVIDER_KEY,$('voiceAiProvider').value);voiceRenderAiControls()};$('voiceSaveGateway').onclick=voiceTestGateway;$('voiceGateway').value=localStorage.getItem(VOICE_GATEWAY_KEY)||'';voiceRenderAiControls();if($('voiceGateway').value&&voiceGptEnabled())voiceTestGateway();if('speechSynthesis'in window)speechSynthesis.getVoices()}
 
 
+function v8InstallCompatibility(){
+ if(window.RUNLU_V8_INSTALL)return RUNLU_V8_INSTALL();
+ console.warn('[V8 Pilot] compatibility adapter unavailable; V6 shell remains active');
+ return false
+}
 function autoInitializeSeed(){initializeSeedDatabase(false)}
 
 if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
@@ -4840,6 +4845,7 @@ document.body.classList.remove('formEntry');
  ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
  ['reconcileCompletedCustomerOrderInventory',()=>reconcileCompletedCustomerOrderInventory(true)],
  ['reconcileTransferredCarpetStatuses',()=>reconcileTransferredCarpetStatuses(false)],
+ ['v8InstallCompatibility',()=>v8InstallCompatibility()],
  ['renderDashboard',()=>renderDashboard()],
  ['renderProducts',()=>renderProducts()],
  ['renderInventory',()=>renderInventory()],
@@ -4857,5 +4863,7 @@ document.body.classList.remove('formEntry');
  ['startCloudPolling',()=>startCloudPolling()]
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
+<script src="v8-compat.js"></script>
+<script>safeStartupStep('v8LateInstall',()=>{v8InstallCompatibility();renderDashboard();renderCarpetInventory()})</script>
 </body>
 </html>
