@@ -4864,6 +4864,6 @@ document.body.classList.remove('formEntry');
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
 <script src="v8-compat.js"></script>
-<script>safeStartupStep('v8LateInstall',()=>{v8InstallCompatibility();renderDashboard();renderCarpetInventory()})</script>
+<script>safeStartupStep('v8LateInstall',()=>{v8InstallCompatibility();const health=window.RUNLU_V8_CARPET_HEALTH?.();if(health&&!health.ok)console.warn('[V8 Pilot] startup health gate failed',health);renderDashboard();renderCarpetInventory()})</script>
 </body>
 </html>
