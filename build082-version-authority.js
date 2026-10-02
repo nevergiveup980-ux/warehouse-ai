@@ -1,8 +1,8 @@
-// RUNLU Warehouse AI V8.0.1 Build002 — Single Version Authority
+// RUNLU Warehouse AI V8.0.1 Build148 — Single Version Authority
 (() => {
   if (window.__RUNLU_VERSION_AUTHORITY__) return;
   window.__RUNLU_VERSION_AUTHORITY__ = true;
-  const FALLBACK = {version:'8.0.1', build:'002'};
+  const FALLBACK = {version:'8.0.1', build:'148'};
   let current = {...FALLBACK};
   let badgeObserver = null;
   let titleObserver = null;
