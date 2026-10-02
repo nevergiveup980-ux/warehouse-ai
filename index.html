@@ -4863,7 +4863,6 @@ document.body.classList.remove('formEntry');
  ['startCloudPolling',()=>startCloudPolling()]
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
-<script src="v8-compat.js"></script>
-<script>safeStartupStep('v8LateInstall',()=>{v8InstallCompatibility();const health=window.RUNLU_V8_CARPET_HEALTH?.();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:health||null,ready:!!health?.ok};if(health&&!health.ok)console.warn('[V8 Pilot] RELEASE BLOCKED: carpet health gate failed',health);renderDashboard();renderCarpetInventory()})</script>
+<script src="v8-compat.js" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>
 </html>
