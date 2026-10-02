@@ -1,7 +1,7 @@
 {
-  "version": "6.12.32",
-  "build": "127",
-  "date": "2026-09-14",
+  "version": "8.0.0",
+  "build": "001",
+  "date": "2026-10-02",
   "channel": "stable",
-  "notes": "Carpet Receiving Guard Authority: the Build125 pending-CHC receiving handlers now remain authoritative and cannot be re-wrapped by the persistent legacy Build120 duplicate-manufacturer guard. Build126 remains the final stock-impact authority, so recognized CHC022/CHC023 Pending placeholders can complete and apply stock reliably."
+  "notes": "RUNLU Warehouse Command Center V8 production release. V6 field workflow with V8 compatibility layer and V7 canonical command architecture."
 }
