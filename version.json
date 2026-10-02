@@ -1,7 +1,7 @@
 {
-  "version": "8.0.0",
-  "build": "001",
+  "version": "8.0.1",
+  "build": "002",
   "date": "2026-10-02",
   "channel": "stable",
-  "notes": "RUNLU Warehouse Command Center V8 production release. V6 field workflow with V8 compatibility layer and V7 canonical command architecture."
+  "notes": "V8 inventory identity bridge: preserves cloud record identity, resolves migrated Product Master links, and suppresses exact legacy shadow duplicates from live inventory without deleting warehouse data."
 }
