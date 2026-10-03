@@ -2206,7 +2206,7 @@ function findCarpetRoll(records,value){const key=carpetRollKey(value);if(!key)re
 function findCarpetRollForOperation(records,carpetRecordId,rollValue){const rows=records||[];if(carpetRecordId!==undefined&&carpetRecordId!==null&&String(carpetRecordId)!==''){const byId=rows.find(x=>String(x.id)===String(carpetRecordId));if(byId)return byId}const key=carpetRollKey(rollValue);if(!key)return null;const exact=rows.find(x=>carpetRollKey(x.roll)===key);if(exact)return exact;return findCarpetRoll(rows,rollValue)}
 function uniqueValues(values){const seen=new Set(),out=[];values.forEach(v=>{v=normalizeText(v);const k=normKey(v);if(v&&!seen.has(k)){seen.add(k);out.push(v)}});return out.sort((a,b)=>a.localeCompare(b))}
 function loadMasters(){return load(PMDB)}
-function loadInventoryRecords(){return load(INVDB)}
+function loadInventoryRecords(){const rows=load(INVDB);return window.RUNLU_V8_ADAPT_INVENTORY?rows.map(RUNLU_V8_ADAPT_INVENTORY):rows}
 function inventoryCanonicalProductId(masterId){return window.RUNLU_V8_CANONICAL_PRODUCT_ID?RUNLU_V8_CANONICAL_PRODUCT_ID(masterId):String(masterId||'')}
 function inventoryProductForMasterId(masterId,masters=loadMasters()){
  if(window.RUNLU_V8_RESOLVE_PRODUCT){const hit=RUNLU_V8_RESOLVE_PRODUCT(masterId,masters);if(hit)return hit}
@@ -4871,6 +4871,6 @@ document.body.classList.remove('formEntry');
  ['startCloudPolling',()=>startCloudPolling()]
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
-<script src="v8-compat.js?r=v8.0.1-inventory-bridge-b799" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
+<script src="v8-compat.js?r=v8.0.1-inventory-location-20261002" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>
 </html>
