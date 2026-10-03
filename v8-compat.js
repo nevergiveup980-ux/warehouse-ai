@@ -4,6 +4,26 @@
 (function(){
   'use strict';
   const LOCATIONS={"05aad46f-e475-466e-a673-b1751eddf474":"7B","06502271-379c-46c4-a953-0310eb14eed7":"2C","0c182f8a-4da7-44ad-9e0e-474b2f020187":"13D","0f0367ec-f3c0-413c-b621-6526b3ede3bd":"2A","217b0379-7a8c-4326-b77b-a608d0ef003d":"6C","279098fb-ac6d-4792-8616-1ed2872901ff":"13C","319f6ce4-5be7-46ee-8f75-08a937e2e55f":"6A","40e8569d-e07c-4743-bfd9-a3679aa87994":"13A","4b7e858d-08bc-48f8-9f49-78ff3cf99a21":"5B","4fb7fb02-6171-4417-9497-933d49d409fa":"3D","52aa4320-5332-4eec-b7a2-e7aff749bd62":"7C","5e9b81e4-0058-4f0c-87da-554c9b9d0e53":"14D","71345e89-6921-4b5f-a686-44f7917c6286":"2B","7c891cc0-7b27-480a-94ce-baef3dd1103c":"6B","91657dc7-c8d8-47c6-beed-2221cfcf33b7":"4D","95a4ac83-06d1-4377-b38e-4645ed550fab":"12D","9880171b-a9c1-4017-997a-f0bce7697cd4":"5C","a75880fa-3b9a-415b-9dca-6befa496ca80":"3B","c1c4e18f-4a69-45a8-ad91-28390f68e2c7":"14C","c638b4d2-9c7f-47c1-9a6a-a82ae3741902":"12C","c6d4387c-c841-410f-9e0f-6e978d64bd3b":"4C","c98feee9-17cc-431b-9ce4-a84951ddbe5e":"3C","cb58ff15-6baf-4ac7-8762-4640c2744c86":"4A","cda184d8-73ef-4db2-8f82-da8823ec27f6":"6D","cee9769b-442f-4530-8dff-0fa1f032d608":"3A","e841c63b-dadc-4153-ada4-15a7ba60920c":"5A","ea4ea498-1f97-456a-b817-3a6ceba25a93":"7A","f896fb8a-914f-4e21-ab40-074121ad3b76":"4B","fa604122-59a4-4d8c-aa5f-433f7f322ccb":"14A"};
+
+  // Canonical stock rows carry locationId; the V6 views read location.
+  const STOCK_LOCATIONS={
+    "18916eff-1254-4449-949b-93680516ca70":"8B & Corner Bin",
+    "2431d395-b14a-4df9-b130-4da3d2bdc5a4":"10A",
+    "0a55d487-bfc4-4408-97e2-579ad0dfeffa":"11A"
+  };
+  window.RUNLU_V8_ADAPT_INVENTORY=function(raw){
+    if(!raw||Object.prototype.hasOwnProperty.call(raw,'location'))return raw;
+    const location=STOCK_LOCATIONS[String(raw.locationId||'')]||LOCATIONS[String(raw.locationId||'')];
+    if(!location)return raw;
+    const view={...raw};
+    // A display-only value must not become a cloud mutation during an unrelated save.
+    Object.defineProperty(view,'location',{
+      configurable:true,enumerable:false,get(){return location},
+      set(value){Object.defineProperty(this,'location',{value,writable:true,configurable:true,enumerable:true})}
+    });
+    return view;
+  };
+
   const PRODUCT_CANONICAL_LINKS={
     "PRD-0001":"0044555a-e24d-4d16-b97f-b67ad25e78c5",
     "PRD-0002":"ee6d79e6-b2dc-4d42-89af-2e36e1f824df",
