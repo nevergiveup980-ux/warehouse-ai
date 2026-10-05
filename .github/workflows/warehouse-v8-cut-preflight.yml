@@ -1,10 +1,11 @@
-name: V8 canonical cut preflight
+name: V8 cut and inventory regression
 on:
   pull_request:
     paths:
       - 'index.html'
       - 'v8-compat.js'
       - 'tests/v8-cut-*.mjs'
+      - 'tests/v8-inventory-editor.mjs'
       - '.github/workflows/warehouse-v8-cut-preflight.yml'
   workflow_dispatch:
 jobs:
@@ -18,3 +19,5 @@ jobs:
       - run: node tests/v8-cut-preflight.mjs
       - run: node tests/v8-cut-retry.mjs
       - run: node tests/v8-cut-save-flow.mjs
+
+      - run: node tests/v8-inventory-editor.mjs

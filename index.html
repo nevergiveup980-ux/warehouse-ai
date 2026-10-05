@@ -2247,20 +2247,22 @@ function inventoryProductForMasterId(masterId,masters=loadMasters()){
 }
 function inventoryProductForRecord(record,masters=loadMasters()){return inventoryProductForMasterId(record?.masterId,masters)}
 function inventoryMasterMatches(record,masterId){return inventoryCanonicalProductId(record?.masterId)===inventoryCanonicalProductId(masterId)}
-function inventoryRecordIdentity(r){return String(r?.inventoryId||r?.id||'')}
+function inventoryRecordIdentity(r){return String(r?._cloudRecordId||r?.inventoryId||r?.id||'')}
 function inventoryRecordJsRef(r){return JSON.stringify(inventoryRecordIdentity(r))}
+// Cloud record IDs survive display-only lifecycle normalization and reloads.
+// An ambiguous match at any identity tier must never fall through to another row.
+function inventoryRecordIdentityMatches(records,identity){
+ const key=String(identity??'');if(!key)return [];
+ for(const field of ['_cloudRecordId','inventoryId','id']){
+  const hits=(records||[]).filter(r=>r[field]!==undefined&&r[field]!==null&&String(r[field])===key);
+  if(hits.length)return hits;
+ }
+ return [];
+}
 function findInventoryRecordByIdentity(records,identity){
- const key=String(identity??'');if(!key)return null;
- const byInventoryId=(records||[]).filter(r=>String(r.inventoryId||'')===key);
- if(byInventoryId.length===1)return byInventoryId[0];
- const byLegacyId=(records||[]).filter(r=>String(r.id)===key);
- return byLegacyId.length===1?byLegacyId[0]:null;
+ const hits=inventoryRecordIdentityMatches(records,identity);return hits.length===1?hits[0]:null;
 }
-function inventoryRecordIdentityMatchCount(records,identity){
- const key=String(identity??'');if(!key)return 0;
- const uid=(records||[]).filter(r=>String(r.inventoryId||'')===key).length;if(uid)return uid;
- return (records||[]).filter(r=>String(r.id)===key).length;
-}
+function inventoryRecordIdentityMatchCount(records,identity){return inventoryRecordIdentityMatches(records,identity).length}
 function normalizeInventoryLifecycleRecord(r){
  if(!r)return r;
  const now=new Date().toISOString();
@@ -2593,14 +2595,25 @@ function generalTagData(side='left'){const right=side==='right',productId=$(righ
 function renderGeneralTagHistory(){const box=$('generalTagHistory');if(!box)return;const rows=load(TAGPRINTDB).slice(0,10);box.innerHTML=rows.length?rows.map(x=>`<div class="item"><b>${esc(x.product)}</b> · ${esc(x.type)}<div class="meta">${esc(x.time)} · ${x.copies} ${x.layout==='letter'?'sheet(s)':'copy/copies'} · ${esc(x.ownership)}</div></div>`).join(''):'<div class="empty">No product tags printed yet.</div>'}
 function renderGeneralTags(){if(!$('generalTagPreview')||!$('gtProduct')?.options.length)return;const left=generalTagData('left'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1)),sheets=[];if(left.layout==='letter'){const right=generalTagData('right');for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet letter">${generalTagHTML(left)}${generalTagHTML(right)}</div>`)}else{for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet single">${generalTagHTML(left)}</div>`)}$('generalTagPreview').innerHTML=sheets.join('');renderGeneralTagHistory()}
 function printGeneralTags(){const left=generalTagData('left'),right=generalTagData('right'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1));if(!left.product.id){alert('Choose a Left Label product first.');return}if(left.layout==='letter'&&!right.product.id){alert('Choose a Right Label product first.');return}const leftName=[left.product.name,left.product.color].filter(Boolean).join(' · '),rightName=[right.product.name,right.product.color].filter(Boolean).join(' · '),productLabel=left.layout==='letter'?`${leftName}  +  ${rightName}`:leftName,history=load(TAGPRINTDB);history.unshift({id:Date.now(),time:new Date().toLocaleString(),product:productLabel,type:left.type,copies,ownership:left.ownership,layout:left.layout,masterId:left.product.id,inventoryId:left.record?.id||'',rightMasterId:right.product.id||'',rightInventoryId:right.record?.id||''});save(TAGPRINTDB,history.slice(0,100));renderGeneralTags();document.body.classList.add('printingGeneralTags');const done=()=>document.body.classList.remove('printingGeneralTags');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
+function setInventoryEditUnit(unit){
+ const select=$('editInvUnit'),raw=String(unit||'Carton');
+ for(const option of Array.from(select.options))if(option.dataset.inventoryOriginalUnit==='1')option.remove();
+ const exact=Array.from(select.options).find(option=>option.value===raw);
+ if(!exact){
+  const equivalent=Array.from(select.options).find(option=>normKey(option.value)===normKey(raw));
+  const option=document.createElement('option');option.value=raw;option.textContent=equivalent?equivalent.textContent:raw;
+  option.dataset.inventoryOriginalUnit='1';select.appendChild(option);
+ }
+ select.value=raw;
+}
 function openInventoryRecordEditor(identity){
  const records=loadInventoryRecords(),record=findInventoryRecordByIdentity(records,identity);if(!record){alert('The exact inventory record could not be uniquely identified. Refresh and try again.');return}
- const product=loadMasters().find(x=>x.id===record.masterId)||{};editingInventoryRecordId=inventoryRecordIdentity(record);
+ const product=inventoryProductForRecord(record);editingInventoryRecordId=inventoryRecordIdentity(record);
  $('inventoryEditContext').innerHTML=`<b>${esc(product.color||product.name||'Inventory record')}</b>${product.color&&product.name?'<br>'+esc(product.name):''}<br>Record at ${esc(record.location||'unassigned location')}<br>Inventory ID: <b>${esc(record.inventoryId||record.id||'—')}</b>`;
  $('editInvLocationType').value=record.locationType||'Rack';
  if(!$('editInvLocationType').value)$('editInvLocationType').value='Other';
  $('editInvLocation').value=record.location||'';$('editInvQuantity').value=Number(record.quantity||0);
- $('editInvUnit').value=record.unit||'Carton';if(!$('editInvUnit').value)$('editInvUnit').value='Each';
+ setInventoryEditUnit(record.unit);
  $('editInvLot').value=record.lotNumber||'';$('editInvPo').value=record.poNumber||'';$('editInvNotes').value=record.notes||'';
  $('inventoryEditModal').classList.remove('hidden');setTimeout(()=>$('editInvLocation').focus(),120);
 }
@@ -4910,6 +4923,6 @@ document.body.classList.remove('formEntry');
  ['startCloudPolling',()=>startCloudPolling()]
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
-<script src="v8-compat.js?r=v8.0.1-cut-preflight-20261005" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
+<script src="v8-compat.js?r=v8.0.1-inventory-editor-20261005" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>
 </html>
