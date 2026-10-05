@@ -4,6 +4,12 @@ import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../build128-operation-save-authority.js',import.meta.url),'utf8');
 
+const loader=fs.readFileSync(new URL('../release-loader.js',import.meta.url),'utf8');
+const emitted=[];
+vm.runInNewContext(loader,{document:{documentElement:{setAttribute(){}},write(s){emitted.push(s)}},window:{}});
+assert.equal((emitted.join('').match(/src="build128-operation-save-authority\.js\?/g)||[]).length,1,'production loader must activate the save authority exactly once');
+assert.ok(emitted.join('').indexOf('build128-operation-save-authority.js')>emitted.join('').indexOf('build127-carpet-receiving-guard-authority.js'),'save authority loads after receiving authority');
+
 let ordinaryCalls=0, carpetCalls=0;
 const ordinary=function(){ordinaryCalls++;return 'ordinary-saved'};
 const stuckBuild120=function(){return false};
@@ -11,7 +17,7 @@ stuckBuild120.__build120=true;
 stuckBuild120.__original=ordinary;
 const build125=async function(){
   const type=context.document.getElementById('operationLineType')?.value||'';
-  if(type==='Carpet Receiving'){carpetCalls++;return 'carpet-guarded'}
+  if(type==='Carpet Receiving'||context.operationItemsDraft.some(x=>x.type==='Carpet Receiving')){carpetCalls++;return 'carpet-guarded'}
   return stuckBuild120();
 };
 build125.__build125=true;
@@ -53,4 +59,12 @@ assert.equal(carpetResult,'carpet-guarded','Carpet Receiving must retain Build12
 assert.equal(carpetCalls,1,'Carpet Receiving guard should execute');
 assert.equal(ordinaryCalls,1,'Carpet guard path must not bypass directly to ordinary save');
 
-console.log('Build128 operation save authority regression: PASS');
+nodes.operationLineType.value='Shipping';
+context.operationItemsDraft.push({type:'Carpet Receiving',roll:'TEST'});
+assert.equal(await context.window.saveOperation(),'carpet-guarded','mixed orders must keep receiving validation');
+context.operationItemsDraft.length=0;
+for(const type of ['Order Picking & Preparation','Shipping','Inventory Transfer','Customer Return']){
+ nodes.operationType.value=type;nodes.operationLineType.value=type;
+ assert.equal(await context.window.saveOperation(),'ordinary-saved',type+' must reach ordinary save');
+}
+console.log('Build128 operation save authority and production loader regression: PASS');
