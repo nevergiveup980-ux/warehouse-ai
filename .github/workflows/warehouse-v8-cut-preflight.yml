@@ -4,7 +4,7 @@ on:
     paths:
       - 'index.html'
       - 'v8-compat.js'
-      - 'tests/v8-cut-preflight.mjs'
+      - 'tests/v8-cut-*.mjs'
       - '.github/workflows/warehouse-v8-cut-preflight.yml'
   workflow_dispatch:
 jobs:
@@ -16,3 +16,5 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/v8-cut-preflight.mjs
+      - run: node tests/v8-cut-retry.mjs
+      - run: node tests/v8-cut-save-flow.mjs

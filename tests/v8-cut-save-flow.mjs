@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const compat=fs.readFileSync(new URL('../v8-compat.js',import.meta.url),'utf8');
+const store=new Map(),committed=new Map(),alerts=[];let written=[],deductions=0,loseReply=true;
+const roll={canonicalId:'fixture',roll:'TEST',length:79.25,_cloudVersion:1};
+const item={type:'Carpet Cutting',inventoryMode:'Stock',roll:'TEST',quantity:62,requestedQuantity:62,numberOfCuts:5,unit:'Foot'};
+const values={operationDate:'2026-10-05',operationType:'Carpet Cutting',operationStatus:'Completed',operationCustomer:'Fixture',operationPO:'TEST',operationInventoryMode:'Stock',operationUnit:'Foot',operationItemStatus:'Completed'};
+const c={console,crypto:{randomUUID:()=> 'one-command'},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},$:id=>({value:values[id]||''}),operationItemsDraft:[],operationQuantityInput:()=>62,operationItemFromForm:()=>({...item}),completeOpenOperationItems:()=>{},derivePartialOrderStatus:()=> 'Completed',isSupplierOperationType:()=>false,operationRecords:()=>[],operationContinuationId:null,operationEditId:null,openOperationFingerprint:()=>'',confirmOperationCompletion:()=>true,carpetRecords:()=>[roll],findCarpetRollForOperation:()=>roll,v8ReadCutRoll:async()=>roll,v8ExecuteCutCommand:async command=>{if(!committed.has(command.commandId)){deductions++;committed.set(command.commandId,{status:'committed',remaining_sixteenths:3072,new_version:2});}if(loseReply){loseReply=false;throw Error('timeout');}return committed.get(command.commandId);},recordSyncPull:async()=>{throw Error('refresh offline')},feetLabel:String,LOGDB:'log',OPDRAFTDB:'draft',save:(key,a)=>{written=structuredClone(a);return true},alert:x=>alerts.push(x),refreshOperationMemory:()=>{},renderDashboard:()=>{},showPage:()=>{},activeOperationsDate:'',operationDraftDirty:true};
+c.window=c;vm.createContext(c);vm.runInContext(compat,c);
+vm.runInContext(html.slice(html.indexOf('const V8_PENDING_CUT_KEY='),html.indexOf('function dataURLToBlob(')),c);
+vm.runInContext(html.slice(html.indexOf('async function saveOperation(){'),html.indexOf('function cancelOperationEdit(){')),c);
+await Promise.all([c.saveOperation(),c.saveOperation()]);
+assert.equal(deductions,1);assert.equal(written.length,0);assert.equal(store.size,1);assert.equal(c.__v8OperationSaving,false);
+await c.saveOperation();
+assert.equal(deductions,1);assert.equal(written.length,1);assert.equal(written[0].impactApplied,true);assert.equal(written[0].actualStockQuantity,63.25);assert.equal(store.size,0);assert.equal(c.__v8OperationSaving,false);
+console.log('V8 actual save flow: lost reply + double click + retry + refresh failure: PASS');
