@@ -161,6 +161,8 @@
   };
   window.RUNLU_V8_VALIDATE_CUT_RESULT=function(plan,result){
     const r=result||{},remaining=Number(r.remaining_sixteenths??r.remainingSixteenths),version=Number(r.new_version??r.newVersion);
+    if(r.status!=='committed')throw new Error('Cut rejected: '+String(r.code||r.status||'invalid response'));
+    if(!Number.isSafeInteger(remaining)||!Number.isSafeInteger(version))throw new Error('Incomplete cut result');
     const expectedRemaining=Math.round(plan.remainingFeet*192);
     if(Number.isFinite(remaining)&&remaining!==expectedRemaining)throw new Error('V8 cut result balance mismatch');
     if(Number.isFinite(version)&&version!==plan.expectedVersion+1)throw new Error('V8 cut result version mismatch');

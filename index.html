@@ -1426,6 +1426,17 @@ function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'
 async function cloudRequest(path,options={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
 function v8CanonicalRpcHeaders(token){return {...cloudHeaders(token),'Content-Profile':'warehouse_v7','Accept-Profile':'warehouse_v7'}}
 function v8CanonicalRpcRequest(name,body,token){return cloudRequest('/rest/v1/rpc/'+name,{method:'POST',headers:v8CanonicalRpcHeaders(token),body:JSON.stringify(body)})}
+async function v8ReadCutRoll(roll){
+ const session=await cloudEnsureSession();if(!session?.user?.id)throw new Error('Administrator sign-in required.');
+ const id=String(roll?.canonicalId||'');
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw new Error('Canonical roll identity missing');
+ const rows=await cloudRequest('/rest/v1/carpet_roll?select=id,roll_number,version,remaining_sixteenths,lifecycle&tenant_id=eq.e2d45722-186b-4b4f-af16-38709a0113ee&id=eq.'+encodeURIComponent(id),{headers:{...cloudHeaders(session.access_token,false),'Accept-Profile':'warehouse_v7'}});
+ if(!Array.isArray(rows)||rows.length!==1||rows[0].id!==id)throw new Error('Canonical carpet roll not found.');
+ const row=rows[0],version=Number(row.version),remaining=Number(row.remaining_sixteenths);
+ if(row.lifecycle!=='active')throw new Error('This carpet roll is not active.');
+ if(!Number.isSafeInteger(version)||version<1||!Number.isSafeInteger(remaining)||remaining<0)throw new Error('Invalid canonical carpet balance or version.');
+ return {...roll,canonicalId:row.id,roll:row.roll_number,_cloudVersion:version,length:remaining/192};
+}
 async function v8ExecuteCutCommand(command){
  const session=await cloudEnsureSession();if(!session?.user?.id)throw new Error('Administrator sign-in required.');
  const body={p_tenant:'e2d45722-186b-4b4f-af16-38709a0113ee',p_command:command.commandId,p_roll:command.rollId,p_expected_version:command.expectedVersion,p_deduct_sixteenths:command.deductSixteenths,p_payload:command.payload,p_actor:session.user.id,p_device:cloudDeviceId()};
@@ -3111,7 +3122,7 @@ function enrichOperationItem(item,type=$('operationType')?.value){
  return out
 }
 function updateOperationCalculationPreview(){
- const el=$('operationCalculationPreview');if(!el)return;const qty=operationQuantityInput(),type=$('operationLineType')?.value||$('operationType').value,mode=$('operationLineInventoryMode')?.value||$('operationInventoryMode').value,item=enrichOperationItem({productId:$('operationProduct').dataset.productId||'',product:$('operationProduct').value.trim(),collection:$('operationCollection').value.trim(),colour:$('operationColour').value.trim(),quantity:Number.isFinite(qty)?qty:0,unit:$('operationUnit').value,inventoryMode:mode},type),spec=underlaymentSpec(item),record=currentOperationInventoryRecord();let html='';
+ const el=$('operationCalculationPreview');if(!el)return;const qty=operationQuantityInput(),type=$('operationLineType')?.value||$('operationType').value,mode=$('operationLineInventoryMode')?.value||$('operationInventoryMode').value,item=enrichOperationItem({numberOfCuts:Math.max(1,Math.floor(Number($('operationCuts')?.value||1))),productId:$('operationProduct').dataset.productId||'',product:$('operationProduct').value.trim(),collection:$('operationCollection').value.trim(),colour:$('operationColour').value.trim(),quantity:Number.isFinite(qty)?qty:0,unit:$('operationUnit').value,inventoryMode:mode},type),spec=underlaymentSpec(item),record=currentOperationInventoryRecord();let html='';
  if(type==='Carpet Cutting'&&mode==='Stock'&&qty>0){const roll=findCarpetRollForOperation(carpetRecords(),$('operationRoll')?.dataset.carpetRecordId||$('operationCarpetRollPicker')?.value||'',$('operationRoll')?.value||''),plan=carpetCutConsumptionPlan(item,roll?.length||0);html=plan.useFullRoll?`<b>Full roll finish:</b> Customer/order total ${feetLabel(qty)} + ${item.numberOfCuts} cut(s) × 3″ normally requires ${feetLabel(plan.planned)}. Current roll is ${feetLabel(plan.before)}, leaving only ${feetLabel(Math.max(0,plan.before-plan.planned))}; the system will consume the <b>entire remaining roll</b> and set balance to <b>0</b>.`:`<b>Carpet cut allowance:</b> Customer/order total ${feetLabel(qty)} + ${item.numberOfCuts} cut(s) × 3″ (${item.allowanceInches}″) = <b>${feetLabel(item.actualStockQuantity)}</b> actual stock deduction.`;}
  else if(type==='Inventory Transfer'&&$('operationCarpetTransferMode')?.value==='Cut Pieces Before Transfer'){const pieces=parseTransferPieceLengths($('operationTransferPieces')?.value),requested=pieces.reduce((a,b)=>a+b,0),actual=requested+pieces.length*0.25;if(pieces.length)html=`<b>Cut & Transfer:</b> ${pieces.map(feetLabel).join(' + ')} = ${feetLabel(requested)} requested; ${pieces.length} piece(s) × 3″ = ${feetLabel(actual)} actual source-roll deduction. ${pieces.length} child roll(s) will be created at <b>${esc($('operationToLocation').value||'destination')}</b>.`; }
  else if(spec&&qty>0&&item.unit==='SY'){const decision=item.roundingDecision==='round-up'?`Remainder ${item.remainderSY} SY is over half a roll (${item.halfRollThresholdSY} SY), so round up.`:item.roundingDecision==='returned-material'?`Remainder ${item.returnedMaterialSY} SY is at or below half a roll (${item.halfRollThresholdSY} SY), so use installer-returned loose material.`:'Exact full-roll quantity.';html=`<b>${esc(spec.name)} issue suggestion:</b> ${qty} SY requested → deduct <b>${item.stockQuantity} full roll(s)</b>${item.returnedMaterialSY?` + ${item.returnedMaterialSY} SY returned material`:''}. ${esc(decision)} Estimated full-roll weight ${item.totalWeightLb} lb. <b>Review before completing.</b>`}
@@ -3531,8 +3542,9 @@ async function saveOperation(){
    const rolls=carpetRecords(),roll=findCarpetRollForOperation(rolls,x.carpetRecordId,x.roll);
    if(!roll){alert('Canonical carpet roll not found. Re-sync before completing.');return}
    try{
-    const plan=RUNLU_V8_CUT_PLAN(roll,x.requestedQuantity??x.quantity,x.numberOfCuts||1);
-    const command=RUNLU_V8_BUILD_CUT_COMMAND(roll,x.requestedQuantity??x.quantity,x.numberOfCuts||1,{operationId:x.id,po:x.po,customer:x.customer,notes:x.notes});
+    const liveRoll=await v8ReadCutRoll(roll);
+    const plan=RUNLU_V8_CUT_PLAN(liveRoll,x.requestedQuantity??x.quantity,x.numberOfCuts||1);
+    const command=RUNLU_V8_BUILD_CUT_COMMAND(liveRoll,x.requestedQuantity??x.quantity,x.numberOfCuts||1,{operationId:x.id,po:x.po,customer:x.customer,notes:x.notes});
     const result=await v8ExecuteCutCommand(command);
     RUNLU_V8_VALIDATE_CUT_RESULT(plan,result);
     x.impactApplied=true;x.appliedAt=new Date().toISOString();x.completedAt=x.appliedAt;
@@ -4876,6 +4888,6 @@ document.body.classList.remove('formEntry');
  ['startCloudPolling',()=>startCloudPolling()]
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
-<script src="v8-compat.js?r=v8.0.1-inventory-location-20261002" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
+<script src="v8-compat.js?r=v8.0.1-cut-preflight-20261005" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>
 </html>
