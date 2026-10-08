@@ -10,7 +10,7 @@
     if(typeof original!=='function'||original.__runluBuild148)return false;
     const wrapped=function(key,rows){
       if(key!==window.CARPETDB)return original.apply(this,arguments);
-      const before=localStorage.getItem(key),previous=Array.isArray(JSON.parse(before||'null'))?JSON.parse(before):[];
+      let previous=[];try{const old=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(old))previous=old}catch{}
       const added=Array.isArray(rows)?rows.filter(r=>!previous.some(p=>text(p.roll)===text(r.roll)&&text(p.sourceOperationId)===text(r.sourceOperationId))):[];
       const result=original.apply(this,arguments);
       if(result!==false)return result;
