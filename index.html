@@ -1577,7 +1577,12 @@ function queueRecordDeltaSave(key,before,after){
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
- while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;q.shift();setRecordSyncOutbox(q);sent++}return sent
+ while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;
+ // Persist the acknowledged removal before mutating the in-memory queue.
+ // If storage is full, do not resend a different operation under this ID.
+ const remaining=q.slice(1);
+ setRecordSyncOutbox(remaining);
+ q=remaining;sent++}return sent
 }
 async function recordSyncBootstrap(){
  const s=await cloudEnsureSession();if(!s)return 0;
