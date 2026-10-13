@@ -1539,7 +1539,17 @@ function recordSyncPrepareGeneration(){
 }
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
 function recordSyncOutbox(){try{return JSON.parse(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)||'[]')}catch{return[]}}
-function setRecordSyncOutbox(v){localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON.stringify(v));updateHeaderCloudPill('auto')}
+function setRecordSyncOutbox(v){
+ // Drop only exact duplicate operations; never collapse distinct stock movements.
+ const seen=new Set(),safe=[];
+ for(const op of v){
+  const signature=JSON.stringify([op.operation_id,op.dataset_key,op.record_id,op.payload,op.base_version,op.delete,op.device_id]);
+  if(seen.has(signature))continue;
+  seen.add(signature);safe.push(op);
+ }
+ localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON.stringify(safe));
+ updateHeaderCloudPill('auto');
+}
 function recordSyncPayload(row){
  if(!row||typeof row!=='object')return row;
  const out={...row};delete out._cloudVersion;delete out._cloudChangeSeq;delete out._cloudRecordId;return out
