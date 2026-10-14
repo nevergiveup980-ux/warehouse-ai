@@ -323,6 +323,16 @@
     let q=queue(),idx=q.findIndex(x=>x.id===queueId),cs=conflicts(),c=cs.find(x=>x.queueId===queueId);if(idx<0||!c)return;
     const m=q[idx],server=c.serverRecord||{},sv=Number(server.version||0);
     if(action==='cloud'){
+      // Explicitly choosing cloud must update the local record before clearing
+      // the blocked operation; otherwise a failed refresh can leave the old
+      // device value visible as though it were the accepted cloud version.
+      // Do not silently discard a newer local edit made after the conflict
+      // was displayed.
+      const shown=c.devicePayload;
+      if(!eq(m.payload,shown)){
+        alert('This record changed again after the conflict was displayed. Review the latest local changes before choosing Cloud.');
+        return;
+      }
       q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);write(QUEUE,q);saveConflicts(cs);await sync({silent:true});return;
     }
     if(action==='device'){
