@@ -1,0 +1,22 @@
+name: Cloud Master queue safety
+on:
+  pull_request:
+    paths:
+      - 'build072-hotfix.js'
+      - 'tests/build072-queue-*.mjs'
+      - '.github/workflows/cloud-master-queue-safety.yml'
+  workflow_dispatch:
+jobs:
+  queue-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check build072-hotfix.js
+      - name: Static queue guards
+        run: node tests/build072-queue-safety-static.mjs
+      - name: Queue reconciliation regression
+        run: node tests/build072-queue-reconcile-regression.mjs
