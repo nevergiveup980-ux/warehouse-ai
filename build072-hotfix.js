@@ -247,7 +247,15 @@
       if(!MANAGED.has(k)||applying)return original.apply(this,arguments);
       const before=read(k),encoded=JSON.stringify(v);
       try{localStorage.setItem(k,encoded)}catch(e){alert('This device could not save the local cache. No cloud overwrite was attempted.');return false}
-      diffAndQueue(k,before,v);return true;
+      try{diffAndQueue(k,before,v)}catch(e){
+        // The cache write succeeded but the cloud outbox did not. Do not report
+        // a successful synchronized save or silently discard the failed delta.
+        console.error('RUNLU Cloud Master could not persist the offline operation',e);
+        try{localStorage.setItem(LAST_ERROR,'Offline sync queue could not be saved: '+String(e?.message||e))}catch(_){}
+        alert('Saved on this device, but the offline cloud queue is full. Do not clear website data or edit this record on another device until sync is repaired.');
+        return false;
+      }
+      return true;
     };
     wrapped.__build072=true;wrapped.__original=original;window.save=wrapped;return true;
   }
