@@ -174,6 +174,7 @@
     let q=queue(),flushed=0,cs=conflicts();
     const initialFingerprints=new Map(q.map(m=>[m.id,JSON.stringify(m)]));
     const acknowledged=new Set();
+    const acknowledgedVersions=new Map();
     for(let i=0;i<q.length;i++){
       const m=q[i];if(m.blocked||m.replayHeld)continue;
       if(m.datasetKey===INV&&m.op==='upsert'&&m.source!=='live-save'){
@@ -192,7 +193,8 @@
         }
         if(res?.status!=='ok')throw new Error('Cloud Master mutation was not confirmed.');
         const rec=res.record||{};setVersion(m.datasetKey,m.recordId,rec.version||m.baseVersion+1);
-        cs=cs.filter(c=>c.queueId!==m.id);acknowledged.add(m.id);q[i]=null;flushed++;
+        cs=cs.filter(c=>c.queueId!==m.id);acknowledged.add(m.id);
+        acknowledgedVersions.set(m.id,Number(rec.version||m.baseVersion+1));q[i]=null;flushed++;
       }catch(e){m.lastError=e.message||String(e);localStorage.setItem(LAST_ERROR,m.lastError);if(navigator.onLine===false)break}
     }
     // Merge network results with the latest queue. Never discard edits or
@@ -204,7 +206,12 @@
     }).map(m=>{
       // Only propagate blocked/replay state if this operation was not edited
       // since the flush began; concurrent user edits take precedence.
-      if(JSON.stringify(m)!==initialFingerprints.get(m.id))return m;
+      if(JSON.stringify(m)!==initialFingerprints.get(m.id)){
+        // If the previous edit reached cloud while a newer edit was made,
+        // rebase that newer edit on the confirmed cloud version. Otherwise
+        // it would retry against a stale baseVersion and falsely conflict.
+        return acknowledgedVersions.has(m.id)?{...m,baseVersion:acknowledgedVersions.get(m.id)}:m;
+      }
       return pendingById.get(m.id)||m;
     });
     write(QUEUE,merged);saveConflicts(cs);renderPanel();return {flushed,pending:merged.length};
