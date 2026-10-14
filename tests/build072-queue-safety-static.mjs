@@ -12,6 +12,8 @@ check('Local cache write failure stops the save',/could not save the local cache
 check('Pending offline operations block cloud pull',/if\(queue\(\)\.length\)throw new Error\('Cloud refresh paused/);
 check('Pending offline operations block initial cloud activation',/if\(queue\(\)\.length\)throw new Error\('Cloud Master activation paused/);
 check('Record-level conflicts block cloud pull',/if\(conflicts\(\)\.length\)throw new Error/);
+check('Stale cloud conflict choice is rejected after newer edits',/if\(!eq\(m\.payload,shown\)\)/);
+check('Stale conflict resolution warns before dropping edits',/This record changed again after the conflict was displayed/);
 check('Cloud pull happens after pending-queue gate',/if\(queue\(\)\.length\)[\s\S]{0,220}await pullCloud\(s\)/);
 check('Unproven inventory replay remains held',/build145-unproven-inventory-replay/);
 check('Cloud mutations require explicit success',/res\?\.status!=='ok'/);
