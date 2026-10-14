@@ -234,6 +234,9 @@
     const rows=await fetchRecords(s);rememberRemote(rows);captureLocalDelta(rows);
     await flushQueue(s,{allowShadow:true});
     if(conflicts().length){await setState(s,'paused',{metadata:{reason:'record_conflict_during_activation',paused_at:nowIso()}});throw new Error('Cloud Master activation paused because a real record-level conflict needs review. No whole dataset was overwritten.');}
+    // Activation must not claim the cloud is authoritative while local
+    // mutations are held, failed, or waiting for confirmation.
+    if(queue().length)throw new Error('Cloud Master activation paused: local offline operations remain pending. Nothing was discarded.');
     st=await setState(s,'active',{activated_at:nowIso(),activated_by:deviceId(),metadata:{legacy_source:'user_datasets',activation:'Build072 after local-delta capture'}});
     clearLegacyConflictState();return st;
   }
