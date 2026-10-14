@@ -76,7 +76,16 @@
   function versions(){return read(VERSIONS)||{}}
   function setVersion(dataset,id,v){const map=versions();if(v==null)delete map[versionKey(dataset,id)];else map[versionKey(dataset,id)]=Number(v);write(VERSIONS,map)}
   function getVersion(dataset,id){const v=versions()[versionKey(dataset,id)];return Number.isFinite(Number(v))?Number(v):0}
-  function queue(){const q=read(QUEUE);return Array.isArray(q)?q:[]}
+  function queue(){
+    // A malformed offline queue is NOT an empty queue. Failing closed prevents
+    // the next save or cloud pull from erasing recoverable pending operations.
+    const raw=localStorage.getItem(QUEUE);
+    if(raw===null)return [];
+    let parsed;
+    try{parsed=JSON.parse(raw)}catch(e){throw new Error('Cloud Master offline queue is unreadable; original data preserved. '+String(e?.message||e))}
+    if(!Array.isArray(parsed))throw new Error('Cloud Master offline queue has an unexpected format; original data preserved.');
+    return parsed;
+  }
   function conflicts(){const x=read(CONFLICTS);return Array.isArray(x)?x:[]}
   function saveConflicts(x){write(CONFLICTS,x);renderPanel()}
   function qid(){return 'Q-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
