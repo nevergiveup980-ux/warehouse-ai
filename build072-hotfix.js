@@ -222,6 +222,9 @@
       const s=await ensureSession();if(!s)throw new Error('Cloud sign-in required.');
       if(navigator.onLine===false)throw new Error('Offline — changes are safely queued on this device.');
       await activateIfNeeded(s);await flushQueue(s);if(conflicts().length)throw new Error('A record-level cloud conflict needs review before that record can sync.');
+      // A held, blocked, or failed local operation must not be overwritten by
+      // a cloud pull. The user must resolve/persist the pending changes first.
+      if(queue().length)throw new Error('Cloud refresh paused: local offline operations remain pending. No local records were replaced.');
       await pullCloud(s);if(!silent)alert('Cloud Master synchronized. Supabase is the authoritative warehouse record; this device is now refreshed from cloud.');return true;
     }catch(e){localStorage.setItem(LAST_ERROR,e.message||String(e));if(!silent&&navigator.onLine!==false)alert('Cloud Master sync stopped: '+(e.message||e));renderPanel();return false}
     finally{syncBusy=false;renderPanel()}
