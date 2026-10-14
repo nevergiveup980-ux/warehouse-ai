@@ -187,8 +187,15 @@
         m.attempts=Number(m.attempts||0)+1;
         const res=await applyMutation(s,m);
         if(res?.status==='conflict'){
-          m.blocked=true;m.serverRecord=res.record||null;m.reason=res.reason||'version_mismatch';
-          cs=cs.filter(c=>c.queueId!==m.id);cs.push({queueId:m.id,at:nowIso(),datasetKey:m.datasetKey,recordId:m.recordId,op:m.op,devicePayload:m.payload,serverRecord:res.record||null,reason:m.reason});
+          // The user may have edited this record during the network request.
+          // Preserve the newest payload and block it for explicit review;
+          // never replace it with the stale payload that was sent.
+          const current=queue().find(x=>x.id===m.id);
+          const changedDuringFlight=current&&JSON.stringify(current)!==initialFingerprints.get(m.id);
+          const reviewed=changedDuringFlight?current:m;
+          reviewed.blocked=true;reviewed.serverRecord=res.record||null;reviewed.reason=res.reason||'version_mismatch';
+          cs=cs.filter(c=>c.queueId!==m.id);cs.push({queueId:m.id,at:nowIso(),datasetKey:reviewed.datasetKey,recordId:reviewed.recordId,op:reviewed.op,devicePayload:clone(reviewed.payload),serverRecord:res.record||null,reason:reviewed.reason});
+          q[i]=reviewed;
           continue;
         }
         if(res?.status!=='ok')throw new Error('Cloud Master mutation was not confirmed.');
@@ -207,6 +214,10 @@
       // Only propagate blocked/replay state if this operation was not edited
       // since the flush began; concurrent user edits take precedence.
       if(JSON.stringify(m)!==initialFingerprints.get(m.id)){
+        // Conflict results take priority over in-flight edits. Keep the newest
+        // local payload but retain the explicit review block.
+        const processed=pendingById.get(m.id);
+        if(processed?.blocked)return {...m,blocked:true,serverRecord:processed.serverRecord,reason:processed.reason};
         // If the previous edit reached cloud while a newer edit was made,
         // rebase that newer edit on the confirmed cloud version. Otherwise
         // it would retry against a stale baseVersion and falsely conflict.
