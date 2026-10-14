@@ -1,0 +1,19 @@
+// RUNLU Cloud Master Build072 safety checks. Run: node tests/build072-queue-safety-static.mjs
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const src=readFileSync(new URL('../build072-hotfix.js',import.meta.url),'utf8');
+const check=(label,pattern)=>{assert.match(src,pattern,label);console.log('PASS',label)};
+check('Cloud Master offline queue key',/runlu_cloud_master_offline_queue_v680/);
+check('Cloud Master save failure is surfaced',/Offline sync queue could not be saved/);
+check('Local cache write failure stops the save',/could not save the local cache/);
+check('Pending offline operations block cloud pull',/if\(queue\(\)\.length\)throw new Error\('Cloud refresh paused/);
+check('Record-level conflicts block cloud pull',/if\(conflicts\(\)\.length\)throw new Error/);
+check('Cloud pull happens after pending-queue gate',/if\(queue\(\)\.length\)[\s\S]{0,220}await pullCloud\(s\)/);
+check('Unproven inventory replay remains held',/build145-unproven-inventory-replay/);
+check('Cloud mutations require explicit success',/res\?\.status!=='ok'/);
+const flush=src.slice(src.indexOf('async function flushQueue('),src.indexOf('function sortDataset('));
+assert.match(flush,/let q=queue\(\)/);
+assert.match(flush,/await applyMutation\(s,m\)/);
+assert.match(flush,/q=q\.filter\(Boolean\);write\(QUEUE,q\)/);
+console.warn('KNOWN RISK: flushQueue reads a queue snapshot, awaits network mutations, then writes the old snapshot. Concurrent new operations may be overwritten. DO NOT DEPLOY until addressed and tested.');
+console.log('Static checks passed; these checks do not simulate real browser or network behavior.');
