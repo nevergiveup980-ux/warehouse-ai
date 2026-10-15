@@ -16,6 +16,9 @@ check('Rollback failure alerts the user to stop editing',/Offline save rollback 
 check('Multi-record save snapshots queue before writing',/const previousQueueRaw=localStorage\.getItem\(QUEUE\)/);
 check('Multi-record save restores queue on partial enqueue failure',/localStorage\.setItem\(QUEUE,previousQueueRaw\)/);
 check('Rollback success requires both cache and queue restoration',/restored&&queueRestored/);
+check('Save preflights unresolved edits before local write',/try\{assertNoUnresolvedSaveEdits\(k,before,v\)\}[\s\S]*?localStorage\.setItem\(k,encoded\)/);
+check('Preflight checks blocked and held records',/x\.datasetKey===dataset&&\(x\.blocked\|\|x\.replayHeld\)/);
+check('Preflight compares only affected record',/previous\.get\(op\.recordId\),next\.get\(op\.recordId\)/);
 check('Pending offline operations block cloud pull',/if\(queue\(\)\.length\)throw new Error\('Cloud refresh paused/);
 check('Pending offline operations block initial cloud activation',/if\(queue\(\)\.length\)throw new Error\('Cloud Master activation paused/);
 check('Record-level conflicts block cloud pull',/if\(conflicts\(\)\.length\)throw new Error/);
