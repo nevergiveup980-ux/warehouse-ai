@@ -14,6 +14,9 @@ check('Pending offline operations block initial cloud activation',/if\(queue\(\)
 check('Record-level conflicts block cloud pull',/if\(conflicts\(\)\.length\)throw new Error/);
 check('All conflict actions reject newer payloads or changed operations',/if\(!eq\(m\.payload,c\.devicePayload\)\|\|m\.op!==c\.op\)/);
 check('Stale conflict resolution warns before dropping edits',/This record changed after the conflict was displayed/);
+check('Cloud selection checks sync result',/if\(!ok\)throw new Error\('Cloud refresh did not complete/);
+check('Cloud selection restores conflict only if no concurrent edits',/if\(eq\(queue\(\),q\)&&eq\(conflicts\(\),cs\)\)/);
+check('Cloud selection keeps previous queue for rollback',/const previousQueue=clone\(q\),previousConflicts=clone\(cs\)/);
 check('Cloud pull happens after pending-queue gate',/if\(queue\(\)\.length\)[\s\S]{0,220}await pullCloud\(s\)/);
 check('Unproven inventory replay remains held',/build145-unproven-inventory-replay/);
 check('Cloud mutations require explicit success',/res\?\.status!=='ok'/);
