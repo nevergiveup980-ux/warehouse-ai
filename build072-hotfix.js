@@ -310,13 +310,22 @@
     const wrapped=function(k,v){
       if(!MANAGED.has(k)||applying)return original.apply(this,arguments);
       const before=read(k),encoded=JSON.stringify(v);
+      // A failed queue write must not leave an untracked cache edit. Keep the
+      // previous raw bytes for rollback rather than re-serializing parsed data.
+      const previousRaw=localStorage.getItem(k);
       try{localStorage.setItem(k,encoded)}catch(e){alert('This device could not save the local cache. No cloud overwrite was attempted.');return false}
       try{diffAndQueue(k,before,v)}catch(e){
-        // The cache write succeeded but the cloud outbox did not. Do not report
-        // a successful synchronized save or silently discard the failed delta.
         console.error('RUNLU Cloud Master could not persist the offline operation',e);
+        let restored=false;
+        try{
+          if(previousRaw===null)localStorage.removeItem(k);
+          else localStorage.setItem(k,previousRaw);
+          restored=true;
+        }catch(rollbackError){console.error('RUNLU Cloud Master cache rollback failed',rollbackError)}
         try{localStorage.setItem(LAST_ERROR,'Offline sync queue could not be saved: '+String(e?.message||e))}catch(_){}
-        alert('Saved on this device, but the offline cloud queue is full. Do not clear website data or edit this record on another device until sync is repaired.');
+        alert(restored
+          ?'Save was cancelled because the offline cloud queue could not be updated. The previous local record was restored. Do not clear website data.'
+          :'Offline cloud queue failed AND the local cache could not be restored. Stop editing this record, do not clear website data, and request recovery.');
         return false;
       }
       return true;
