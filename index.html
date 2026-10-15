@@ -1451,13 +1451,16 @@ async function v8CheckCarpetReviewGate(){
  try{
   const session=await cloudEnsureSession();if(!session?.access_token||!session?.user?.id)throw new Error('Please sign in as the warehouse administrator.');
   const tenant='e2d45722-186b-4b4f-af16-38709a0113ee';
-  const gate=await v8CanonicalRpcRequest('get_carpet_review_promotion_gate',{p_tenant:tenant},session.access_token);
-  const cases=[];
+  const checks=[];
+  const call=async(name,args)=>{try{const value=await v8CanonicalRpcRequest(name,args,session.access_token);return {ok:true,value}}catch(e){return {ok:false,error:String(e.message||e)}}};
+  const gate=await call('get_carpet_review_promotion_gate',{p_tenant:tenant});
+  checks.push('Review gate: '+(gate.ok?JSON.stringify(gate.value):'BLOCKED — '+gate.error));
   for(const [roll,id] of [['RC2347','1786654274234.5'],['RC2348','1786654104967.5']]){
-   try{const result=await v8CanonicalRpcRequest('preview_carpet_review_promotion_case',{p_tenant:tenant,p_source_dataset:'runlu_carpet_inventory_v52',p_source_record_id:id},session.access_token);cases.push({roll,preview:result})}
-   catch(e){cases.push({roll,error:String(e.message||e)})}
+   const result=await call('preview_carpet_review_promotion_case',{p_tenant:tenant,p_source_dataset:'runlu_carpet_inventory_v52',p_source_record_id:id});
+   checks.push(roll+': '+(result.ok?JSON.stringify(result.value):'BLOCKED — '+result.error));
   }
-  status.textContent='Read-only review result: '+JSON.stringify({gate,cases});
+  status.textContent=checks.join('\\n')+'\\nRead-only check complete. No records were modified.';
+  status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
  }catch(e){status.textContent='Review access check failed: '+String(e.message||e)+'. No records were modified.'}
 }
 async function v8ReadCutRoll(roll){
