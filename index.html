@@ -1399,10 +1399,21 @@ function pruneLocalApplicationCache(force=false){
  return result;
 }
 function save(k,v){
- const encoded=JSON.stringify(v),before=load(k);
+ const encoded=JSON.stringify(v),before=load(k),previousRaw=localStorage.getItem(k);
+ const previousOutboxRaw=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
  try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);return true;}
  catch(err){
   console.error('Storage save failed:',err);
+  // Queue failure after the local write is not a successful save.
+  // Restore both keys so no partially queued batch survives a rollback.
+  let restored=true;
+  try{
+   if(previousOutboxRaw===null)localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
+   else localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,previousOutboxRaw);
+   if(previousRaw===null)localStorage.removeItem(k);
+   else localStorage.setItem(k,previousRaw);
+  }catch(rollbackError){restored=false;console.error('Warehouse save rollback incomplete',rollbackError)}
+  if(!restored){alert('Local save and queue rollback incomplete. Stop editing and do not clear browser data.');return false}
   if(isQuotaError(err)){
    const normal=pruneLocalApplicationCache(true),deep=aggressiveSafeStorageCleanup();
    try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);renderBackupStatus();return true}catch(retryErr){
