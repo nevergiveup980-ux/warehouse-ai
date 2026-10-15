@@ -304,12 +304,35 @@
 
   function scheduleFlush(){if(flushTimer)clearTimeout(flushTimer);flushTimer=setTimeout(()=>sync({silent:true}),700)}
 
+  function assertNoUnresolvedSaveEdits(dataset,before,after){
+    const pending=queue().filter(x=>x.datasetKey===dataset&&(x.blocked||x.replayHeld));
+    if(!pending.length)return;
+    if(dataset==='runlu_settings_v20'){
+      if(!eq(before,after)&&pending.some(x=>x.recordId==='__document__'))
+        throw new Error('Unresolved settings operation must be reviewed before another save.');
+      return;
+    }
+    const previous=new Map();
+    if(Array.isArray(before))for(const row of before){const id=stableId(dataset,row);if(id)previous.set(id,row)}
+    const next=new Map();
+    if(Array.isArray(after))for(const row of after){const id=stableId(dataset,row);if(id)next.set(id,row)}
+    for(const op of pending){
+      if(!eq(previous.get(op.recordId),next.get(op.recordId)))
+        throw new Error('Unresolved cloud operation for this record; review the pending operation before saving.');
+    }
+  }
+
   function installSaveWrapper(){
     const current=window.save;if(typeof current!=='function'||current.__build072)return false;
     const original=current;
     const wrapped=function(k,v){
       if(!MANAGED.has(k)||applying)return original.apply(this,arguments);
       const before=read(k),encoded=JSON.stringify(v);
+      // Reject edits to unresolved records before touching the local cache.
+      try{assertNoUnresolvedSaveEdits(k,before,v)}catch(e){
+        alert(String(e?.message||e)+' No local save was attempted.');
+        return false;
+      }
       // A failed queue write must not leave an untracked cache edit. Keep the
       // previous raw bytes for rollback rather than re-serializing parsed data.
       const previousRaw=localStorage.getItem(k);
