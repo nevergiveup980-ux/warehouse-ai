@@ -1526,6 +1526,11 @@ const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC
 function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
 function recordSyncPrepareGeneration(){
  if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
+ // Never reset a browser generation while unsent operations still exist.
+ // A generation change is not permission to discard local business data.
+ if(recordSyncOutbox().length)throw new Error('Pending offline operations: browser generation reset blocked. Preserve this device data.');
+ for(const key of DATA_KEYS)if(localStorage.getItem(key)!==null)
+   throw new Error('Existing local warehouse data: automatic generation reset blocked. Export and reconcile before migration.');
  cloudApplying=true;try{
   for(const k of DATA_KEYS)localStorage.removeItem(k);
   localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
@@ -1538,7 +1543,14 @@ function recordSyncPrepareGeneration(){
  return true
 }
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
-function recordSyncOutbox(){try{return JSON.parse(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)||'[]')}catch{return[]}}
+function recordSyncOutbox(){
+ const raw=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
+ if(raw===null)return [];
+ let parsed;
+ try{parsed=JSON.parse(raw)}catch(e){throw new Error('Cloud outbox unreadable; original browser data preserved. '+String(e?.message||e))}
+ if(!Array.isArray(parsed))throw new Error('Cloud outbox format invalid; original browser data preserved.');
+ return parsed;
+}
 function recordSyncDeduplicateOutbox(v){
  // Deduplicate by stable operation ID only when the entire operation agrees.
  // Conflicting copies of an operation ID must remain visible for investigation.
