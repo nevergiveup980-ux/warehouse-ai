@@ -175,7 +175,15 @@
     write(BOOTSTRAP,{capturedAt:nowIso(),audit});return audit;
   }
 
-  async function flushQueue(s,{allowShadow=false}={}){
+  async function flushQueue(s,options={}){
+    // syncBusy is tab-local; an exclusive browser lock prevents parallel uploads.
+    if(!navigator.locks?.request)throw new Error('Cross-tab sync lock unavailable; offline queue preserved.');
+    return navigator.locks.request('runlu-cloud-master-flush-v680',{mode:'exclusive',ifAvailable:true},async lock=>{
+      if(!lock)throw new Error('Another tab is syncing. This tab did not upload.');
+      return flushQueueLocked(s,options);
+    });
+  }
+  async function flushQueueLocked(s,{allowShadow=false}={}){
     const st=stateCache||await fetchState(s);if(st?.mode!=='active'&&!allowShadow)return {flushed:0,pending:queue().length};
     let q=queue(),flushed=0,cs=conflicts();
     const initialFingerprints=new Map(q.map(m=>[m.id,JSON.stringify(m)]));
