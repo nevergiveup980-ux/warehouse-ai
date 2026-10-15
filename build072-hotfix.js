@@ -92,7 +92,13 @@
 
   function enqueue(dataset,id,op,payload,baseVersion,source=''){
     if(!dataset||!id)return;
-    let q=queue(),idx=q.findIndex(x=>x.datasetKey===dataset&&x.recordId===id&&!x.blocked);
+    let q=queue();
+    // A held or conflicted operation must never be silently replaced by a
+    // later edit of the same record. That would erase the evidence needed
+    // to determine whether the first operation reached the server.
+    const unresolved=q.find(x=>x.datasetKey===dataset&&x.recordId===id&&(x.blocked||x.replayHeld));
+    if(unresolved)throw new Error('Unresolved cloud operation for this record; new edit was not queued. Keep this device data and review the pending operation before syncing.');
+    let idx=q.findIndex(x=>x.datasetKey===dataset&&x.recordId===id&&!x.blocked);
     if(idx>=0){
       const cur=q[idx];
       if(cur.baseVersion===0&&op==='delete'){q.splice(idx,1);write(QUEUE,q);renderPanel();return}
