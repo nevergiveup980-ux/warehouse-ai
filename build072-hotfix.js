@@ -202,7 +202,18 @@
         const rec=res.record||{};setVersion(m.datasetKey,m.recordId,rec.version||m.baseVersion+1);
         cs=cs.filter(c=>c.queueId!==m.id);acknowledged.add(m.id);
         acknowledgedVersions.set(m.id,Number(rec.version||m.baseVersion+1));q[i]=null;flushed++;
-      }catch(e){m.lastError=e.message||String(e);localStorage.setItem(LAST_ERROR,m.lastError);if(navigator.onLine===false)break}
+      }catch(e){
+        m.lastError=e.message||String(e);
+        localStorage.setItem(LAST_ERROR,m.lastError);
+        // A timed-out request may already have committed on the server.
+        // Never blindly replay an inventory mutation whose outcome is unknown.
+        if(m.datasetKey===INV){
+          m.replayHeld=true;
+          m.replayHoldReason='inventory-cloud-acknowledgement-unknown';
+          m.replayHeldAt=nowIso();
+        }
+        if(navigator.onLine===false)break;
+      }
     }
     // Merge network results with the latest queue. Never discard edits or
     // new operations made while an asynchronous cloud mutation was in flight.
