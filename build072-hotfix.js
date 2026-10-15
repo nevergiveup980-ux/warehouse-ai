@@ -313,9 +313,19 @@
       // A failed queue write must not leave an untracked cache edit. Keep the
       // previous raw bytes for rollback rather than re-serializing parsed data.
       const previousRaw=localStorage.getItem(k);
+      const previousQueueRaw=localStorage.getItem(QUEUE);
       try{localStorage.setItem(k,encoded)}catch(e){alert('This device could not save the local cache. No cloud overwrite was attempted.');return false}
       try{diffAndQueue(k,before,v)}catch(e){
         console.error('RUNLU Cloud Master could not persist the offline operation',e);
+        // A dataset save may enqueue several changed records. If the third
+        // enqueue fails, the first two must not remain queued while the whole
+        // dataset is rolled back. Restore the queue snapshot first.
+        let queueRestored=false;
+        try{
+          if(previousQueueRaw===null)localStorage.removeItem(QUEUE);
+          else localStorage.setItem(QUEUE,previousQueueRaw);
+          queueRestored=true;
+        }catch(queueRollbackError){console.error('RUNLU Cloud Master queue rollback failed',queueRollbackError)}
         let restored=false;
         try{
           if(previousRaw===null)localStorage.removeItem(k);
@@ -323,9 +333,9 @@
           restored=true;
         }catch(rollbackError){console.error('RUNLU Cloud Master cache rollback failed',rollbackError)}
         try{localStorage.setItem(LAST_ERROR,'Offline sync queue could not be saved: '+String(e?.message||e))}catch(_){}
-        alert(restored
-          ?'Save was cancelled because the offline cloud queue could not be updated. The previous local record was restored. Do not clear website data.'
-          :'Offline cloud queue failed AND the local cache could not be restored. Stop editing this record, do not clear website data, and request recovery.');
+        alert(restored&&queueRestored
+          ?'Save was cancelled because the offline cloud queue could not be updated. Previous local records and queue were restored. Do not clear website data.'
+          :'Offline save rollback was incomplete. Stop editing, do not clear website data, and request recovery.');
         return false;
       }
       return true;
