@@ -9,6 +9,10 @@ check('Unexpected queue shape is rejected',/offline queue has an unexpected form
 check('Queue reader explicitly parses persisted JSON',/parsed=JSON\.parse\(raw\)/);
 check('Cloud Master save failure is surfaced',/Offline sync queue could not be saved/);
 check('Local cache write failure stops the save',/could not save the local cache/);
+check('Local cache raw value is saved for rollback',/const previousRaw=localStorage\.getItem\(k\)/);
+check('Failed queue write restores previous local value',/localStorage\.setItem\(k,previousRaw\)/);
+check('Failed queue write removes newly created cache key',/if\(previousRaw===null\)localStorage\.removeItem\(k\)/);
+check('Rollback failure alerts the user to stop editing',/Offline cloud queue failed AND the local cache could not be restored/);
 check('Pending offline operations block cloud pull',/if\(queue\(\)\.length\)throw new Error\('Cloud refresh paused/);
 check('Pending offline operations block initial cloud activation',/if\(queue\(\)\.length\)throw new Error\('Cloud Master activation paused/);
 check('Record-level conflicts block cloud pull',/if\(conflicts\(\)\.length\)throw new Error/);
