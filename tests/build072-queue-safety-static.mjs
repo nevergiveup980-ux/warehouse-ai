@@ -32,6 +32,10 @@ check('Unproven inventory replay remains held',/build145-unproven-inventory-repl
 check('Unknown inventory acknowledgement blocks automatic replay',/m\.replayHoldReason='inventory-cloud-acknowledgement-unknown'/);
 check('Unknown inventory acknowledgement sets replay hold',/if\(m\.datasetKey===INV\)\{\s*m\.replayHeld=true/);
 check('Cloud mutations require explicit success',/res\?\.status!=='ok'/);
+check('Cross-tab cloud upload requires Web Locks',/if\(!navigator\.locks\?\.request\)throw new Error/);
+check('Cloud upload uses exclusive nonwaiting lock',/navigator\.locks\.request\('runlu-cloud-master-flush-v680',\{mode:'exclusive',ifAvailable:true\}/);
+check('Lock failure prevents cloud upload',/if\(!lock\)throw new Error\('Another tab is syncing/);
+check('Only lock holder flushes the queue',/return flushQueueLocked\(s,options\)/);
 check('Every edited queue operation gets a new mutation revision',/queuedAt:nowIso\(\),mutationRevision:qid\(\),attempts:0/);
 check('New queue operations carry a mutation revision',/q\.push\(\{id:qid\(\),mutationRevision:qid\(\)/);
 check('Held or blocked record prevents silent queue overwrite',/const unresolved=q\.find\(x=>x\.datasetKey===dataset&&x\.recordId===id&&\(x\.blocked\|\|x\.replayHeld\)\)/);
