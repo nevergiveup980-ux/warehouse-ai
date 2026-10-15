@@ -24,6 +24,8 @@ check('Unknown inventory acknowledgement sets replay hold',/if\(m\.datasetKey===
 check('Cloud mutations require explicit success',/res\?\.status!=='ok'/);
 check('Every edited queue operation gets a new mutation revision',/queuedAt:nowIso\(\),mutationRevision:qid\(\),attempts:0/);
 check('New queue operations carry a mutation revision',/q\.push\(\{id:qid\(\),mutationRevision:qid\(\)/);
+check('Held or blocked record prevents silent queue overwrite',/const unresolved=q\.find\(x=>x\.datasetKey===dataset&&x\.recordId===id&&\(x\.blocked\|\|x\.replayHeld\)\)/);
+check('Unresolved record save throws instead of coalescing',/if\(unresolved\)throw new Error\('Unresolved cloud operation for this record/);
 const flush=src.slice(src.indexOf('async function flushQueue('),src.indexOf('function sortDataset('));
 assert.match(flush,/let q=queue\(\)/);
 assert.match(flush,/await applyMutation\(s,m\)/);
