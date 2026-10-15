@@ -789,7 +789,7 @@ img,video,canvas,svg{max-width:100%}
 <div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
 <div class="meta" style="margin-top:9px">Local snapshots protect against accidental editing, but they remain on this device. A downloaded JSON backup is the protection for phone replacement, browser data loss or moving the app to a different URL.</div></div>
 
-<div class="settingRow"><div class="name">Carpet Data Migration</div><div class="meta">The July 20 carpet inventory and cutting-log backup is built into this release. Migration adds missing legacy records once and never overwrites newer V5.2 balances.</div>
+<div class="settingRow"><div class="name">Legacy Carpet Data Migration</div><div class="meta">Historical July 20 migration only. Retired when Cloud Master is active; it cannot restore deferred V8 rolls. Use the read-only V8 Carpet Recovery check below for RC2347 / RC2348. Do not import old JSON backups over current warehouse data.</div>
 <div class="actions"><button class="purple" onclick="migrateLegacyCarpetData(true)">Check Carpet Migration</button></div>
 <div id="carpetImportStatus" class="notice" style="margin-top:10px">Checking unified carpet records...</div></div>
 
