@@ -348,11 +348,22 @@
       return;
     }
     if(action==='device'){
-      m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});return;
+      m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;
+      // Keep the conflict visible until the server confirms this mutation.
+      // flushQueue removes the matching conflict only after status==='ok'.
+      write(QUEUE,q);
+      const ok=await sync({silent:true});
+      if(!ok)alert('Device selection is pending cloud confirmation. Do not repeat the inventory change or clear website data.');
+      return;
     }
     if(action==='delete'){
       if(!confirm('Delete this cloud record as a duplicate?\n\nA cloud tombstone will be written so an old device cannot resurrect it.'))return;
-      m.op='delete';m.baseVersion=sv;m.blocked=false;m.payload=m.payload||server.payload||{};write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});
+      m.op='delete';m.baseVersion=sv;m.blocked=false;m.payload=m.payload||server.payload||{};
+      // Preserve conflict evidence until the cloud confirms the tombstone.
+      write(QUEUE,q);
+      const ok=await sync({silent:true});
+      if(!ok)alert('Duplicate deletion is pending cloud confirmation. Do not retry the deletion or clear website data.');
+      return;
     }
   };
 
