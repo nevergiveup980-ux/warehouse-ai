@@ -19,6 +19,8 @@ check('Cloud selection restores conflict only if no concurrent edits',/if\(eq\(q
 check('Cloud selection keeps previous queue for rollback',/const previousQueue=clone\(q\),previousConflicts=clone\(cs\)/);
 check('Cloud pull happens after pending-queue gate',/if\(queue\(\)\.length\)[\s\S]{0,220}await pullCloud\(s\)/);
 check('Unproven inventory replay remains held',/build145-unproven-inventory-replay/);
+check('Unknown inventory acknowledgement blocks automatic replay',/m\.replayHoldReason='inventory-cloud-acknowledgement-unknown'/);
+check('Unknown inventory acknowledgement sets replay hold',/if\(m\.datasetKey===INV\)\{\s*m\.replayHeld=true/);
 check('Cloud mutations require explicit success',/res\?\.status!=='ok'/);
 const flush=src.slice(src.indexOf('async function flushQueue('),src.indexOf('function sortDataset('));
 assert.match(flush,/let q=queue\(\)/);
