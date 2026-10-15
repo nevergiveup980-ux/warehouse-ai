@@ -96,8 +96,8 @@
     if(idx>=0){
       const cur=q[idx];
       if(cur.baseVersion===0&&op==='delete'){q.splice(idx,1);write(QUEUE,q);renderPanel();return}
-      q[idx]={...cur,op,payload:clone(payload),queuedAt:nowIso(),attempts:0,source:source||cur.source||'',replayHeld:false,replayHoldReason:null,replayHeldAt:null};
-    }else q.push({id:qid(),datasetKey:dataset,recordId:id,op,payload:clone(payload),baseVersion:Number(baseVersion||0),queuedAt:nowIso(),attempts:0,blocked:false,source:source||'',replayHeld:false});
+      q[idx]={...cur,op,payload:clone(payload),queuedAt:nowIso(),mutationRevision:qid(),attempts:0,source:source||cur.source||'',replayHeld:false,replayHoldReason:null,replayHeldAt:null};
+    }else q.push({id:qid(),mutationRevision:qid(),datasetKey:dataset,recordId:id,op,payload:clone(payload),baseVersion:Number(baseVersion||0),queuedAt:nowIso(),attempts:0,blocked:false,source:source||'',replayHeld:false});
     write(QUEUE,q);renderPanel();scheduleFlush();
   }
   function diffAndQueue(dataset,before,after){
