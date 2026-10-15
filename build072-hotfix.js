@@ -175,12 +175,12 @@
     write(BOOTSTRAP,{capturedAt:nowIso(),audit});return audit;
   }
 
-  async function flushQueue(s,options={}){
+  async function flushQueue(s,{allowShadow=false}={}){
     // syncBusy is tab-local; an exclusive browser lock prevents parallel uploads.
     if(!navigator.locks?.request)throw new Error('Cross-tab sync lock unavailable; offline queue preserved.');
     return navigator.locks.request('runlu-cloud-master-flush-v680',{mode:'exclusive',ifAvailable:true},async lock=>{
       if(!lock)throw new Error('Another tab is syncing. This tab did not upload.');
-      return flushQueueLocked(s,options);
+      return flushQueueLocked(s,{allowShadow});
     });
   }
   async function flushQueueLocked(s,{allowShadow=false}={}){
