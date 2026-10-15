@@ -1459,7 +1459,7 @@ async function v8CheckCarpetReviewGate(){
    const result=await call('preview_carpet_review_promotion_case',{p_tenant:tenant,p_source_dataset:'runlu_carpet_inventory_v52',p_source_record_id:id});
    checks.push(roll+': '+(result.ok?JSON.stringify(result.value):'BLOCKED — '+result.error));
   }
-  status.textContent=checks.join('\\n')+'\\nRead-only check complete. No records were modified.';
+  status.textContent=checks.join('\n')+'\nRead-only check complete. No records were modified.';
   status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
  }catch(e){status.textContent='Review access check failed: '+String(e.message||e)+'. No records were modified.'}
 }
