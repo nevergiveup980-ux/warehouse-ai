@@ -1401,8 +1401,9 @@ function pruneLocalApplicationCache(force=false){
  return result;
 }
 function save(k,v){
+ const outboxKey='runlu_record_sync_outbox_v1';
  const encoded=JSON.stringify(v),before=load(k),previousRaw=localStorage.getItem(k);
- const previousOutboxRaw=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
+ const previousOutboxRaw=localStorage.getItem(outboxKey);
  try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);return true;}
  catch(err){
   console.error('Storage save failed:',err);
@@ -1410,8 +1411,8 @@ function save(k,v){
   // Restore both keys so no partially queued batch survives a rollback.
   let restored=true;
   try{
-   if(previousOutboxRaw===null)localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
-   else localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,previousOutboxRaw);
+   if(previousOutboxRaw===null)localStorage.removeItem(outboxKey);
+   else localStorage.setItem(outboxKey,previousOutboxRaw);
    if(previousRaw===null)localStorage.removeItem(k);
    else localStorage.setItem(k,previousRaw);
   }catch(rollbackError){restored=false;console.error('Warehouse save rollback incomplete',rollbackError)}
@@ -1421,8 +1422,8 @@ function save(k,v){
    try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);renderBackupStatus();return true}catch(retryErr){
     console.error('Storage save retry failed:',retryErr);
     try{
-     if(previousOutboxRaw===null)localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
-     else localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,previousOutboxRaw);
+     if(previousOutboxRaw===null)localStorage.removeItem(outboxKey);
+     else localStorage.setItem(outboxKey,previousOutboxRaw);
      if(previousRaw===null)localStorage.removeItem(k);
      else localStorage.setItem(k,previousRaw);
     }catch(rollbackError){console.error('Warehouse retry rollback incomplete; stop editing',rollbackError);alert('Recovery failed. Stop editing; do not clear browser data.');return false}
