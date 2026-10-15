@@ -329,7 +329,23 @@
       return;
     }
     if(action==='cloud'){
-      q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);write(QUEUE,q);saveConflicts(cs);await sync({silent:true});return;
+      // Do not discard the device operation before a successful cloud refresh.
+      // A network error or failed local cache write must leave the conflict
+      // available for another review, not silently accept a stale local value.
+      const previousQueue=clone(q),previousConflicts=clone(cs);
+      q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);
+      try{
+        write(QUEUE,q);saveConflicts(cs);
+        const ok=await sync({silent:true});
+        if(!ok)throw new Error('Cloud refresh did not complete.');
+      }catch(e){
+        // Restore only when no newer queue/conflict changes occurred meanwhile.
+        if(eq(queue(),q)&&eq(conflicts(),cs)){
+          write(QUEUE,previousQueue);saveConflicts(previousConflicts);
+        }
+        alert('Cloud selection was not completed. The conflict remains available for review. '+String(e?.message||e));
+      }
+      return;
     }
     if(action==='device'){
       m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});return;
