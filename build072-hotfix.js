@@ -276,18 +276,10 @@
     return {left:left||c.recordId,right:right||c.recordId};
   }
   window.runluCloudMasterResolve=async function(queueId,action){
-    let q=queue(),idx=q.findIndex(x=>x.id===queueId),cs=conflicts(),c=cs.find(x=>x.queueId===queueId);if(idx<0||!c)return;
-    const m=q[idx],server=c.serverRecord||{},sv=Number(server.version||0);
-    if(action==='cloud'){
-      alert('Use Cloud is paused during recovery. Offline operation preserved for review.');return;
-      q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);write(QUEUE,q);saveConflicts(cs);await sync({silent:true});return;
-    }
-    if(action==='device'){
-      alert('Apply Device is paused during recovery. Offline operation preserved for review.');return;
-      m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});return;
-    }
-    if(action==='delete'){
-      alert('Delete Duplicate is disabled during the Cloud Master safety review. No cloud deletion was attempted.');return;
+    // Recovery guard: keep the queue, server snapshot, and conflict evidence
+    // untouched until a separately reviewed reconciliation workflow exists.
+    if(['cloud','device','delete'].includes(action)){
+      alert('Cloud Master conflict actions are paused during recovery. No local or cloud record was changed.');
     }
   };
 
