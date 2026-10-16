@@ -4,12 +4,13 @@ import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../build072-hotfix.js',import.meta.url),'utf8');
 
-test('duplicate delete is disabled in both handler and rendered controls',()=>{
-  const handler=source.slice(source.indexOf("if(action==='delete'){"),source.indexOf('\n  };',source.indexOf("if(action==='delete'){")));
-  assert.match(handler,/No cloud deletion was attempted/);
-  assert.doesNotMatch(handler,/m\.op\s*=\s*'delete'/);
-  assert.match(source,/Delete Duplicate — Disabled/);
-  assert.doesNotMatch(source,/onclick="runluCloudMasterResolve\('[^']+','delete'\)"/);
+test('all conflict resolution actions are paused in handler and UI',()=>{
+  const handler=source.slice(source.indexOf('window.runluCloudMasterResolve='),source.indexOf('\n  function renderPanel()',source.indexOf('window.runluCloudMasterResolve=')));
+  assert.match(handler,/\['cloud','device','delete'\]\.includes\(action\)/);
+  assert.doesNotMatch(handler,/write\(QUEUE|sync\(|m\.op\s*=/);
+  for(const label of ['Use Cloud — Disabled','Apply Device — Disabled','Delete Duplicate — Disabled'])
+    assert.ok(source.includes(label));
+  assert.doesNotMatch(source,/onclick="runluCloudMasterResolve\(/);
 });
 
 test('invalid queue fails closed without replacing it',()=>{
