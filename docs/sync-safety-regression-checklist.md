@@ -21,3 +21,14 @@ This PR is NOT a fix for the legacy `runlu_cloud_master_offline_queue_v80` quota
 - Verify branch protection, required reviews/checks, and deployment configuration.
 
 No live inventory data should be purged by this PR.
+
+## V8 carpet recovery release gate (RC2347 / RC2348)
+
+- [x] PR #192 branch CI: 8/8 workflows succeeded at commit `fb90c0d1e929729a37badabfa965d9a196a9107e`.
+- [x] Database metadata: `warehouse_v7` review gate, preview, resolve and promote RPCs exist; `authenticated` has EXECUTE; none is SECURITY DEFINER.
+- [ ] Verify GitHub Pages / custom-domain deployment source and confirm a tested release path before merging this 52-commit branch.
+- [ ] After deployment, sign in as the real tenant administrator and run Settings → V8 Carpet Recovery → Check V8 Review Access; capture gate and per-roll preview. Do not use the retired legacy migration.
+- [ ] Resolve RC2347 from physical evidence: original 159′2″, cut 55′6″, remaining 103′8″; mark as cut/not FULL. Invoice product description differs from original receiving record and must be reviewed, not silently rewritten.
+- [ ] Resolve RC2348 from physical label: FULL, uncut 136′2″. Confirm rack location (historical 6B vs observed 6A) before finalizing.
+- [ ] Use authenticated version-checked review → preview → promote RPCs, never direct canonical table insert; verify canonical roll records and audit trail after each promotion.
+- [ ] Confirm desktop/mobile show matching Cloud Master stock without importing old JSON or clearing browser storage.
