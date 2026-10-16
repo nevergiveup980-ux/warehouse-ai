@@ -789,9 +789,11 @@ img,video,canvas,svg{max-width:100%}
 <div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
 <div class="meta" style="margin-top:9px">Local snapshots protect against accidental editing, but they remain on this device. A downloaded JSON backup is the protection for phone replacement, browser data loss or moving the app to a different URL.</div></div>
 
-<div class="settingRow"><div class="name">Carpet Data Migration</div><div class="meta">The July 20 carpet inventory and cutting-log backup is built into this release. Migration adds missing legacy records once and never overwrites newer V5.2 balances.</div>
+<div class="settingRow"><div class="name">Legacy Carpet Data Migration</div><div class="meta">Historical July 20 migration only. Retired when Cloud Master is active; it cannot restore deferred V8 rolls. Use the read-only V8 Carpet Recovery check below for RC2347 / RC2348. Do not import old JSON backups over current warehouse data.</div>
 <div class="actions"><button class="purple" onclick="migrateLegacyCarpetData(true)">Check Carpet Migration</button></div>
 <div id="carpetImportStatus" class="notice" style="margin-top:10px">Checking unified carpet records...</div></div>
+
+<div class="settingRow"><div class="name">V8 Carpet Recovery — Read-only Check</div><div class="meta">Check the authenticated administrator review gate for RC2347 and RC2348. This does not change inventory or import old backups.</div><div class="actions"><button class="purple" onclick="v8CheckCarpetReviewGate()">Check V8 Review Access</button></div><div id="v8ReviewGateStatus" class="notice" style="margin-top:10px" role="status">Not checked. No stock changes will be made.</div></div>
 
 <div class="settingRow"><div class="name">Incomplete Carpet Review</div><div class="meta">A blank carpet length means the roll still needs verification; it is not zero inventory. PCW unopened rolls remain protected as real FULL stock until their label, location and length are confirmed.</div></div>
 
@@ -1399,14 +1401,32 @@ function pruneLocalApplicationCache(force=false){
  return result;
 }
 function save(k,v){
- const encoded=JSON.stringify(v),before=load(k);
+ const outboxKey='runlu_record_sync_outbox_v1';
+ const encoded=JSON.stringify(v),before=load(k),previousRaw=localStorage.getItem(k);
+ const previousOutboxRaw=localStorage.getItem(outboxKey);
  try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);return true;}
  catch(err){
   console.error('Storage save failed:',err);
+  // Queue failure after the local write is not a successful save.
+  // Restore both keys so no partially queued batch survives a rollback.
+  let restored=true;
+  try{
+   if(previousOutboxRaw===null)localStorage.removeItem(outboxKey);
+   else localStorage.setItem(outboxKey,previousOutboxRaw);
+   if(previousRaw===null)localStorage.removeItem(k);
+   else localStorage.setItem(k,previousRaw);
+  }catch(rollbackError){restored=false;console.error('Warehouse save rollback incomplete',rollbackError)}
+  if(!restored){alert('Local save and queue rollback incomplete. Stop editing and do not clear browser data.');return false}
   if(isQuotaError(err)){
    const normal=pruneLocalApplicationCache(true),deep=aggressiveSafeStorageCleanup();
    try{localStorage.setItem(k,encoded);if(typeof queueRecordDeltaSave==='function')queueRecordDeltaSave(k,before,v);renderBackupStatus();return true}catch(retryErr){
     console.error('Storage save retry failed:',retryErr);
+    try{
+     if(previousOutboxRaw===null)localStorage.removeItem(outboxKey);
+     else localStorage.setItem(outboxKey,previousOutboxRaw);
+     if(previousRaw===null)localStorage.removeItem(k);
+     else localStorage.setItem(k,previousRaw);
+    }catch(rollbackError){console.error('Warehouse retry rollback incomplete; stop editing',rollbackError);alert('Recovery failed. Stop editing; do not clear browser data.');return false}
     const freed=(normal.reclaimedBytes||0)+(deep.reclaimedBytes||0);
     alert('This browser cannot save more local app data.'+(freed?` Automatic cleanup recovered ${(freed/1024/1024).toFixed(1)} MB, but the browser still needs more room.`:'')+' Cloud data was not deleted. Keep this page open, confirm Cloud ✓, then use Settings → Download Upgrade Backup before clearing this site’s browser data.');
    }
@@ -1426,6 +1446,24 @@ function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'
 async function cloudRequest(path,options={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
 function v8CanonicalRpcHeaders(token){return {...cloudHeaders(token),'Content-Profile':'warehouse_v7','Accept-Profile':'warehouse_v7'}}
 function v8CanonicalRpcRequest(name,body,token){return cloudRequest('/rest/v1/rpc/'+name,{method:'POST',headers:v8CanonicalRpcHeaders(token),body:JSON.stringify(body)})}
+async function v8CheckCarpetReviewGate(){
+ const status=$('v8ReviewGateStatus');if(!status)return;
+ status.textContent='Checking V8 review access (read-only)...';
+ try{
+  const session=await cloudEnsureSession();if(!session?.access_token||!session?.user?.id)throw new Error('Please sign in as the warehouse administrator.');
+  const tenant='e2d45722-186b-4b4f-af16-38709a0113ee';
+  const checks=[];
+  const call=async(name,args)=>{try{const value=await v8CanonicalRpcRequest(name,args,session.access_token);return {ok:true,value}}catch(e){return {ok:false,error:String(e.message||e)}}};
+  const gate=await call('get_carpet_review_promotion_gate',{p_tenant:tenant});
+  checks.push('Review gate: '+(gate.ok?JSON.stringify(gate.value):'BLOCKED — '+gate.error));
+  for(const [roll,id] of [['RC2347','1786654274234.5'],['RC2348','1786654104967.5']]){
+   const result=await call('preview_carpet_review_promotion_case',{p_tenant:tenant,p_source_dataset:'runlu_carpet_inventory_v52',p_source_record_id:id});
+   checks.push(roll+': '+(result.ok?JSON.stringify(result.value):'BLOCKED — '+result.error));
+  }
+  status.textContent=checks.join('\n')+'\nRead-only check complete. No records were modified.';
+  status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
+ }catch(e){status.textContent='Review access check failed: '+String(e.message||e)+'. No records were modified.'}
+}
 async function v8ReadCutRoll(roll){
  const session=await cloudEnsureSession();if(!session?.user?.id)throw new Error('Administrator sign-in required.');
  const id=String(roll?.canonicalId||'');
@@ -1526,6 +1564,11 @@ const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC
 function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
 function recordSyncPrepareGeneration(){
  if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
+ // Never reset a browser generation while unsent operations still exist.
+ // A generation change is not permission to discard local business data.
+ if(recordSyncOutbox().length)throw new Error('Pending offline operations: browser generation reset blocked. Preserve this device data.');
+ for(const key of DATA_KEYS)if(localStorage.getItem(key)!==null)
+   throw new Error('Existing local warehouse data: automatic generation reset blocked. Export and reconcile before migration.');
  cloudApplying=true;try{
   for(const k of DATA_KEYS)localStorage.removeItem(k);
   localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
@@ -1538,8 +1581,38 @@ function recordSyncPrepareGeneration(){
  return true
 }
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
-function recordSyncOutbox(){try{return JSON.parse(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)||'[]')}catch{return[]}}
-function setRecordSyncOutbox(v){localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON.stringify(v));updateHeaderCloudPill('auto')}
+function recordSyncOutbox(){
+ const raw=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
+ if(raw===null)return [];
+ let parsed;
+ try{parsed=JSON.parse(raw)}catch(e){throw new Error('Cloud outbox unreadable; original browser data preserved. '+String(e?.message||e))}
+ if(!Array.isArray(parsed))throw new Error('Cloud outbox format invalid; original browser data preserved.');
+ return parsed;
+}
+function recordSyncDeduplicateOutbox(v){
+ // Deduplicate by stable operation ID only when the entire operation agrees.
+ // Conflicting copies of an operation ID must remain visible for investigation.
+ const seen=new Map(),safe=[];
+ for(const op of v){
+  const id=String(op?.operation_id||'');
+  const fingerprint=JSON.stringify(op);
+  if(id&&seen.has(id)&&seen.get(id)===fingerprint)continue;
+  if(id&&!seen.has(id))seen.set(id,fingerprint);
+  safe.push(op);
+ }
+ return safe;
+}
+function setRecordSyncOutbox(v){
+ const safe=recordSyncDeduplicateOutbox(v);
+ try{
+  localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON.stringify(safe));
+ }catch(err){
+  // Never drop unsent operations to make room: fail closed.
+  console.error('RUNLU sync outbox could not be persisted; pending operations preserved in memory only until reload.',err);
+  throw err;
+ }
+ updateHeaderCloudPill('auto');
+}
 function recordSyncPayload(row){
  if(!row||typeof row!=='object')return row;
  const out={...row};delete out._cloudVersion;delete out._cloudChangeSeq;delete out._cloudRecordId;return out
@@ -1554,7 +1627,12 @@ function queueRecordDeltaSave(key,before,after){
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
- while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;q.shift();setRecordSyncOutbox(q);sent++}return sent
+ while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;
+ // Persist the acknowledged removal before mutating the in-memory queue.
+ // If storage is full, do not resend a different operation under this ID.
+ const remaining=q.slice(1);
+ setRecordSyncOutbox(remaining);
+ q=remaining;sent++}return sent
 }
 async function recordSyncBootstrap(){
  const s=await cloudEnsureSession();if(!s)return 0;

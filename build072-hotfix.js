@@ -76,19 +76,34 @@
   function versions(){return read(VERSIONS)||{}}
   function setVersion(dataset,id,v){const map=versions();if(v==null)delete map[versionKey(dataset,id)];else map[versionKey(dataset,id)]=Number(v);write(VERSIONS,map)}
   function getVersion(dataset,id){const v=versions()[versionKey(dataset,id)];return Number.isFinite(Number(v))?Number(v):0}
-  function queue(){const q=read(QUEUE);return Array.isArray(q)?q:[]}
+  function queue(){
+    // A malformed offline queue is NOT an empty queue. Failing closed prevents
+    // the next save or cloud pull from erasing recoverable pending operations.
+    const raw=localStorage.getItem(QUEUE);
+    if(raw===null)return [];
+    let parsed;
+    try{parsed=JSON.parse(raw)}catch(e){throw new Error('Cloud Master offline queue is unreadable; original data preserved. '+String(e?.message||e))}
+    if(!Array.isArray(parsed))throw new Error('Cloud Master offline queue has an unexpected format; original data preserved.');
+    return parsed;
+  }
   function conflicts(){const x=read(CONFLICTS);return Array.isArray(x)?x:[]}
   function saveConflicts(x){write(CONFLICTS,x);renderPanel()}
   function qid(){return 'Q-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
 
   function enqueue(dataset,id,op,payload,baseVersion,source=''){
     if(!dataset||!id)return;
-    let q=queue(),idx=q.findIndex(x=>x.datasetKey===dataset&&x.recordId===id&&!x.blocked);
+    let q=queue();
+    // A held or conflicted operation must never be silently replaced by a
+    // later edit of the same record. That would erase the evidence needed
+    // to determine whether the first operation reached the server.
+    const unresolved=q.find(x=>x.datasetKey===dataset&&x.recordId===id&&(x.blocked||x.replayHeld));
+    if(unresolved)throw new Error('Unresolved cloud operation for this record; new edit was not queued. Keep this device data and review the pending operation before syncing.');
+    let idx=q.findIndex(x=>x.datasetKey===dataset&&x.recordId===id&&!x.blocked);
     if(idx>=0){
       const cur=q[idx];
       if(cur.baseVersion===0&&op==='delete'){q.splice(idx,1);write(QUEUE,q);renderPanel();return}
-      q[idx]={...cur,op,payload:clone(payload),queuedAt:nowIso(),attempts:0,source:source||cur.source||'',replayHeld:false,replayHoldReason:null,replayHeldAt:null};
-    }else q.push({id:qid(),datasetKey:dataset,recordId:id,op,payload:clone(payload),baseVersion:Number(baseVersion||0),queuedAt:nowIso(),attempts:0,blocked:false,source:source||'',replayHeld:false});
+      q[idx]={...cur,op,payload:clone(payload),queuedAt:nowIso(),mutationRevision:qid(),attempts:0,source:source||cur.source||'',replayHeld:false,replayHoldReason:null,replayHeldAt:null};
+    }else q.push({id:qid(),mutationRevision:qid(),datasetKey:dataset,recordId:id,op,payload:clone(payload),baseVersion:Number(baseVersion||0),queuedAt:nowIso(),attempts:0,blocked:false,source:source||'',replayHeld:false});
     write(QUEUE,q);renderPanel();scheduleFlush();
   }
   function diffAndQueue(dataset,before,after){
@@ -161,8 +176,20 @@
   }
 
   async function flushQueue(s,{allowShadow=false}={}){
+    const options={allowShadow};
+    // syncBusy is tab-local; an exclusive browser lock prevents parallel uploads.
+    if(!navigator.locks?.request)throw new Error('Cross-tab sync lock unavailable; offline queue preserved.');
+    return navigator.locks.request('runlu-cloud-master-flush-v680',{mode:'exclusive',ifAvailable:true},async lock=>{
+      if(!lock)throw new Error('Another tab is syncing. This tab did not upload.');
+      return flushQueueLocked(s,options);
+    });
+  }
+  async function flushQueueLocked(s,{allowShadow=false}={}){
     const st=stateCache||await fetchState(s);if(st?.mode!=='active'&&!allowShadow)return {flushed:0,pending:queue().length};
     let q=queue(),flushed=0,cs=conflicts();
+    const initialFingerprints=new Map(q.map(m=>[m.id,JSON.stringify(m)]));
+    const acknowledged=new Set();
+    const acknowledgedVersions=new Map();
     for(let i=0;i<q.length;i++){
       const m=q[i];if(m.blocked||m.replayHeld)continue;
       if(m.datasetKey===INV&&m.op==='upsert'&&m.source!=='live-save'){
@@ -175,16 +202,56 @@
         m.attempts=Number(m.attempts||0)+1;
         const res=await applyMutation(s,m);
         if(res?.status==='conflict'){
-          m.blocked=true;m.serverRecord=res.record||null;m.reason=res.reason||'version_mismatch';
-          cs=cs.filter(c=>c.queueId!==m.id);cs.push({queueId:m.id,at:nowIso(),datasetKey:m.datasetKey,recordId:m.recordId,op:m.op,devicePayload:m.payload,serverRecord:res.record||null,reason:m.reason});
+          // The user may have edited this record during the network request.
+          // Preserve the newest payload and block it for explicit review;
+          // never replace it with the stale payload that was sent.
+          const current=queue().find(x=>x.id===m.id);
+          const changedDuringFlight=current&&JSON.stringify(current)!==initialFingerprints.get(m.id);
+          const reviewed=changedDuringFlight?current:m;
+          reviewed.blocked=true;reviewed.serverRecord=res.record||null;reviewed.reason=res.reason||'version_mismatch';
+          cs=cs.filter(c=>c.queueId!==m.id);cs.push({queueId:m.id,at:nowIso(),datasetKey:reviewed.datasetKey,recordId:reviewed.recordId,op:reviewed.op,devicePayload:clone(reviewed.payload),serverRecord:res.record||null,reason:reviewed.reason});
+          q[i]=reviewed;
           continue;
         }
         if(res?.status!=='ok')throw new Error('Cloud Master mutation was not confirmed.');
         const rec=res.record||{};setVersion(m.datasetKey,m.recordId,rec.version||m.baseVersion+1);
-        cs=cs.filter(c=>c.queueId!==m.id);q[i]=null;flushed++;
-      }catch(e){m.lastError=e.message||String(e);localStorage.setItem(LAST_ERROR,m.lastError);if(navigator.onLine===false)break}
+        cs=cs.filter(c=>c.queueId!==m.id);acknowledged.add(m.id);
+        acknowledgedVersions.set(m.id,Number(rec.version||m.baseVersion+1));q[i]=null;flushed++;
+      }catch(e){
+        m.lastError=e.message||String(e);
+        localStorage.setItem(LAST_ERROR,m.lastError);
+        // A timed-out request may already have committed on the server.
+        // Never blindly replay an inventory mutation whose outcome is unknown.
+        if(m.datasetKey===INV){
+          m.replayHeld=true;
+          m.replayHoldReason='inventory-cloud-acknowledgement-unknown';
+          m.replayHeldAt=nowIso();
+        }
+        if(navigator.onLine===false)break;
+      }
     }
-    q=q.filter(Boolean);write(QUEUE,q);saveConflicts(cs);renderPanel();return {flushed,pending:q.length};
+    // Merge network results with the latest queue. Never discard edits or
+    // new operations made while an asynchronous cloud mutation was in flight.
+    const latest=queue();
+    const pendingById=new Map(q.filter(Boolean).map(m=>[m.id,m]));
+    const merged=latest.filter(m=>{
+      return !(acknowledged.has(m.id)&&JSON.stringify(m)===initialFingerprints.get(m.id));
+    }).map(m=>{
+      // Only propagate blocked/replay state if this operation was not edited
+      // since the flush began; concurrent user edits take precedence.
+      if(JSON.stringify(m)!==initialFingerprints.get(m.id)){
+        // Conflict results take priority over in-flight edits. Keep the newest
+        // local payload but retain the explicit review block.
+        const processed=pendingById.get(m.id);
+        if(processed?.blocked)return {...m,blocked:true,serverRecord:processed.serverRecord,reason:processed.reason};
+        // If the previous edit reached cloud while a newer edit was made,
+        // rebase that newer edit on the confirmed cloud version. Otherwise
+        // it would retry against a stale baseVersion and falsely conflict.
+        return acknowledgedVersions.has(m.id)?{...m,baseVersion:acknowledgedVersions.get(m.id)}:m;
+      }
+      return pendingById.get(m.id)||m;
+    });
+    write(QUEUE,merged);saveConflicts(cs);renderPanel();return {flushed,pending:merged.length};
   }
 
   function sortDataset(dataset,rows){
@@ -211,6 +278,9 @@
     const rows=await fetchRecords(s);rememberRemote(rows);captureLocalDelta(rows);
     await flushQueue(s,{allowShadow:true});
     if(conflicts().length){await setState(s,'paused',{metadata:{reason:'record_conflict_during_activation',paused_at:nowIso()}});throw new Error('Cloud Master activation paused because a real record-level conflict needs review. No whole dataset was overwritten.');}
+    // Activation must not claim the cloud is authoritative while local
+    // mutations are held, failed, or waiting for confirmation.
+    if(queue().length)throw new Error('Cloud Master activation paused: local offline operations remain pending. Nothing was discarded.');
     st=await setState(s,'active',{activated_at:nowIso(),activated_by:deviceId(),metadata:{legacy_source:'user_datasets',activation:'Build072 after local-delta capture'}});
     clearLegacyConflictState();return st;
   }
@@ -222,6 +292,9 @@
       const s=await ensureSession();if(!s)throw new Error('Cloud sign-in required.');
       if(navigator.onLine===false)throw new Error('Offline — changes are safely queued on this device.');
       await activateIfNeeded(s);await flushQueue(s);if(conflicts().length)throw new Error('A record-level cloud conflict needs review before that record can sync.');
+      // A held, blocked, or failed local operation must not be overwritten by
+      // a cloud pull. The user must resolve/persist the pending changes first.
+      if(queue().length)throw new Error('Cloud refresh paused: local offline operations remain pending. No local records were replaced.');
       await pullCloud(s);if(!silent)alert('Cloud Master synchronized. Supabase is the authoritative warehouse record; this device is now refreshed from cloud.');return true;
     }catch(e){localStorage.setItem(LAST_ERROR,e.message||String(e));if(!silent&&navigator.onLine!==false)alert('Cloud Master sync stopped: '+(e.message||e));renderPanel();return false}
     finally{syncBusy=false;renderPanel()}
@@ -240,14 +313,64 @@
 
   function scheduleFlush(){if(flushTimer)clearTimeout(flushTimer);flushTimer=setTimeout(()=>sync({silent:true}),700)}
 
+  function assertNoUnresolvedSaveEdits(dataset,before,after){
+    const pending=queue().filter(x=>x.datasetKey===dataset&&(x.blocked||x.replayHeld));
+    if(!pending.length)return;
+    if(dataset==='runlu_settings_v20'){
+      if(!eq(before,after)&&pending.some(x=>x.recordId==='__document__'))
+        throw new Error('Unresolved settings operation must be reviewed before another save.');
+      return;
+    }
+    const previous=new Map();
+    if(Array.isArray(before))for(const row of before){const id=stableId(dataset,row);if(id)previous.set(id,row)}
+    const next=new Map();
+    if(Array.isArray(after))for(const row of after){const id=stableId(dataset,row);if(id)next.set(id,row)}
+    for(const op of pending){
+      if(!eq(previous.get(op.recordId),next.get(op.recordId)))
+        throw new Error('Unresolved cloud operation for this record; review the pending operation before saving.');
+    }
+  }
+
   function installSaveWrapper(){
     const current=window.save;if(typeof current!=='function'||current.__build072)return false;
     const original=current;
     const wrapped=function(k,v){
       if(!MANAGED.has(k)||applying)return original.apply(this,arguments);
       const before=read(k),encoded=JSON.stringify(v);
+      // Reject edits to unresolved records before touching the local cache.
+      try{assertNoUnresolvedSaveEdits(k,before,v)}catch(e){
+        alert(String(e?.message||e)+' No local save was attempted.');
+        return false;
+      }
+      // A failed queue write must not leave an untracked cache edit. Keep the
+      // previous raw bytes for rollback rather than re-serializing parsed data.
+      const previousRaw=localStorage.getItem(k);
+      const previousQueueRaw=localStorage.getItem(QUEUE);
       try{localStorage.setItem(k,encoded)}catch(e){alert('This device could not save the local cache. No cloud overwrite was attempted.');return false}
-      diffAndQueue(k,before,v);return true;
+      try{diffAndQueue(k,before,v)}catch(e){
+        console.error('RUNLU Cloud Master could not persist the offline operation',e);
+        // A dataset save may enqueue several changed records. If the third
+        // enqueue fails, the first two must not remain queued while the whole
+        // dataset is rolled back. Restore the queue snapshot first.
+        let queueRestored=false;
+        try{
+          if(previousQueueRaw===null)localStorage.removeItem(QUEUE);
+          else localStorage.setItem(QUEUE,previousQueueRaw);
+          queueRestored=true;
+        }catch(queueRollbackError){console.error('RUNLU Cloud Master queue rollback failed',queueRollbackError)}
+        let restored=false;
+        try{
+          if(previousRaw===null)localStorage.removeItem(k);
+          else localStorage.setItem(k,previousRaw);
+          restored=true;
+        }catch(rollbackError){console.error('RUNLU Cloud Master cache rollback failed',rollbackError)}
+        try{localStorage.setItem(LAST_ERROR,'Offline sync queue could not be saved: '+String(e?.message||e))}catch(_){}
+        alert(restored&&queueRestored
+          ?'Save was cancelled because the offline cloud queue could not be updated. Previous local records and queue were restored. Do not clear website data.'
+          :'Offline save rollback was incomplete. Stop editing, do not clear website data, and request recovery.');
+        return false;
+      }
+      return true;
     };
     wrapped.__build072=true;wrapped.__original=original;window.save=wrapped;return true;
   }
@@ -267,15 +390,48 @@
   window.runluCloudMasterResolve=async function(queueId,action){
     let q=queue(),idx=q.findIndex(x=>x.id===queueId),cs=conflicts(),c=cs.find(x=>x.queueId===queueId);if(idx<0||!c)return;
     const m=q[idx],server=c.serverRecord||{},sv=Number(server.version||0);
+    // Every resolution button must act on the same payload that the conflict
+    // panel showed. Never let an old button silently discard a newer edit.
+    if(!eq(m.payload,c.devicePayload)||m.op!==c.op){
+      alert('This record changed after the conflict was displayed. Review the latest local changes before resolving the conflict.');
+      return;
+    }
     if(action==='cloud'){
-      q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);write(QUEUE,q);saveConflicts(cs);await sync({silent:true});return;
+      // Do not discard the device operation before a successful cloud refresh.
+      // A network error or failed local cache write must leave the conflict
+      // available for another review, not silently accept a stale local value.
+      const previousQueue=clone(q),previousConflicts=clone(cs);
+      q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);
+      try{
+        write(QUEUE,q);saveConflicts(cs);
+        const ok=await sync({silent:true});
+        if(!ok)throw new Error('Cloud refresh did not complete.');
+      }catch(e){
+        // Restore only when no newer queue/conflict changes occurred meanwhile.
+        if(eq(queue(),q)&&eq(conflicts(),cs)){
+          write(QUEUE,previousQueue);saveConflicts(previousConflicts);
+        }
+        alert('Cloud selection was not completed. The conflict remains available for review. '+String(e?.message||e));
+      }
+      return;
     }
     if(action==='device'){
-      m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});return;
+      m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;
+      // Keep the conflict visible until the server confirms this mutation.
+      // flushQueue removes the matching conflict only after status==='ok'.
+      write(QUEUE,q);
+      const ok=await sync({silent:true});
+      if(!ok)alert('Device selection is pending cloud confirmation. Do not repeat the inventory change or clear website data.');
+      return;
     }
     if(action==='delete'){
       if(!confirm('Delete this cloud record as a duplicate?\n\nA cloud tombstone will be written so an old device cannot resurrect it.'))return;
-      m.op='delete';m.baseVersion=sv;m.blocked=false;m.payload=m.payload||server.payload||{};write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});
+      m.op='delete';m.baseVersion=sv;m.blocked=false;m.payload=m.payload||server.payload||{};
+      // Preserve conflict evidence until the cloud confirms the tombstone.
+      write(QUEUE,q);
+      const ok=await sync({silent:true});
+      if(!ok)alert('Duplicate deletion is pending cloud confirmation. Do not retry the deletion or clear website data.');
+      return;
     }
   };
 
