@@ -76,7 +76,7 @@
   function versions(){return read(VERSIONS)||{}}
   function setVersion(dataset,id,v){const map=versions();if(v==null)delete map[versionKey(dataset,id)];else map[versionKey(dataset,id)]=Number(v);write(VERSIONS,map)}
   function getVersion(dataset,id){const v=versions()[versionKey(dataset,id)];return Number.isFinite(Number(v))?Number(v):0}
-  function queue(){const q=read(QUEUE);return Array.isArray(q)?q:[]}
+  function queue(){const raw=localStorage.getItem(QUEUE);if(raw===null)return [];let q;try{q=JSON.parse(raw)}catch(e){throw new Error('Cloud Master offline queue is unreadable; original data preserved.')}if(!Array.isArray(q))throw new Error('Cloud Master offline queue has invalid format; original data preserved.');return q}
   function conflicts(){const x=read(CONFLICTS);return Array.isArray(x)?x:[]}
   function saveConflicts(x){write(CONFLICTS,x);renderPanel()}
   function qid(){return 'Q-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
@@ -161,6 +161,9 @@
   }
 
   async function flushQueue(s,{allowShadow=false}={}){
+    // During recovery, unresolved conflicts are a hard stop for automatic writes.
+    // Keep every queued operation untouched until a reviewed reconciliation is available.
+    if(conflicts().length)throw new Error('Cloud Master recovery hold: unresolved conflicts remain. No queued operation was uploaded.');
     const st=stateCache||await fetchState(s);if(st?.mode!=='active'&&!allowShadow)return {flushed:0,pending:queue().length};
     let q=queue(),flushed=0,cs=conflicts();
     for(let i=0;i<q.length;i++){
@@ -211,6 +214,7 @@
     const rows=await fetchRecords(s);rememberRemote(rows);captureLocalDelta(rows);
     await flushQueue(s,{allowShadow:true});
     if(conflicts().length){await setState(s,'paused',{metadata:{reason:'record_conflict_during_activation',paused_at:nowIso()}});throw new Error('Cloud Master activation paused because a real record-level conflict needs review. No whole dataset was overwritten.');}
+    if(queue().length)throw new Error('Cloud Master activation paused: unresolved offline operations remain; no local records were replaced.');
     st=await setState(s,'active',{activated_at:nowIso(),activated_by:deviceId(),metadata:{legacy_source:'user_datasets',activation:'Build072 after local-delta capture'}});
     clearLegacyConflictState();return st;
   }
@@ -221,7 +225,7 @@
     try{
       const s=await ensureSession();if(!s)throw new Error('Cloud sign-in required.');
       if(navigator.onLine===false)throw new Error('Offline — changes are safely queued on this device.');
-      await activateIfNeeded(s);await flushQueue(s);if(conflicts().length)throw new Error('A record-level cloud conflict needs review before that record can sync.');
+      await activateIfNeeded(s);await flushQueue(s);if(conflicts().length)throw new Error('A record-level cloud conflict needs review before that record can sync.');if(queue().length)throw new Error('Cloud refresh paused: pending offline operations must be reviewed first. No local cache was replaced.');
       await pullCloud(s);if(!silent)alert('Cloud Master synchronized. Supabase is the authoritative warehouse record; this device is now refreshed from cloud.');return true;
     }catch(e){localStorage.setItem(LAST_ERROR,e.message||String(e));if(!silent&&navigator.onLine!==false)alert('Cloud Master sync stopped: '+(e.message||e));renderPanel();return false}
     finally{syncBusy=false;renderPanel()}
@@ -245,9 +249,16 @@
     const original=current;
     const wrapped=function(k,v){
       if(!MANAGED.has(k)||applying)return original.apply(this,arguments);
-      const before=read(k),encoded=JSON.stringify(v);
+      const before=read(k),encoded=JSON.stringify(v),previousRaw=localStorage.getItem(k),previousQueue=localStorage.getItem(QUEUE);
       try{localStorage.setItem(k,encoded)}catch(e){alert('This device could not save the local cache. No cloud overwrite was attempted.');return false}
-      diffAndQueue(k,before,v);return true;
+      try{diffAndQueue(k,before,v);return true}catch(e){
+        let restored=true;
+        try{if(previousQueue===null)localStorage.removeItem(QUEUE);else localStorage.setItem(QUEUE,previousQueue)}catch(rollbackError){restored=false;console.error('Offline queue rollback failed',rollbackError)}
+        try{if(previousRaw===null)localStorage.removeItem(k);else localStorage.setItem(k,previousRaw)}catch(rollbackError){restored=false;console.error('Local cache rollback failed',rollbackError)}
+        try{localStorage.setItem(LAST_ERROR,'Offline save failed; '+(restored?'previous state restored.':'rollback requires manual review.'))}catch(error){console.error('Could not persist offline save error',error)}
+        alert('Offline operation could not be saved. '+(restored?'Local changes were rolled back.':'Do not refresh or sync; manual recovery is required.'));
+        return false;
+      }
     };
     wrapped.__build072=true;wrapped.__original=original;window.save=wrapped;return true;
   }
@@ -265,17 +276,10 @@
     return {left:left||c.recordId,right:right||c.recordId};
   }
   window.runluCloudMasterResolve=async function(queueId,action){
-    let q=queue(),idx=q.findIndex(x=>x.id===queueId),cs=conflicts(),c=cs.find(x=>x.queueId===queueId);if(idx<0||!c)return;
-    const m=q[idx],server=c.serverRecord||{},sv=Number(server.version||0);
-    if(action==='cloud'){
-      q.splice(idx,1);cs=cs.filter(x=>x.queueId!==queueId);write(QUEUE,q);saveConflicts(cs);await sync({silent:true});return;
-    }
-    if(action==='device'){
-      m.baseVersion=sv;m.blocked=false;delete m.serverRecord;delete m.reason;write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});return;
-    }
-    if(action==='delete'){
-      if(!confirm('Delete this cloud record as a duplicate?\n\nA cloud tombstone will be written so an old device cannot resurrect it.'))return;
-      m.op='delete';m.baseVersion=sv;m.blocked=false;m.payload=m.payload||server.payload||{};write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});
+    // Recovery guard: keep the queue, server snapshot, and conflict evidence
+    // untouched until a separately reviewed reconciliation workflow exists.
+    if(['cloud','device','delete'].includes(action)){
+      alert('Cloud Master conflict actions are paused during recovery. No local or cloud record was changed.');
     }
   };
 
@@ -285,7 +289,7 @@
     const q=queue(),cs=conflicts(),last=localStorage.getItem(LAST_SYNC)||'',err=localStorage.getItem(LAST_ERROR)||'',sum=read(SUMMARY)||{};
     const mode=stateCache?.mode||'checking';
     const online=navigator.onLine!==false;
-    const conflictHtml=cs.slice(0,8).map(c=>{const x=conflictSummary(c);return `<div style="margin-top:10px;padding:10px;border:1px solid #efc2c7;border-radius:10px;background:#fff7f8"><b>${escapeHtml(label(c.datasetKey))}</b> · ${escapeHtml(c.recordId)}<br><small><b>This device:</b> ${escapeHtml(x.left)}<br><b>Cloud:</b> ${escapeHtml(x.right)}</small><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><button onclick="runluCloudMasterResolve('${escapeAttr(c.queueId)}','cloud')">Use Cloud</button><button class="blue" onclick="runluCloudMasterResolve('${escapeAttr(c.queueId)}','device')">Apply Device</button><button class="red" onclick="runluCloudMasterResolve('${escapeAttr(c.queueId)}','delete')">Delete Duplicate</button></div></div>`}).join('');
+    const conflictHtml=cs.slice(0,8).map(c=>{const x=conflictSummary(c);return `<div style="margin-top:10px;padding:10px;border:1px solid #efc2c7;border-radius:10px;background:#fff7f8"><b>${escapeHtml(label(c.datasetKey))}</b> · ${escapeHtml(c.recordId)}<br><small><b>This device:</b> ${escapeHtml(x.left)}<br><b>Cloud:</b> ${escapeHtml(x.right)}</small><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><button disabled title="Disabled during recovery review">Use Cloud — Disabled</button><button disabled title="Disabled during recovery review">Apply Device — Disabled</button><button disabled title="Disabled during Cloud Master safety review">Delete Duplicate — Disabled</button></div></div>`}).join('');
     box.style.cssText='margin:14px 0;padding:14px;border:1px solid #9fd3b1;background:#f2fbf5;border-radius:14px;color:#163d27;line-height:1.5';
     box.innerHTML=`<div style="font-weight:900;font-size:17px">☁️ Cloud Master</div><div><b>${mode==='active'?'ACTIVE — Supabase is the warehouse master record':mode==='paused'?'PAUSED — record review required':'Preparing record-level cloud master'}</b></div><div>This phone/computer is now a cache and offline work station, not a competing master database.</div><div style="margin-top:7px"><b>Network:</b> ${online?'Online':'Offline'} · <b>Offline queue:</b> ${q.length} · <b>Record conflicts:</b> ${cs.length}${sum.totalActive!=null?` · <b>Cloud records:</b> ${sum.totalActive}`:''}</div>${last?`<div><b>Last Cloud Master sync:</b> ${escapeHtml(new Date(last).toLocaleString())}</div>`:''}${err?`<div style="color:#9b2c2c"><b>Last issue:</b> ${escapeHtml(err)}</div>`:''}<button id="build072SyncBtn" class="green" style="margin-top:10px">${syncBusy?'Syncing Cloud Master…':'Sync Cloud Master Now'}</button><div style="margin-top:9px;font-size:13px;color:#496455">Legacy whole-dataset Upload / Download / Keep Device / Keep Cloud actions are retired under Build072.</div>${conflictHtml}`;
     const btn=document.getElementById('build072SyncBtn');if(btn){btn.disabled=syncBusy;btn.onclick=()=>sync({silent:false})}
