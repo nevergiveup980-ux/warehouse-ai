@@ -793,6 +793,8 @@ img,video,canvas,svg{max-width:100%}
 <div class="actions"><button class="purple" onclick="migrateLegacyCarpetData(true)">Check Carpet Migration</button></div>
 <div id="carpetImportStatus" class="notice" style="margin-top:10px">Checking unified carpet records...</div></div>
 
+<div class="settingRow"><div class="name">V8 Carpet Recovery — Read-only Check</div><div class="meta">Check the authenticated administrator review gate for RC2347 and RC2348. This does not change inventory or import old backups.</div><div class="actions"><button class="purple" onclick="v8CheckCarpetReviewGate()">Check V8 Review Access</button></div><div id="v8ReviewGateStatus" class="notice" style="margin-top:10px" role="status">Not checked. No stock changes will be made.</div></div>
+
 <div class="settingRow"><div class="name">Incomplete Carpet Review</div><div class="meta">A blank carpet length means the roll still needs verification; it is not zero inventory. PCW unopened rolls remain protected as real FULL stock until their label, location and length are confirmed.</div></div>
 
 <div class="settingRow"><div class="name">Warehouse Seed Database</div><div class="meta">Adds the documented warehouse products and inventory records without overwriting existing records or quantities.</div><div class="actions"><button class="green" onclick="initializeSeedDatabase(true)">Check Documented Warehouse Data</button></div></div>
@@ -1426,6 +1428,24 @@ function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'
 async function cloudRequest(path,options={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
 function v8CanonicalRpcHeaders(token){return {...cloudHeaders(token),'Content-Profile':'warehouse_v7','Accept-Profile':'warehouse_v7'}}
 function v8CanonicalRpcRequest(name,body,token){return cloudRequest('/rest/v1/rpc/'+name,{method:'POST',headers:v8CanonicalRpcHeaders(token),body:JSON.stringify(body)})}
+async function v8CheckCarpetReviewGate(){
+ const status=$('v8ReviewGateStatus');if(!status)return;
+ status.textContent='Checking V8 review access (read-only)...';
+ try{
+  const session=await cloudEnsureSession();if(!session?.access_token||!session?.user?.id)throw new Error('Please sign in as the warehouse administrator.');
+  const tenant='e2d45722-186b-4b4f-af16-38709a0113ee';
+  const checks=[];
+  const call=async(name,args)=>{try{const value=await v8CanonicalRpcRequest(name,args,session.access_token);return {ok:true,value}}catch(e){return {ok:false,error:String(e.message||e)}}};
+  const gate=await call('get_carpet_review_promotion_gate',{p_tenant:tenant});
+  checks.push('Review gate: '+(gate.ok?JSON.stringify(gate.value):'BLOCKED — '+gate.error));
+  for(const [roll,id] of [['RC2347','1786654274234.5'],['RC2348','1786654104967.5']]){
+   const result=await call('preview_carpet_review_promotion_case',{p_tenant:tenant,p_source_dataset:'runlu_carpet_inventory_v52',p_source_record_id:id});
+   checks.push(roll+': '+(result.ok?JSON.stringify(result.value):'BLOCKED — '+result.error));
+  }
+  status.textContent=checks.join('\n')+'\nRead-only check complete. No records were modified.';
+  status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
+ }catch(e){status.textContent='Review access check failed: '+String(e.message||e)+'. No records were modified.'}
+}
 async function v8ReadCutRoll(roll){
  const session=await cloudEnsureSession();if(!session?.user?.id)throw new Error('Administrator sign-in required.');
  const id=String(roll?.canonicalId||'');
