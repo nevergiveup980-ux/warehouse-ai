@@ -1582,7 +1582,7 @@ function recordSyncPrepareGeneration(){
  return true
 }
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
-function recordSyncOutbox(){try{return JSON.parse(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)||'[]')}catch{return[]}}
+function recordSyncOutbox(){const raw=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);if(raw===null)return [];let q;try{q=JSON.parse(raw)}catch{throw new Error('Offline record queue is unreadable; synchronization paused to preserve device data.')}if(!Array.isArray(q))throw new Error('Offline record queue has invalid format; synchronization paused to preserve device data.');return q}
 function setRecordSyncOutbox(v){localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,JSON.stringify(v));updateHeaderCloudPill('auto')}
 function recordSyncPayload(row){
  if(!row||typeof row!=='object')return row;
