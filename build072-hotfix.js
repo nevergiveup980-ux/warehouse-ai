@@ -211,6 +211,7 @@
     const rows=await fetchRecords(s);rememberRemote(rows);captureLocalDelta(rows);
     await flushQueue(s,{allowShadow:true});
     if(conflicts().length){await setState(s,'paused',{metadata:{reason:'record_conflict_during_activation',paused_at:nowIso()}});throw new Error('Cloud Master activation paused because a real record-level conflict needs review. No whole dataset was overwritten.');}
+    if(queue().length)throw new Error('Cloud Master activation paused: unresolved offline operations remain; no local records were replaced.');
     st=await setState(s,'active',{activated_at:nowIso(),activated_by:deviceId(),metadata:{legacy_source:'user_datasets',activation:'Build072 after local-delta capture'}});
     clearLegacyConflictState();return st;
   }
@@ -251,7 +252,7 @@
         let restored=true;
         try{if(previousQueue===null)localStorage.removeItem(QUEUE);else localStorage.setItem(QUEUE,previousQueue)}catch(rollbackError){restored=false;console.error('Offline queue rollback failed',rollbackError)}
         try{if(previousRaw===null)localStorage.removeItem(k);else localStorage.setItem(k,previousRaw)}catch(rollbackError){restored=false;console.error('Local cache rollback failed',rollbackError)}
-        localStorage.setItem(LAST_ERROR,'Offline save failed; '+(restored?'previous state restored.':'rollback requires manual review.'));
+        try{localStorage.setItem(LAST_ERROR,'Offline save failed; '+(restored?'previous state restored.':'rollback requires manual review.'))}catch(error){console.error('Could not persist offline save error',error)}
         alert('Offline operation could not be saved. '+(restored?'Local changes were rolled back.':'Do not refresh or sync; manual recovery is required.'));
         return false;
       }
@@ -282,8 +283,6 @@
     }
     if(action==='delete'){
       alert('Delete Duplicate is disabled during the Cloud Master safety review. No cloud deletion was attempted.');return;
-      if(!confirm('Delete this cloud record as a duplicate?\n\nA cloud tombstone will be written so an old device cannot resurrect it.'))return;
-      m.op='delete';m.baseVersion=sv;m.blocked=false;m.payload=m.payload||server.payload||{};write(QUEUE,q);cs=cs.filter(x=>x.queueId!==queueId);saveConflicts(cs);await sync({silent:true});
     }
   };
 
