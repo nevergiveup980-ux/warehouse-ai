@@ -1,0 +1,20 @@
+name: Cloud Master Emergency Safety
+on:
+  pull_request:
+    paths:
+      - 'build072-hotfix.js'
+      - 'tests/cloud-master-emergency-guard.test.mjs'
+      - '.github/workflows/cloud-master-emergency-safety.yml'
+  workflow_dispatch:
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: node --check build072-hotfix.js
+      - name: Emergency guard regression tests
+        run: node --test tests/cloud-master-emergency-guard.test.mjs
