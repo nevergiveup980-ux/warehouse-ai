@@ -1560,6 +1560,16 @@ const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC
 function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
 function recordSyncPrepareGeneration(){
  if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
+ // A version change must never silently erase offline operations or warehouse records.
+ const rawOutbox=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
+ if(rawOutbox!==null){
+  let pending;
+  try{pending=JSON.parse(rawOutbox)}catch{throw new Error('Unreadable offline queue: generation reset blocked; preserve this device data.')}
+  if(!Array.isArray(pending))throw new Error('Invalid offline queue: generation reset blocked; preserve this device data.');
+  if(pending.length)throw new Error('Pending offline operations: generation reset blocked; preserve this device data.');
+ }
+ for(const key of DATA_KEYS)if(localStorage.getItem(key)!==null)
+  throw new Error('Existing warehouse records: generation reset blocked; reconcile before migration.');
  cloudApplying=true;try{
   for(const k of DATA_KEYS)localStorage.removeItem(k);
   localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
