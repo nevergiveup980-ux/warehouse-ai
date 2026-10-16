@@ -161,6 +161,9 @@
   }
 
   async function flushQueue(s,{allowShadow=false}={}){
+    // During recovery, unresolved conflicts are a hard stop for automatic writes.
+    // Keep every queued operation untouched until a reviewed reconciliation is available.
+    if(conflicts().length)throw new Error('Cloud Master recovery hold: unresolved conflicts remain. No queued operation was uploaded.');
     const st=stateCache||await fetchState(s);if(st?.mode!=='active'&&!allowShadow)return {flushed:0,pending:queue().length};
     let q=queue(),flushed=0,cs=conflicts();
     for(let i=0;i<q.length;i++){
