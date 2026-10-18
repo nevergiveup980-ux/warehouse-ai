@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RUNLU Offline Queue Audit — Read Only</title>
+<style>body{font:16px system-ui,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem;line-height:1.5}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid #ddd;padding:8px;text-align:left;overflow-wrap:anywhere}th{position:sticky;top:0;background:white} .warning{border:1px solid #ad6200;padding:12px;border-radius:8px}button,input{font:inherit;margin:8px 0} .scroll{max-height:65vh;overflow:auto}</style>
+<h1>RUNLU Offline Queue Audit</h1>
+<p class="warning"><strong>Read-only diagnostic.</strong> Select an exported RUNLU_OFFLINE_QUEUE_EMERGENCY JSON file. Processing stays in this browser tab. This page makes no network requests, does not read or write warehouse browser storage, and cannot sync, restore, edit or delete records. Keep the original file unchanged.</p>
+<label>Emergency queue export: <input id="file" type="file" accept=".json,application/json"></label>
+<p id="status" role="status">No file loaded.</p><section id="results" hidden><h2>Summary</h2><p id="summary"></p><button id="csv" type="button">Download risk index CSV (no payloads)</button><div class="scroll"><table><thead><tr><th>Dataset</th><th>Record ID</th><th>Operations</th><th>Deletes</th><th>Last intent</th><th>Transitions</th><th>Missing base version</th><th>Priority</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<script>
+'use strict';
+const file=document.getElementById('file'),status=document.getElementById('status'),results=document.getElementById('results'),rows=document.getElementById('rows'),summary=document.getElementById('summary'),csv=document.getElementById('csv');
+let report=[];
+const cell=(tr,value)=>{const td=document.createElement('td');td.textContent=String(value);tr.append(td)};
+file.addEventListener('change',async()=>{
+ results.hidden=true;rows.replaceChildren();report=[];csv.disabled=true;
+ const f=file.files&&file.files[0];if(!f)return;
+ try{
+  if(f.size>30*1024*1024)throw Error('File exceeds 30 MB local audit limit.');
+  const outer=JSON.parse(await f.text());
+  if(outer.format!=='RUNLU Offline Queue Emergency Export'||outer.storageKey!=='runlu_record_sync_outbox_v1'||typeof outer.rawOutbox!=='string')throw Error('Not a recognized emergency queue export.');
+  const ops=JSON.parse(outer.rawOutbox);if(!Array.isArray(ops))throw Error('Outbox is not an array.');
+  if(outer.operationCount!==ops.length)throw Error('Operation count differs from export metadata.');
+  const groups=new Map(),seen=new Set();
+  for(let i=0;i<ops.length;i++){
+   const op=ops[i];if(!op||typeof op!=='object'||typeof op.dataset_key!=='string'||typeof op.record_id!=='string'||typeof op.operation_id!=='string'||typeof op.delete!=='boolean')throw Error('Malformed operation at position '+i);
+   if(seen.has(op.operation_id))throw Error('Duplicate operation ID at position '+i);seen.add(op.operation_id);
+   const key=JSON.stringify([op.dataset_key,op.record_id]);
+   if(!groups.has(key))groups.set(key,{dataset:op.dataset_key,id:op.record_id,count:0,deletes:0,transitions:0,missing:0,last:null});
+   const g=groups.get(key);if(g.last!==null&&g.last!==op.delete)g.transitions++;
+   g.last=op.delete;g.count++;if(op.delete)g.deletes++;if(op.base_version==null)g.missing++;
+  }
+  report=[...groups.values()].map(g=>({...g,priority:g.deletes?'REVIEW DELETE':g.count>1?'REVIEW REPEATS':'SINGLE'})).sort((a,b)=>(b.deletes>0)-(a.deletes>0)||b.count-a.count||a.id.localeCompare(b.id));
+  const high=report.filter(g=>g.deletes).length;
+  summary.textContent=ops.length+' operations / '+report.length+' record groups / '+high+' groups containing deletes / '+report.filter(g=>g.transitions).length+' groups with delete-write transitions. Queue order is export array order, not verified event time. This is NOT a cloud comparison.';
+  for(const g of report){const tr=document.createElement('tr');for(const value of [g.dataset,g.id,g.count,g.deletes,g.last?'DELETE':'WRITE',g.transitions,g.missing,g.priority])cell(tr,value);rows.append(tr)}
+  status.textContent='Local audit complete. No changes made.';results.hidden=false;csv.disabled=false;
+ }catch(e){status.textContent='Audit stopped: '+e.message;report=[];results.hidden=true}
+});
+csv.addEventListener('click',()=>{
+ if(!report.length)return;
+ const fields=['dataset','id','count','deletes','last','transitions','missing','priority'];
+ const quote=v=>'"'+String(v).replace(/"/g,'""')+'"';
+ const text=[fields.join(','),...report.map(g=>fields.map(k=>quote(g[k])).join(','))].join('\r\n');
+ const blob=new Blob([text],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RUNLU_QUEUE_RISK_INDEX.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+</script></html>
