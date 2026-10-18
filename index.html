@@ -4097,6 +4097,10 @@ function initializeSeedDatabase(showMessage=false){
  }
  if(!showMessage)return false; // First-time seed import requires an explicit user action.
  if(!confirm('Add documented seed products and inventory? Verify current stock first; this cannot recover deleted inventory safely.'))return false;
+ // Seed import remains disabled until an atomic, reviewed migration is available.
+ // Return before loading or mutating any product/inventory arrays.
+ if(showMessage)alert('Seed import is temporarily disabled for data safety. No products or inventory were changed.');
+ return false;
  const masters=loadMasters(),inv=loadInventoryRecords();
  const seedMasters=[
  {id:'PRD-0001',name:'Magnolia Bluff',brand:'',series:'SmartDrop Elite 9',color:'',sku:'VSE9229',category:'Vinyl Plank',coverageUnit:'SF / Box',length:'60 in',width:'9 in',thickness:'5 mm',productWeight:'55 lb / box',piecesPerBox:0,sfPerBox:30,weightPerBox:55,boxesPerPallet:52,sfPerPallet:1560,weightPerPallet:0,photo:'',notes:'Country: South Korea; wear layer 0.5 mm',updated:new Date().toLocaleString()},
