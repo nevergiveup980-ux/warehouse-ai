@@ -633,6 +633,7 @@ img,video,canvas,svg{max-width:100%}
 <div><label>Customer / Supplier</label><input id="customer"></div><div><label>Salesperson</label><input id="salesperson"></div>
 <div><label>PO Number</label><input id="poNumber"></div><div><label>SO / Order Number</label><input id="soNumber"></div>
 <div class="full"><label>Product</label><input id="orderProduct" list="productList"></div>
+<div class="full"><button type="button" onclick="RUNLUWarehousePOPicker.open()">Choose Carpet Roll (Pilot)</button><div id="poCarpetPickerPanel" hidden style="padding:12px;margin-top:8px;border:1px solid #d5dbe3;border-radius:8px"><label for="poCarpetPickerSelect">Available carpet roll</label><select id="poCarpetPickerSelect"><option value="">Choose a carpet roll…</option></select><div id="poCarpetPickerNotice" class="meta"></div><div class="actions"><button type="button" class="green" onclick="RUNLUWarehousePOPicker.apply()">Use Selected Roll</button><button type="button" onclick="RUNLUWarehousePOPicker.close()">Cancel</button></div></div></div>
 <div><label>Quantity</label><input id="orderQty" type="number" min="0" step=".01"></div>
 <div><label>Unit</label><select id="orderUnit"><option>Box</option><option>Pail</option><option>Bucket</option><option>Tube</option><option>Roll</option><option>Pallet</option><option>Piece</option><option>Foot</option></select></div>
 <div><label>Location</label><input id="orderLocation"></div><div><label>Received / Released By</label><input id="handledBy"></div>
@@ -4954,6 +4955,7 @@ document.body.classList.remove('formEntry');
  ['startCloudPolling',()=>startCloudPolling()]
 ].forEach(([name,fn])=>safeStartupStep(name,fn));
 </script>
+<script src="po-carpet-picker.js?r=po-pilot-20261018"></script>
 <script src="v8-compat.js?r=v8.0.1-cut-preflight-20261005" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>
 </html>
