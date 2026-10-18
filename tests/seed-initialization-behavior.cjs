@@ -27,4 +27,4 @@ run('marker blocks manual import',{marker:true},{writes:0,confirms:0,inventory:0
 run('existing seed blocks import',{inventory:[{id:30001,masterId:'PRD-0001',location:'NEW'}]},{writes:0,confirms:1,inventory:1});
 run('unrelated existing inventory blocks import',{inventory:[{id:90001,masterId:'PRD-X',location:'RACK'}]},{writes:0,confirms:1,inventory:1});
 run('manual import canceled',{confirmResult:false},{writes:0,confirms:1,inventory:0});
-run('empty manual confirmed',{}, {writes:2,confirms:1,inventory:9});
+run('empty manual confirmed blocked pending atomic import',{}, {writes:0,confirms:1,inventory:0});
