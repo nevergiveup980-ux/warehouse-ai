@@ -10,6 +10,13 @@
  }
  function peek(){return origin?{...origin}:null}
  function clear(){origin=null}
+ function select(value,apply,showPage,doc){
+  const ctx=peek();
+  if(!ctx||typeof apply!=='function'||typeof showPage!=='function'||!doc?.getElementById(ctx.page))return false;
+  // Apply first: if the form rejects the selected roll, do not navigate or lose context.
+  if(apply(value,ctx)===false)return false;
+  return returnTo(showPage,doc);
+ }
  function returnTo(showPage,doc){
   const ctx=peek();
   if(!ctx||typeof showPage!=='function'||!doc?.getElementById(ctx.page))return false;
@@ -18,5 +25,5 @@
   if(ctx.field){const el=doc.getElementById(ctx.field);if(el&&typeof el.focus==='function')el.focus()}
   clear();return true;
  }
- root.RUNLUWarehouseReturnNav=Object.freeze({remember,peek,clear,returnTo});
+ root.RUNLUWarehouseReturnNav=Object.freeze({remember,peek,clear,returnTo,select});
 })(typeof window!=='undefined'?window:globalThis);
