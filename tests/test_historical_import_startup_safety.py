@@ -11,11 +11,11 @@ class HistoricalImportStartupContract(unittest.TestCase):
   for name in ("applyV516WarehouseDataset", "applyV5515FieldProducts", "applyV5522UnderlaymentSpecs"):
    self.assertNotIn("()=>"+name+"(",startup)
   self.assertIn("historicalInventoryImportSafetyHold",startup)
-  for name in ("repairMissingCarpetRollsFromReceiving", "reconcileCompletedCustomerOrderInventory", "repairCompletedStockTransfers", "reconcileTransferredCarpetStatuses", "recoverOrderLibraries", "restoreConversationOrders"):
+  for name in ("repairMissingCarpetRollsFromReceiving", "reconcileCompletedCustomerOrderInventory", "repairCompletedStockTransfers", "reconcileTransferredCarpetStatuses", "recoverOrderLibraries", "restoreConversationOrders", "migrateV13", "migrateToV21", "migrateInventoryLifecycle", "migrateOperationsV52", "dedupeOpenOperationDrafts"):
    self.assertNotIn("()=>"+name+"(",startup)
   self.assertIn("missingCarpetRollRecoverySafetyHold",startup)
   self.assertIn("completedOrderInventorySafetyHold",startup)
-  for name in ("repairCompletedStockTransfers", "reconcileTransferredCarpetStatuses", "recoverOrderLibraries", "restoreConversationOrders"):
+  for name in ("repairCompletedStockTransfers", "reconcileTransferredCarpetStatuses", "recoverOrderLibraries", "restoreConversationOrders", "migrateV13", "migrateToV21", "migrateInventoryLifecycle", "migrateOperationsV52", "dedupeOpenOperationDrafts"):
    self.assertIn(name+"SafetyHold",startup)
  def test_functions_preserved_for_manual_review(self):
   for name in ("applyV516WarehouseDataset", "applyV5515FieldProducts", "applyV5522UnderlaymentSpecs"):
