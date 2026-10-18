@@ -1648,7 +1648,40 @@ async function recordSyncPull(){
  const s=await cloudEnsureSession();if(!s)return 0;
  const reset=recordSyncPrepareGeneration();if(reset||localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)!=='1')await recordSyncBootstrap();
  let cursor=Number(localStorage.getItem(RECORD_SYNC_CURSOR_KEY)||0),count=0;
- while(true){const rows=await cloudRequest('/rest/v1/rpc/warehouse_get_delta',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_after_seq:cursor,p_limit:500})});if(!Array.isArray(rows)||!rows.length)break;cloudApplying=true;try{for(const r of rows){if(!DATA_KEYS.includes(r.dataset_key))continue;const list=load(r.dataset_key),idx=list.findIndex((x,i)=>recordSyncId(x,i)===String(r.record_id));if(r.deleted_at){if(idx>=0)list.splice(idx,1)}else{const payload=await cloudHydratePayload(r.payload,s),hydrated={...payload,_cloudVersion:Number(r.version||0),_cloudChangeSeq:Number(r.change_seq||0),_cloudRecordId:String(r.record_id||'')};if(idx>=0)list[idx]=hydrated;else list.push(hydrated)}localStorage.setItem(r.dataset_key,JSON.stringify(list));cursor=Math.max(cursor,Number(r.change_seq||0));count++}localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor))}finally{cloudApplying=false}if(rows.length<500)break}return count
+ while(true){const rows=await cloudRequest('/rest/v1/rpc/warehouse_get_delta',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_after_seq:cursor,p_limit:500})});if(!Array.isArray(rows)||!rows.length)break;cloudApplying=true;try{
+  // Stage the complete delta page before writing any local data.
+  const staged=new Map(),originals=new Map();
+  let nextCursor=cursor,pageCount=0;
+  for(const r of rows){
+   if(!DATA_KEYS.includes(r.dataset_key))continue;
+   if(!staged.has(r.dataset_key)){
+    originals.set(r.dataset_key,localStorage.getItem(r.dataset_key));
+    staged.set(r.dataset_key,load(r.dataset_key));
+   }
+   const list=staged.get(r.dataset_key),idx=list.findIndex((x,i)=>recordSyncId(x,i)===String(r.record_id));
+   if(r.deleted_at){if(idx>=0)list.splice(idx,1)}
+   else{
+    const payload=await cloudHydratePayload(r.payload,s);
+    const hydrated={...payload,_cloudVersion:Number(r.version||0),_cloudChangeSeq:Number(r.change_seq||0),_cloudRecordId:String(r.record_id||'')};
+    if(idx>=0)list[idx]=hydrated;else list.push(hydrated);
+   }
+   nextCursor=Math.max(nextCursor,Number(r.change_seq||0));pageCount++;
+  }
+  originals.set(RECORD_SYNC_CURSOR_KEY,localStorage.getItem(RECORD_SYNC_CURSOR_KEY));
+  try{
+   for(const [key,list] of staged)localStorage.setItem(key,JSON.stringify(list));
+   localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(nextCursor));
+  }catch(writeError){
+   let rollbackFailed=false;
+   for(const [key,oldValue] of originals){
+    try{if(oldValue===null)localStorage.removeItem(key);else localStorage.setItem(key,oldValue)}
+    catch(restoreError){rollbackFailed=true;console.error('Cloud delta rollback failed for '+key,restoreError)}
+   }
+   if(rollbackFailed)throw new Error('Cloud delta failed and rollback was incomplete. Stop editing and preserve this browser data.',{cause:writeError});
+   throw writeError;
+  }
+  cursor=nextCursor;count+=pageCount;
+ }finally{cloudApplying=false}if(rows.length<500)break}return count
 }
 async function recordSyncNow(silent=true){if(cloudSyncBusy||!cloudSession())return;try{cloudSyncBusy=true;const reset=recordSyncPrepareGeneration();if(reset||!recordSyncReady())await recordSyncBootstrap();if(recordSyncReady()&&recordSyncOutbox().length){throw new Error('Pending offline operations: automatic replay is on safety hold pending explicit reconciliation. No queue entries were sent or removed.')}if(!protectedInputActive())await recordSyncPull();localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!silent){renderDashboard();renderProducts();renderInventory();renderCarpetInventory()}}catch(e){console.error('Warehouse record sync failed:',e);try{localStorage.setItem(CLOUD_LAST_ERROR_KEY,String(e?.message||e))}catch(storageError){console.error('Warehouse sync error could not be persisted; preserve device data:',storageError)}}finally{cloudSyncBusy=false;try{updateHeaderCloudPill('auto')}catch(statusError){console.error('Warehouse sync status update failed:',statusError)}}}
 
