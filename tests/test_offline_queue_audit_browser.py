@@ -1,10 +1,12 @@
-"""Chromium smoke test for the standalone audit. Synthetic data only."""
+"""Chromium and WebKit smoke test for the standalone audit. Synthetic data only."""
+import os
 import json
 import pathlib
 import tempfile
 import unittest
 from playwright.sync_api import sync_playwright
 
+ENGINE = os.environ.get('RUNLU_TEST_BROWSER', 'chromium')
 PAGE = pathlib.Path(__file__).resolve().parents[1] / 'tools' / 'offline-queue-audit.html'
 
 class BrowserSmoke(unittest.TestCase):
@@ -18,7 +20,7 @@ class BrowserSmoke(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             p=pathlib.Path(folder)/'synthetic.json';p.write_text(json.dumps(export),encoding='utf-8')
             with sync_playwright() as pw:
-                browser=pw.chromium.launch(headless=True)
+                browser=getattr(pw, ENGINE).launch(headless=True)
                 context=browser.new_context(accept_downloads=True)
                 page=context.new_page()
                 requests=[]
@@ -40,7 +42,7 @@ class BrowserSmoke(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             p=pathlib.Path(folder)/'invalid.json';p.write_text('{"not":"an export"}',encoding='utf-8')
             with sync_playwright() as pw:
-                browser=pw.chromium.launch(headless=True)
+                browser=getattr(pw, ENGINE).launch(headless=True)
                 page=browser.new_page()
                 page.goto(PAGE.resolve().as_uri())
                 page.locator('#file').set_input_files(str(p))
