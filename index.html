@@ -4089,6 +4089,14 @@ function resetV20Data(){
 
 
 function initializeSeedDatabase(showMessage=false){
+ // Never re-seed a device whose seed initialization was already recorded.
+ // This also protects intentional deletions and relocated seed inventory.
+ if(localStorage.getItem('runlu_v30_seed_initialized')){
+  if(showMessage)alert('Documented warehouse seed data was previously initialized. No inventory was changed.');
+  return false;
+ }
+ if(!showMessage)return false; // First-time seed import requires an explicit user action.
+ if(!confirm('Add documented seed products and inventory? Verify current stock first; this cannot recover deleted inventory safely.'))return false;
  const masters=loadMasters(),inv=loadInventoryRecords();
  const seedMasters=[
  {id:'PRD-0001',name:'Magnolia Bluff',brand:'',series:'SmartDrop Elite 9',color:'',sku:'VSE9229',category:'Vinyl Plank',coverageUnit:'SF / Box',length:'60 in',width:'9 in',thickness:'5 mm',productWeight:'55 lb / box',piecesPerBox:0,sfPerBox:30,weightPerBox:55,boxesPerPallet:52,sfPerPallet:1560,weightPerPallet:0,photo:'',notes:'Country: South Korea; wear layer 0.5 mm',updated:new Date().toLocaleString()},
@@ -4907,7 +4915,11 @@ function v8InstallCompatibility(){
  console.warn('[V8 Pilot] compatibility adapter unavailable; V6 shell remains active');
  return false
 }
-function autoInitializeSeed(){initializeSeedDatabase(false)}
+function autoInitializeSeed(){
+ // Historical seed inventory must not be recreated during normal startup.
+ // Preserve existing records and offline queue; explicit review is required.
+ return false;
+}
 
 if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
 document.querySelectorAll('#operationEditor input,#operationEditor select,#operationEditor textarea').forEach(el=>{el.addEventListener('input',scheduleOperationDraft);el.addEventListener('change',scheduleOperationDraft)});
