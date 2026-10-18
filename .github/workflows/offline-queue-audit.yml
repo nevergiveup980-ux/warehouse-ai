@@ -1,0 +1,21 @@
+name: Offline Queue Audit Safety
+on:
+  pull_request:
+    paths:
+      - 'tools/offline-queue-audit.html'
+      - 'tests/test_offline_queue_audit_contract.py'
+      - 'tests/test_offline_queue_audit_static.py'
+      - '.github/workflows/offline-queue-audit.yml'
+  workflow_dispatch:
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Contract and read-only security checks
+        run: python -m unittest discover -s tests -p 'test_offline_queue_audit_*.py' -v
