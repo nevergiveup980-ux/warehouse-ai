@@ -19,10 +19,11 @@ file.addEventListener('change',async()=>{
   const outer=JSON.parse(await f.text());
   if(outer.format!=='RUNLU Offline Queue Emergency Export'||outer.storageKey!=='runlu_record_sync_outbox_v1'||typeof outer.rawOutbox!=='string')throw Error('Not a recognized emergency queue export.');
   const ops=JSON.parse(outer.rawOutbox);if(!Array.isArray(ops))throw Error('Outbox is not an array.');
-  if(outer.operationCount!==ops.length)throw Error('Operation count differs from export metadata.');
+  if(!Number.isSafeInteger(outer.operationCount)||outer.operationCount!==ops.length)throw Error('Operation count differs from export metadata.');
+  if(ops.length>100000)throw Error('Operation count exceeds local audit limit.');
   const groups=new Map(),seen=new Set();
   for(let i=0;i<ops.length;i++){
-   const op=ops[i];if(!op||typeof op!=='object'||typeof op.dataset_key!=='string'||typeof op.record_id!=='string'||typeof op.operation_id!=='string'||typeof op.delete!=='boolean')throw Error('Malformed operation at position '+i);
+   const op=ops[i];if(!op||typeof op!=='object'||typeof op.dataset_key!=='string'||typeof op.record_id!=='string'||typeof op.operation_id!=='string'||typeof op.delete!=='boolean'||!op.operation_id||!op.dataset_key||!op.record_id||!op.payload||typeof op.payload!=='object'||Array.isArray(op.payload))throw Error('Malformed operation at position '+i);
    if(seen.has(op.operation_id))throw Error('Duplicate operation ID at position '+i);seen.add(op.operation_id);
    const key=JSON.stringify([op.dataset_key,op.record_id]);
    if(!groups.has(key))groups.set(key,{dataset:op.dataset_key,id:op.record_id,count:0,deletes:0,transitions:0,missing:0,last:null});
@@ -39,8 +40,8 @@ file.addEventListener('change',async()=>{
 csv.addEventListener('click',()=>{
  if(!report.length)return;
  const fields=['dataset','id','count','deletes','last','transitions','missing','priority'];
- const quote=v=>'"'+String(v).replace(/"/g,'""')+'"';
- const text=[fields.join(','),...report.map(g=>fields.map(k=>quote(g[k])).join(','))].join('\r\n');
+ const quote=v=>{let value=String(v);if(/^[\\s]*[=+@-]/.test(value))value="'"+value;return '"'+value.replace(/"/g,'""')+'"'};
+ const text=[fields.join(','),...report.map(g=>fields.map(k=>quote(k==='last'?(g.last?'DELETE':'WRITE'):g[k])).join(','))].join('\r\n');
  const blob=new Blob([text],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RUNLU_QUEUE_RISK_INDEX.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 </script></html>
