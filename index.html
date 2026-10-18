@@ -4122,6 +4122,13 @@ function initializeSeedDatabase(showMessage=false){
  {id:30009,masterId:'PRD-0009',locationType:'Floor Stack',location:'LOC-M9B',quantity:165,unit:'Carton',lotNumber:'',poNumber:'',updated:new Date().toLocaleString()}
  ];
  // A legacy device may have seed IDs even if its initialization marker is absent.
+ // Any existing inventory makes historical seed reconstruction ambiguous.
+ // Refuse to mix sample inventory into a working warehouse without review.
+ if(inv.length){
+  if(showMessage)alert('Existing warehouse inventory detected. No seed records were added. Manual review is required.');
+  return false;
+ }
+
  if(seedInv.some(x=>inv.some(r=>String(r.id)===String(x.id)))){
   if(showMessage)alert('Seed inventory IDs already exist. No inventory was changed. Review the inventory before importing.');
   return false;
