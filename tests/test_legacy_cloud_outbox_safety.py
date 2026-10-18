@@ -14,6 +14,7 @@ class LegacyCloudOutboxGuard(unittest.TestCase):
    ("flushCloudDirty","keys=null"),
    ("applyCloudRows","rows,silent=false,keys=null,clearSelectedDirty=false"),
    ("cloudPutDatasetInitial","key,value,s"),
+   ("cloudPutDataset","key,value"),
   ]:
    self.assertIn(f"async function {name}({args}){{assertLegacyCloudSyncOutboxClear();",S,name)
 if __name__=="__main__":unittest.main()
