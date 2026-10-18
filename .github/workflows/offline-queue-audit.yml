@@ -5,6 +5,7 @@ on:
       - 'tools/offline-queue-audit.html'
       - 'tests/test_offline_queue_audit_contract.py'
       - 'tests/test_offline_queue_audit_static.py'
+      - 'tests/test_offline_queue_audit_browser.py'
       - '.github/workflows/offline-queue-audit.yml'
   workflow_dispatch:
 jobs:
@@ -17,5 +18,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Contract and read-only security checks
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Contract, security and browser smoke checks
         run: python -m unittest discover -s tests -p 'test_offline_queue_audit_*.py' -v
