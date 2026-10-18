@@ -1628,6 +1628,8 @@ async function recordSyncBootstrap(){
   const writes=[...grouped].map(([k,v])=>[k,JSON.stringify(v)]);
   writes.push([RECORD_SYNC_CURSOR_KEY,String(Number(snap?.cursor||0))]);
   writes.push([RECORD_SYNC_BOOTSTRAP_KEY,'1']);
+  // Recheck after network/hydration awaits: local edits may have arrived meanwhile.
+  recordSyncAssertBootstrapSafe();
   const originals=new Map(writes.map(([k])=>[k,localStorage.getItem(k)]));
   try{
    for(const [k,v] of writes)localStorage.setItem(k,v);
@@ -1667,6 +1669,8 @@ async function recordSyncPull(){
    }
    nextCursor=Math.max(nextCursor,Number(r.change_seq||0));pageCount++;
   }
+  // A new local edit during delta hydration must not be overwritten by this page.
+  if(recordSyncOutbox().length)throw new Error('Pending offline operations appeared during cloud pull: local overwrite blocked.');
   originals.set(RECORD_SYNC_CURSOR_KEY,localStorage.getItem(RECORD_SYNC_CURSOR_KEY));
   try{
    for(const [key,list] of staged)localStorage.setItem(key,JSON.stringify(list));
