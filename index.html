@@ -4969,10 +4969,14 @@ if($('home'))$('home').classList.remove('hidden');
 document.body.classList.remove('formEntry');
 [
  ['earlyStorageCleanup',()=>{pruneLocalApplicationCache(true);if(localStorageBytes()>STORAGE_SOFT_LIMIT_BYTES)aggressiveSafeStorageCleanup()}],
- ['migrateV13',()=>migrateV13()],
- ['migrateToV21',()=>migrateToV21()],
- ['migrateInventoryLifecycle',()=>migrateInventoryLifecycle()],
- ['migrateOperationsV52',()=>migrateOperationsV52()],
+ // Legacy migrateV13 requires an explicit backup and migration review.
+ ['migrateV13SafetyHold',()=>({skipped:true,reason:'manual migration review required'})],
+ // Legacy migrateToV21 requires an explicit backup and migration review.
+ ['migrateToV21SafetyHold',()=>({skipped:true,reason:'manual migration review required'})],
+ // Legacy migrateInventoryLifecycle requires an explicit backup and migration review.
+ ['migrateInventoryLifecycleSafetyHold',()=>({skipped:true,reason:'manual migration review required'})],
+ // Legacy migrateOperationsV52 requires an explicit backup and migration review.
+ ['migrateOperationsV52SafetyHold',()=>({skipped:true,reason:'manual migration review required'})],
  ['migrateLegacyCarpetData',()=>({retired:true,reason:'Cloud Master snapshot owns carpet bootstrap'} )],
  // Missing-roll recovery can recreate intentionally removed carpet rolls.
  ['missingCarpetRollRecoverySafetyHold',()=>({skipped:true,reason:'requires reconciliation review'})],
@@ -4987,7 +4991,8 @@ document.body.classList.remove('formEntry');
  ['historicalInventoryImportSafetyHold',()=>({skipped:true,reason:'manual review required'})],
  // Historical repairCompletedStockTransfers requires explicit reconciliation; never mutate business data on boot.
  ['repairCompletedStockTransfersSafetyHold',()=>({skipped:true,reason:'review required'})],
- ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
+ // Legacy dedupeOpenOperationDrafts requires an explicit backup and migration review.
+ ['dedupeOpenOperationDraftsSafetyHold',()=>({skipped:true,reason:'manual migration review required'})],
  // PO-only matching can misclassify unrelated live inventory as shipped.
  ['completedOrderInventorySafetyHold',()=>({skipped:true,reason:'requires order-line identity verification'})],
  // Historical reconcileTransferredCarpetStatuses requires explicit reconciliation; never mutate business data on boot.
