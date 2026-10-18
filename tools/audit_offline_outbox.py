@@ -12,7 +12,7 @@ from pathlib import Path
 def extract_outbox(document):
     if isinstance(document,list): return document
     if not isinstance(document,dict): raise ValueError("Expected JSON array or backup object")
-    for key in ("recordSyncOutbox","record_sync_outbox","offlineQueue","offline_queue","outbox","operations"):
+    if "rawOutbox" in document:\n        raw=document["rawOutbox"]\n        if not isinstance(raw,str): raise ValueError("rawOutbox must be a JSON string")\n        decoded=json.loads(raw)\n        if not isinstance(decoded,list): raise ValueError("rawOutbox must decode to an array")\n        return decoded\n    for key in ("recordSyncOutbox","record_sync_outbox","offlineQueue","offline_queue","outbox","operations"):
         value=document.get(key)
         if isinstance(value,list): return value
     raise ValueError("No recognized outbox array in backup; refusing to guess")
