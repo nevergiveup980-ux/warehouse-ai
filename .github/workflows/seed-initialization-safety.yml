@@ -4,6 +4,7 @@ on:
     paths:
       - 'index.html'
       - 'tests/test_seed_initialization_safety.py'
+      - 'tests/seed-initialization-behavior.cjs'
       - '.github/workflows/seed-initialization-safety.yml'
   workflow_dispatch:
 jobs:
@@ -16,3 +17,5 @@ jobs:
           python-version: '3.11'
       - name: Seed initialization safety contracts
         run: python -m unittest discover -s tests -p test_seed_initialization_safety.py -v
+      - name: Seed initialization behavior in isolated JS runtime
+        run: node tests/seed-initialization-behavior.cjs
