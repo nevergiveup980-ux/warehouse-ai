@@ -3,7 +3,10 @@ const src=fs.readFileSync('index.html','utf8');
 const start=src.indexOf('function initializeSeedDatabase(showMessage=false){');
 const end=src.indexOf('\nfunction backupBeforeV516()',start);
 assert(start>=0&&end>start);
-const functionCode=src.slice(start,end)+'\nfunction autoInitializeSeed(){\n return false;\n}';
+const autoStart=src.indexOf('function autoInitializeSeed(){');
+const autoEnd=src.indexOf('\n}',autoStart);
+assert(autoStart>=0&&autoEnd>autoStart);
+const functionCode=src.slice(start,end)+'\n'+src.slice(autoStart,autoEnd+2);
 function run(label,{marker=false,inventory=[],confirmResult=true,manual=true},expect){
  const store=new Map(marker?[['runlu_v30_seed_initialized','1']]:[]);
  let masters=[],inv=structuredClone(inventory),writes=[],confirms=0;
