@@ -1596,6 +1596,8 @@ function queueRecordDeltaSave(key,before,after){
  setRecordSyncOutbox(q);if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50)
 }
 async function recordSyncPush(){
+ // Fail closed until an explicitly reviewed, scoped replay workflow exists.
+ throw new Error('Offline queue replay is disabled pending explicit reconciliation; no operations were sent or removed.');
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
  while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;q.shift();setRecordSyncOutbox(q);sent++}return sent
