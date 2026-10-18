@@ -4973,7 +4973,8 @@ document.body.classList.remove('formEntry');
  ['migrateInventoryLifecycle',()=>migrateInventoryLifecycle()],
  ['migrateOperationsV52',()=>migrateOperationsV52()],
  ['migrateLegacyCarpetData',()=>({retired:true,reason:'Cloud Master snapshot owns carpet bootstrap'} )],
- ['repairMissingCarpetRollsFromReceiving',()=>repairMissingCarpetRollsFromReceiving(true)],
+ // Missing-roll recovery can recreate intentionally removed carpet rolls.
+ ['missingCarpetRollRecoverySafetyHold',()=>({skipped:true,reason:'requires reconciliation review'})],
  ['recoverOrderLibraries',()=>recoverOrderLibraries(false)],
  ['restoreConversationOrders',()=>restoreConversationOrders(false)],
  ['autoInitializeSeed',()=>autoInitializeSeed()],
@@ -4983,7 +4984,8 @@ document.body.classList.remove('formEntry');
  ['historicalInventoryImportSafetyHold',()=>({skipped:true,reason:'manual review required'})],
  ['repairCompletedStockTransfers',()=>repairCompletedStockTransfers(true)],
  ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
- ['reconcileCompletedCustomerOrderInventory',()=>reconcileCompletedCustomerOrderInventory(true)],
+ // PO-only matching can misclassify unrelated live inventory as shipped.
+ ['completedOrderInventorySafetyHold',()=>({skipped:true,reason:'requires order-line identity verification'})],
  ['reconcileTransferredCarpetStatuses',()=>reconcileTransferredCarpetStatuses(false)],
  ['v8InstallCompatibility',()=>v8InstallCompatibility()],
  ['renderDashboard',()=>renderDashboard()],
