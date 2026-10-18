@@ -1207,7 +1207,9 @@ function enforceCleanCloudCutover(){
  localStorage.setItem(CLEAN_BREAK_KEY,'1');
  try{sessionStorage.clear()}catch{}
 }
-enforceCleanCloudCutover();
+// Safety hold: legacy clean-cloud cutover deletes local warehouse datasets on startup.
+// Preserve existing browser records until a separately reviewed migration is approved.
+// enforceCleanCloudCutover();
 
 const ACCESS_ROLE_KEY='runlu_access_role_v620', ACCESS_TRUSTED_KEY='runlu_access_trusted_v620';
 // Build049 — Private Administrator Mode. Public / View Only access is retired.
