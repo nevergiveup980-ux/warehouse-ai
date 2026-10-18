@@ -40,7 +40,7 @@ file.addEventListener('change',async()=>{
 csv.addEventListener('click',()=>{
  if(!report.length)return;
  const fields=['dataset','id','count','deletes','last','transitions','missing','priority'];
- const quote=v=>{let value=String(v);if(/^[\\s]*[=+@-]/.test(value))value="'"+value;return '"'+value.replace(/"/g,'""')+'"'};
+ const quote=v=>{let value=String(v);if(/^\s*[=+@-]/.test(value))value="'"+value;return '"'+value.replace(/"/g,'""')+'"'};
  const text=[fields.join(','),...report.map(g=>fields.map(k=>quote(k==='last'?(g.last?'DELETE':'WRITE'):g[k])).join(','))].join('\r\n');
  const blob=new Blob([text],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RUNLU_QUEUE_RISK_INDEX.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
