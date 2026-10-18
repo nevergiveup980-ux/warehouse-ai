@@ -1624,9 +1624,22 @@ async function recordSyncBootstrap(){
  cloudApplying=true;try{
   const grouped=new Map(DATA_KEYS.map(k=>[k,[]]));
   for(const r of rows)if(grouped.has(r.dataset_key)){const payload=await cloudHydratePayload(r.payload,s);grouped.get(r.dataset_key).push({...payload,_cloudVersion:Number(r.version||0),_cloudChangeSeq:Number(r.change_seq||0),_cloudRecordId:String(r.record_id||'')})}
-  for(const [k,v] of grouped)localStorage.setItem(k,JSON.stringify(v));
-  localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(Number(snap?.cursor||0)));
-  localStorage.setItem(RECORD_SYNC_BOOTSTRAP_KEY,'1');
+  // Stage and snapshot all writes before committing; restore every touched key on failure.
+  const writes=[...grouped].map(([k,v])=>[k,JSON.stringify(v)]);
+  writes.push([RECORD_SYNC_CURSOR_KEY,String(Number(snap?.cursor||0))]);
+  writes.push([RECORD_SYNC_BOOTSTRAP_KEY,'1']);
+  const originals=new Map(writes.map(([k])=>[k,localStorage.getItem(k)]));
+  try{
+   for(const [k,v] of writes)localStorage.setItem(k,v);
+  }catch(bootstrapError){
+   let rollbackFailed=false;
+   for(const [k,oldValue] of originals){
+    try{if(oldValue===null)localStorage.removeItem(k);else localStorage.setItem(k,oldValue)}
+    catch(restoreError){rollbackFailed=true;console.error('Cloud bootstrap rollback failed for '+k,restoreError)}
+   }
+   if(rollbackFailed)throw new Error('Cloud bootstrap failed and rollback was incomplete. Stop editing and preserve this browser data.',{cause:bootstrapError});
+   throw bootstrapError;
+  }
  }finally{cloudApplying=false}
  return rows.length
 }
