@@ -4977,9 +4977,10 @@ document.body.classList.remove('formEntry');
  ['recoverOrderLibraries',()=>recoverOrderLibraries(false)],
  ['restoreConversationOrders',()=>restoreConversationOrders(false)],
  ['autoInitializeSeed',()=>autoInitializeSeed()],
- ['applyV516WarehouseDataset',()=>applyV516WarehouseDataset(false)],
- ['applyV5515FieldProducts',()=>applyV5515FieldProducts(false)],
- ['applyV5522UnderlaymentSpecs',()=>applyV5522UnderlaymentSpecs(false)],
+ // Historical stock imports are deliberately excluded from automatic startup.
+ // They can create inventory/outbox deltas on devices with missing migration markers.
+ // Restore only after a reviewed, recoverable migration is available.
+ ['historicalInventoryImportSafetyHold',()=>({skipped:true,reason:'manual review required'})],
  ['repairCompletedStockTransfers',()=>repairCompletedStockTransfers(true)],
  ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
  ['reconcileCompletedCustomerOrderInventory',()=>reconcileCompletedCustomerOrderInventory(true)],
