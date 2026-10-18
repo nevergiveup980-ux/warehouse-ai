@@ -1671,6 +1671,11 @@ async function recordSyncPull(){
   }
   // A new local edit during delta hydration must not be overwritten by this page.
   if(recordSyncOutbox().length)throw new Error('Pending offline operations appeared during cloud pull: local overwrite blocked.');
+  // Catch edits that bypassed the outbox while the network page was being hydrated.
+  for(const [key,oldValue] of originals)if(localStorage.getItem(key)!==oldValue)
+   throw new Error('Local warehouse data changed during cloud pull: overwrite blocked. Key: '+key);
+  if(Number(localStorage.getItem(RECORD_SYNC_CURSOR_KEY)||0)!==cursor)
+   throw new Error('Cloud cursor changed during pull: stale delta page blocked.');
   originals.set(RECORD_SYNC_CURSOR_KEY,localStorage.getItem(RECORD_SYNC_CURSOR_KEY));
   try{
    for(const [key,list] of staged)localStorage.setItem(key,JSON.stringify(list));
