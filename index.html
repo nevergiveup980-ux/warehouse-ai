@@ -4975,18 +4975,22 @@ document.body.classList.remove('formEntry');
  ['migrateLegacyCarpetData',()=>({retired:true,reason:'Cloud Master snapshot owns carpet bootstrap'} )],
  // Missing-roll recovery can recreate intentionally removed carpet rolls.
  ['missingCarpetRollRecoverySafetyHold',()=>({skipped:true,reason:'requires reconciliation review'})],
- ['recoverOrderLibraries',()=>recoverOrderLibraries(false)],
- ['restoreConversationOrders',()=>restoreConversationOrders(false)],
+ // Historical recoverOrderLibraries requires explicit reconciliation; never mutate business data on boot.
+ ['recoverOrderLibrariesSafetyHold',()=>({skipped:true,reason:'review required'})],
+ // Historical restoreConversationOrders requires explicit reconciliation; never mutate business data on boot.
+ ['restoreConversationOrdersSafetyHold',()=>({skipped:true,reason:'review required'})],
  ['autoInitializeSeed',()=>autoInitializeSeed()],
  // Historical stock imports are deliberately excluded from automatic startup.
  // They can create inventory/outbox deltas on devices with missing migration markers.
  // Restore only after a reviewed, recoverable migration is available.
  ['historicalInventoryImportSafetyHold',()=>({skipped:true,reason:'manual review required'})],
- ['repairCompletedStockTransfers',()=>repairCompletedStockTransfers(true)],
+ // Historical repairCompletedStockTransfers requires explicit reconciliation; never mutate business data on boot.
+ ['repairCompletedStockTransfersSafetyHold',()=>({skipped:true,reason:'review required'})],
  ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
  // PO-only matching can misclassify unrelated live inventory as shipped.
  ['completedOrderInventorySafetyHold',()=>({skipped:true,reason:'requires order-line identity verification'})],
- ['reconcileTransferredCarpetStatuses',()=>reconcileTransferredCarpetStatuses(false)],
+ // Historical reconcileTransferredCarpetStatuses requires explicit reconciliation; never mutate business data on boot.
+ ['reconcileTransferredCarpetStatusesSafetyHold',()=>({skipped:true,reason:'review required'})],
  ['v8InstallCompatibility',()=>v8InstallCompatibility()],
  ['renderDashboard',()=>renderDashboard()],
  ['renderProducts',()=>renderProducts()],
