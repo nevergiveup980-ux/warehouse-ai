@@ -1,0 +1,22 @@
+name: Warehouse Seed Initialization Safety
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/test_seed_initialization_safety.py'
+      - 'tests/test_historical_import_startup_safety.py'
+      - 'tests/seed-initialization-behavior.cjs'
+      - '.github/workflows/seed-initialization-safety.yml'
+  workflow_dispatch:
+jobs:
+  seed-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Seed initialization safety contracts
+        run: python -m unittest discover -s tests -p 'test_*safety.py' -v
+      - name: Seed initialization behavior in isolated JS runtime
+        run: node tests/seed-initialization-behavior.cjs
