@@ -4135,7 +4135,11 @@ function initializeSeedDatabase(showMessage=false){
  }
  let addedM=0,addedI=0;for(const x of seedMasters){if(!masters.some(m=>m.id===x.id||normKey(m.name)===normKey(x.name)||(x.sku&&normKey(m.sku)===normKey(x.sku)))){masters.push(x);addedM++}}
  for(const x of seedInv){if(!inv.some(r=>r.masterId===x.masterId&&normKey(r.location)===normKey(x.location)&&normKey(r.lotNumber)===normKey(x.lotNumber))){inv.push(x);addedI++}}
- save(PMDB,masters);save(INVDB,inv);localStorage.setItem('runlu_v30_seed_initialized','1');refreshMemory();renderProducts();renderInventory();renderDashboard();if(showMessage)alert(`Seed database checked. Added ${addedM} product(s) and ${addedI} inventory record(s). Existing records were not overwritten.`)
+ // Safety hold: multi-library seed imports are not atomic with the record-sync outbox.
+ // A failed second save could leave partially seeded products or inventory.
+ // Keep this legacy action read-only until an explicit transactional import is designed.
+ if(showMessage)alert('Seed import is temporarily disabled for data safety. No products or inventory were changed.');
+ return false;
 }
 
 function backupBeforeV516(){
