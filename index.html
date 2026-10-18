@@ -1617,6 +1617,7 @@ function recordSyncAssertBootstrapSafe(){
  }
 }
 async function recordSyncBootstrap(){
+ if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
  recordSyncAssertBootstrapSafe();
  const s=await cloudEnsureSession();if(!s)return 0;
  const snap=await cloudRequest('/rest/v1/rpc/warehouse_get_snapshot',{method:'POST',headers:cloudHeaders(s.access_token),body:'{}'}),rows=Array.isArray(snap?.records)?snap.records:[];
