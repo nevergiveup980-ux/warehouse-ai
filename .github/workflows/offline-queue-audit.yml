@@ -21,6 +21,10 @@ jobs:
       - name: Install browser test dependencies
         run: |
           python -m pip install playwright==1.56.0
-          python -m playwright install --with-deps chromium
-      - name: Contract, security and browser smoke checks
+          python -m playwright install --with-deps chromium webkit
+      - name: Contract, security and Chromium smoke checks
         run: python -m unittest discover -s tests -p 'test_offline_queue_audit_*.py' -v
+      - name: WebKit (Safari engine) smoke checks
+        env:
+          RUNLU_TEST_BROWSER: webkit
+        run: python -m unittest discover -s tests -p 'test_offline_queue_audit_browser.py' -v
