@@ -1,0 +1,17 @@
+name: Production Pending Outbox Overwrite Guard
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/production-pending-outbox-cloud-overwrite.test.mjs'
+      - '.github/workflows/production-pending-outbox-cloud-overwrite.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/production-pending-outbox-cloud-overwrite.test.mjs
