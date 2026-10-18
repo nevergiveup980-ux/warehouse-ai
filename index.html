@@ -1604,8 +1604,20 @@ async function recordSyncPush(){
  let q=recordSyncOutbox(),sent=0;
  while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;q.shift();setRecordSyncOutbox(q);sent++}return sent
 }
-async function recordSyncBootstrap(){
+function recordSyncAssertBootstrapSafe(){
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
+ for(const key of DATA_KEYS){
+  const raw=localStorage.getItem(key);
+  if(raw===null)continue;
+  let value;
+  try{value=JSON.parse(raw)}catch{throw new Error('Unreadable existing warehouse data: cloud bootstrap blocked to preserve device data. Key: '+key)}
+  if(Array.isArray(value)&&value.length===0)continue;
+  if(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===0)continue;
+  throw new Error('Existing local warehouse data: cloud bootstrap blocked to prevent overwrite. Key: '+key);
+ }
+}
+async function recordSyncBootstrap(){
+ recordSyncAssertBootstrapSafe();
  const s=await cloudEnsureSession();if(!s)return 0;
  const snap=await cloudRequest('/rest/v1/rpc/warehouse_get_snapshot',{method:'POST',headers:cloudHeaders(s.access_token),body:'{}'}),rows=Array.isArray(snap?.records)?snap.records:[];
  cloudApplying=true;try{
