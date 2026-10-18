@@ -1,0 +1,17 @@
+name: Production Quota Error Reporting
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/production-quota-error-reporting.test.mjs'
+      - '.github/workflows/production-quota-error-reporting.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/production-quota-error-reporting.test.mjs
