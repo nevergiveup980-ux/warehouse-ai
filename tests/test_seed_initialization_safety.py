@@ -29,7 +29,9 @@ class SeedSafetyContract(unittest.TestCase):
 
     def test_legacy_seed_ids_block_reimport(self):
         self.assertIn("seedInv.some(x=>inv.some(r=>String(r.id)===String(x.id)))", self.seed)
-        self.assertLess(self.seed.index("seedInv.some("), self.seed.index("save(PMDB,masters)"))
+        self.assertIn("if(inv.length)", self.seed)
+        self.assertNotIn("save(PMDB,masters)", self.seed)
+        self.assertNotIn("save(INVDB,inv)", self.seed)
 
     def test_original_nine_seed_ids_unchanged(self):
         ids = re.findall(r"\{id:(3000[1-9]),masterId:", self.seed)
