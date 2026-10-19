@@ -1,0 +1,25 @@
+name: Deerfoot Read-only Inventory Regression
+on:
+  push:
+    branches:
+      - safety/deerfoot-minimal-readonly-main-20261018
+    paths:
+      - index.html
+      - tests/test_inventory_readonly_render_safety.py
+      - .github/workflows/deerfoot-readonly-inventory-regression.yml
+  pull_request:
+    paths:
+      - index.html
+      - tests/test_inventory_readonly_render_safety.py
+      - .github/workflows/deerfoot-readonly-inventory-regression.yml
+  workflow_dispatch:
+jobs:
+  readonly-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assert inventory and search views do not reconcile stock
+        run: python -m unittest discover -s tests -p 'test_inventory_readonly_render_safety.py' -v
