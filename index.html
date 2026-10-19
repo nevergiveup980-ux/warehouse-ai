@@ -1598,7 +1598,15 @@ function queueRecordDeltaSave(key,before,after){
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
- while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;q.shift();setRecordSyncOutbox(q);sent++}return sent
+ while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status))break;
+ const discarded=data?.reason==='incomplete_carpet_record_discarded'||(status==='duplicate'&&data?.original?.reason==='incomplete_carpet_record_discarded');
+ if(discarded&&op.dataset_key==='runlu_carpet_inventory_v52'){
+  const list=load(op.dataset_key),idx=list.findIndex((row,i)=>recordSyncId(row,i)===String(op.record_id));
+  if(idx>=0){const row=list[idx];if(String(row?.status??'').trim()===''||String(row?.length??'').trim()===''){
+   const next=list.slice();next.splice(idx,1);localStorage.setItem(op.dataset_key,JSON.stringify(next));
+  }}
+ }
+ q.shift();setRecordSyncOutbox(q);sent++}return sent
 }
 async function recordSyncBootstrap(){
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
