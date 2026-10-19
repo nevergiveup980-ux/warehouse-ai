@@ -1,0 +1,20 @@
+name: Inventory Read-only Render Safety
+on:
+  push:
+    branches:
+      - safety/read-only-inventory-render-20261018
+    paths:
+      - index.html
+      - tests/test_inventory_readonly_render_safety.py
+      - .github/workflows/inventory-readonly-render-safety.yml
+  workflow_dispatch:
+jobs:
+  readonly-render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify inventory browsing is read-only
+        run: python -m unittest discover -s tests -p 'test_inventory_readonly_render_safety.py' -v
