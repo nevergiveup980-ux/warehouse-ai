@@ -6,6 +6,7 @@ on:
     paths:
       - index.html
       - tests/test_inventory_readonly_render_safety.py
+      - tests/test_customer_order_completion_audit.py
       - .github/workflows/inventory-readonly-render-safety.yml
   workflow_dispatch:
 jobs:
