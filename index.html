@@ -2798,7 +2798,7 @@ function addInventoryRecordForManagedProduct(){if(!managedProductId)return;newRe
 function openInventoryDetail(identity){const r=findInventoryRecordByIdentity(loadInventoryRecords(),identity)||loadInventoryRecords().find(x=>String(x.id)===String(identity));if(!r)return;openInventoryManager(inventoryCanonicalProductId(r.masterId))}
 function inventorySearchKey(value){return normKey(value).replace(/\bblocer\b/g,'blocker').replace(/\bplatnium\b/g,'platinum').replace(/\bheatherchoice\b/g,'heather choice')}
 function renderInventory(){
- reconcileCompletedCustomerOrderInventory(false);
+ // Read-only rendering: inventory reconciliation must not mutate records during viewing/search.
  const q=inventorySearchKey($('inventoryFilter')?.value||''),masters=loadMasters();
  let rows=loadInventoryRecords().filter(isCurrentGeneralInventoryRecord).map(r=>({r,m:inventoryProductForRecord(r,masters)}));
  if(q)rows=rows.filter(x=>inventorySearchKey([x.m.name,x.m.brand,x.m.series,x.m.color,x.m.sku,x.m.category,x.r.location,x.r.lotNumber,x.r.poNumber,x.r.notes].join(' ')).includes(q));
@@ -2817,7 +2817,7 @@ function smartTermsMatch(intent,values){const hay=normKey(Array.isArray(values)?
 function smartCarpetMatch(intent,x){const length=Number(x.length||0),knownLength=length>0;if(intent.under!==null&&(!knownLength||length>intent.under))return false;const measure=String(x.measure||'').toUpperCase();if(intent.measure==='CAL'&&!measure.startsWith('CAL'))return false;if(intent.measure&&intent.measure!=='CAL'&&measure!==intent.measure)return false;if(intent.lowCarpet&&!(knownLength&&length<=50&&x.status!=='Used Up'&&measure.startsWith('CAL')))return false;return smartTermsMatch(intent,[x.roll,x.sourceRoll,x.manufacturerRoll,x.lot,x.collection,x.colour,x.location,x.po,x.supplier,x.status,x.measure,x.reviewNote])}
 function smartOperationMatch(intent,x){if(intent.operationStatus&&x.status!==intent.operationStatus)return false;const type=normKey(x.type);if(intent.operationType&&!type.includes(intent.operationType))return false;return smartTermsMatch(intent,[x.date,x.time,x.type,x.status,x.inventoryMode,x.operator,x.source,x.po,x.customer,x.supplier,x.product,x.collection,x.colour,x.lot,x.roll,x.location,x.notes,JSON.stringify(x.items||[])])}
 function renderSearch(){
- reconcileCompletedCustomerOrderInventory(false);
+ // Read-only rendering: inventory reconciliation must not mutate records during viewing/search.
  const input=$('query'),raw=input?.value||'',q=normKey(raw),intent=parseSmartSearch(raw);if($('homeGlobalQuery'))$('homeGlobalQuery').value=raw;if(!q){$('globalSearchCount').textContent='';$('searchList').innerHTML='<div class="empty">Enter any roll number, product, colour, PO, customer, supplier, LOT, SKU, rack or note.</div>';return}
  const has=x=>normKey(x).includes(q),masters=loadMasters(),inventory=loadInventoryRecords(),carpets=carpetRecords().filter(x=>!['Split to RAM','Split to REM'].includes(x.status)),ops=operationRecords(),orders=load(ODB),special=load(SPODB),cuts=cuttingRecords(),receiving=load(RCVDB);
  const productResults=intent.scope==='all'?masters.filter(x=>has([x.id,x.name,x.brand,x.series,x.color,x.sku,x.category,x.notes,x.length,x.width,x.thickness].join(' '))).map(x=>globalResult(`${x.name||'Unnamed product'}${x.color?' · '+x.color:''}`,[x.sku?'SKU '+x.sku:'',x.brand,x.series,x.category].filter(Boolean).join(' · '),`editItem('${String(x.id).replace(/'/g,'')}')`)):[];
