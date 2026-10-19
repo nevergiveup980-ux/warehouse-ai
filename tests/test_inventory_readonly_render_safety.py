@@ -10,7 +10,7 @@ class InventoryReadOnlySafety(unittest.TestCase):
         source = INDEX.read_text(encoding="utf-8")
         for name in ("renderInventory", "renderSearch"):
             with self.subTest(function=name):
-                match = re.search(r"function\\s+" + name + r"\\s*\\(\\)\\s*\\{", source)
+                match = re.search(r"function\s+" + name + r"\s*\(\)\s*\{", source)
                 self.assertIsNotNone(match)
                 opening = source[match.end():match.end()+250]
                 self.assertNotIn("reconcileCompletedCustomerOrderInventory(", opening)
