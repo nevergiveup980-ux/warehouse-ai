@@ -17,4 +17,6 @@ jobs:
         with:
           python-version: '3.11'
       - name: Verify inventory browsing is read-only
-        run: python -m unittest discover -s tests -p 'test_inventory_readonly_render_safety.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_inventory_readonly_render_safety.py' -v
+          python -m unittest discover -s tests -p 'test_customer_order_completion_audit.py' -v
