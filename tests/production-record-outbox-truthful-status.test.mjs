@@ -51,3 +51,14 @@ test('successful generic cloud requests do not erase pending outbox diagnostics'
  assert.ok(fn.includes("localStorage.removeItem(CLOUD_LAST_ERROR_KEY)"));
  assert.ok(!fn.includes("localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY)"));
 });
+
+test('acknowledged push dequeues from latest persisted outbox, not stale snapshot',()=>{
+ const start=html.indexOf('async function recordSyncPush(');
+ const end=html.indexOf('\nasync function recordSyncBootstrap(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=html.slice(start,end);
+ assert.ok(fn.includes('const latestQueue=recordSyncOutbox()'));
+ assert.ok(fn.includes('latestQueue[0]?.operation_id!==op.operation_id'));
+ assert.ok(fn.includes('latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue'));
+ assert.ok(!fn.includes('q.shift();setRecordSyncOutbox(q)'));
+});
