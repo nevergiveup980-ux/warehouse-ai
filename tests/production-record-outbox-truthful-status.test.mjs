@@ -26,11 +26,11 @@ test('record sync does not mark completed while pending operations remain',()=>{
 
 test('server non-acknowledgment retains queue and exposes a bounded diagnostic',()=>{
  const start=html.indexOf('async function recordSyncPush(');
- const end=html.indexOf('\\nasync function recordSyncBootstrap(',start);
+ const end=html.indexOf('\nasync function recordSyncBootstrap(',start);
  assert.ok(start>=0&&end>start);
  const fn=html.slice(start,end);
- assert.match(fn,/if\\(!\\['ok','duplicate'\\]\\.includes\\(status\\)\\)/);
- assert.match(fn,/localStorage\\.setItem\\(CLOUD_LAST_ERROR_KEY,issue\\)/);
- assert.match(fn,/q\\.length\\} operation\\(s\\) retained/);
- assert.ok(fn.indexOf('if(![\\'ok\\',\\'duplicate\\'].includes(status))') < fn.indexOf('q.shift()'));
+ assert.ok(fn.includes("if(!['ok','duplicate'].includes(status))"));
+ assert.ok(fn.includes("localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue)"));
+ assert.ok(fn.includes("operation(s) retained"));
+ assert.ok(fn.indexOf("if(!['ok','duplicate'].includes(status))") < fn.indexOf('q.shift()'));
 });
