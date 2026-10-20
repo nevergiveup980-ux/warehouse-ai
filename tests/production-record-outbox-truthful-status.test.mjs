@@ -34,3 +34,10 @@ test('server non-acknowledgment retains queue and exposes a bounded diagnostic',
  assert.ok(fn.includes("operation(s) retained"));
  assert.ok(fn.indexOf("if(!['ok','duplicate'].includes(status))") < fn.indexOf('q.shift()'));
 });
+
+test('recorded sync errors take precedence over recent successful requests',()=>{
+ const start=html.indexOf('function updateHeaderCloudPill(');
+ const end=html.indexOf('\nfunction cloudRememberSummary(',start);
+ const fn=html.slice(start,end);
+ assert.ok(fn.indexOf("if(error){el.className='cloudPill offline'") < fn.indexOf("if(recentOk){el.className='cloudPill online'"));
+});
