@@ -1633,7 +1633,7 @@ async function recordSyncPush(){
    const next=list.slice();next.splice(idx,1);localStorage.setItem(op.dataset_key,JSON.stringify(next));
   }}
  }
- q.shift();setRecordSyncOutbox(q);sent++}return sent
+ const latestQueue=recordSyncOutbox();if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue;sent++}return sent
 }
 async function recordSyncBootstrap(){
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
