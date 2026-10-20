@@ -1591,9 +1591,36 @@ function recordSyncPayload(row){
 function queueRecordDeltaSave(key,before,after){
  if(cloudApplying||!recordSyncReady()||!DATA_KEYS.includes(key)||!Array.isArray(after))return;
  const a=new Map((Array.isArray(before)?before:[]).map((x,i)=>[recordSyncId(x,i),x])),b=new Map(after.map((x,i)=>[recordSyncId(x,i),x])),q=recordSyncOutbox(),device=cloudDeviceId();
- for(const [id,row] of b){const prior=a.get(id),cleanRow=recordSyncPayload(row),cleanPrior=recordSyncPayload(prior);if(JSON.stringify(cleanPrior)!==JSON.stringify(cleanRow)){const baseVersion=prior?Number(prior._cloudVersion||0):null;q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:cleanRow,base_version:baseVersion||null,delete:false,device_id:device})}}
- for(const [id,row] of a)if(!b.has(id)){const baseVersion=Number(row?._cloudVersion||0);q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:{...recordSyncPayload(row),_runluDeleteIntent:'explicit-user-delete'},base_version:baseVersion||null,delete:true,device_id:device})};
- setRecordSyncOutbox(q);if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50)
+ let added=0;
+ // Only compare against the LAST pending operation for this exact record.
+ // Never rewrite or deduplicate the existing queue: it is recovery evidence.
+ function appendUnlessAlreadyPending(id,payload,baseVersion,isDelete){
+  for(let i=q.length-1;i>=0;i--){
+   const prev=q[i];
+   if(prev.dataset_key!==key||String(prev.record_id)!==String(id))continue;
+   if(Boolean(prev.delete)===isDelete&&
+      (prev.base_version??null)===(baseVersion??null)&&
+      JSON.stringify(prev.payload)===JSON.stringify(payload))return;
+   break; // A later different operation for the record must not be bypassed.
+  }
+  q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload,base_version:baseVersion,delete:isDelete,device_id:device});
+  added++;
+ }
+ for(const [id,row] of b){
+  const prior=a.get(id),cleanRow=recordSyncPayload(row),cleanPrior=recordSyncPayload(prior);
+  if(JSON.stringify(cleanPrior)!==JSON.stringify(cleanRow)){
+   const baseVersion=prior?Number(prior._cloudVersion||0):null;
+   appendUnlessAlreadyPending(id,cleanRow,baseVersion||null,false);
+  }
+ }
+ for(const [id,row] of a)if(!b.has(id)){
+  const baseVersion=Number(row?._cloudVersion||0);
+  appendUnlessAlreadyPending(id,{...recordSyncPayload(row),_runluDeleteIntent:'explicit-user-delete'},baseVersion||null,true);
+ }
+ // Avoid rewriting a large outbox on no-op saves (important under quota pressure).
+ if(!added)return;
+ setRecordSyncOutbox(q);
+ if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50);
 }
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
