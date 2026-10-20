@@ -41,3 +41,13 @@ test('recorded sync errors take precedence over recent successful requests',()=>
  const fn=html.slice(start,end);
  assert.ok(fn.indexOf("if(error){el.className='cloudPill offline'") < fn.indexOf("if(recentOk){el.className='cloudPill online'"));
 });
+
+test('successful generic cloud requests do not erase pending outbox diagnostics',()=>{
+ const start=html.indexOf('async function cloudRequest(');
+ const end=html.indexOf('\nfunction v8CanonicalRpcHeaders(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=html.slice(start,end);
+ assert.ok(fn.includes("recordSyncOutbox().length===0"));
+ assert.ok(fn.includes("localStorage.removeItem(CLOUD_LAST_ERROR_KEY)"));
+ assert.ok(!fn.includes("localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY)"));
+});
