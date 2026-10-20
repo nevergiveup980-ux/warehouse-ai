@@ -1588,12 +1588,37 @@ function recordSyncPayload(row){
  if(!row||typeof row!=='object')return row;
  const out={...row};delete out._cloudVersion;delete out._cloudChangeSeq;delete out._cloudRecordId;return out
 }
+// Compare only the latest pending intent for the same record. Never collapse
+// earlier operations: create/update/delete sequences may all be meaningful.
+function recordSyncSameAsLatestPending(q,key,id,payload,baseVersion,isDelete){
+ for(let i=q.length-1;i>=0;i--){
+  const op=q[i];
+  if(op.dataset_key!==key||String(op.record_id)!==String(id))continue;
+  return Boolean(op.delete)===isDelete
+   &&(op.base_version??null)===(baseVersion??null)
+   &&JSON.stringify(op.payload)===JSON.stringify(payload);
+ }
+ return false
+}
 function queueRecordDeltaSave(key,before,after){
  if(cloudApplying||!recordSyncReady()||!DATA_KEYS.includes(key)||!Array.isArray(after))return;
  const a=new Map((Array.isArray(before)?before:[]).map((x,i)=>[recordSyncId(x,i),x])),b=new Map(after.map((x,i)=>[recordSyncId(x,i),x])),q=recordSyncOutbox(),device=cloudDeviceId();
- for(const [id,row] of b){const prior=a.get(id),cleanRow=recordSyncPayload(row),cleanPrior=recordSyncPayload(prior);if(JSON.stringify(cleanPrior)!==JSON.stringify(cleanRow)){const baseVersion=prior?Number(prior._cloudVersion||0):null;q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:cleanRow,base_version:baseVersion||null,delete:false,device_id:device})}}
- for(const [id,row] of a)if(!b.has(id)){const baseVersion=Number(row?._cloudVersion||0);q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:{...recordSyncPayload(row),_runluDeleteIntent:'explicit-user-delete'},base_version:baseVersion||null,delete:true,device_id:device})};
- setRecordSyncOutbox(q);if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50)
+ let added=0;
+ for(const [id,row] of b){
+  const prior=a.get(id),cleanRow=recordSyncPayload(row),cleanPrior=recordSyncPayload(prior);
+  if(JSON.stringify(cleanPrior)===JSON.stringify(cleanRow))continue;
+  const baseVersion=(prior?Number(prior._cloudVersion||0):0)||null;
+  if(recordSyncSameAsLatestPending(q,key,id,cleanRow,baseVersion,false))continue;
+  q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload:cleanRow,base_version:baseVersion,delete:false,device_id:device});added++
+ }
+ for(const [id,row] of a)if(!b.has(id)){
+  const baseVersion=Number(row?._cloudVersion||0)||null;
+  const payload={...recordSyncPayload(row),_runluDeleteIntent:'explicit-user-delete'};
+  if(recordSyncSameAsLatestPending(q,key,id,payload,baseVersion,true))continue;
+  q.push({operation_id:crypto.randomUUID?.()||('op-'+Date.now()+'-'+Math.random()),dataset_key:key,record_id:id,payload,base_version:baseVersion,delete:true,device_id:device});added++
+ }
+ if(added)setRecordSyncOutbox(q);
+ if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50)
 }
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
