@@ -32,7 +32,7 @@ test('server non-acknowledgment retains queue and exposes a bounded diagnostic',
  assert.ok(fn.includes("if(!['ok','duplicate'].includes(status))"));
  assert.ok(fn.includes("localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue)"));
  assert.ok(fn.includes("operation(s) retained"));
- assert.ok(fn.indexOf("if(!['ok','duplicate'].includes(status))") < fn.indexOf('q.shift()'));
+ assert.ok(fn.indexOf("if(!['ok','duplicate'].includes(status))") < fn.indexOf('latestQueue.shift()'));
 });
 
 test('recorded sync errors take precedence over recent successful requests',()=>{
