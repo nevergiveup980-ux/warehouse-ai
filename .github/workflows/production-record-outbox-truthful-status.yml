@@ -8,6 +8,8 @@ on:
       - 'tests/production-record-pull-async-guard.test.mjs'
       - 'tests/carpet-sync-reconciliation.test.mjs'
       - 'tests/v8-cut-projection-missing.test.mjs'
+      - 'tests/v8-cut-projection-legacy-id.test.mjs'
+      - 'v8/cut-bridge.sql'
       - 'tools/carpet-sync-reconciliation.mjs'
       - '.github/workflows/production-record-outbox-truthful-status.yml'
   workflow_dispatch:
@@ -19,4 +21,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/production-record-outbox-truthful-status.test.mjs tests/production-record-outbox-async-race.test.mjs tests/production-record-pull-async-guard.test.mjs tests/carpet-sync-reconciliation.test.mjs tests/v8-cut-projection-missing.test.mjs
+      - run: node --test tests/production-record-outbox-truthful-status.test.mjs tests/production-record-outbox-async-race.test.mjs tests/production-record-pull-async-guard.test.mjs tests/carpet-sync-reconciliation.test.mjs tests/v8-cut-projection-missing.test.mjs tests/v8-cut-projection-legacy-id.test.mjs
