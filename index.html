@@ -1483,6 +1483,7 @@ async function v8CommitCutOperation(x,roll){
  const identity=JSON.stringify([roll.canonicalId,x.date,x.po,x.customer,Number(x.requestedQuantity??x.quantity),Number(x.numberOfCuts||1)]);
  let pending=JSON.parse(localStorage.getItem(V8_PENDING_CUT_KEY)||'null');
  if(pending&&pending.identity!==identity)throw new Error('A previous cut is awaiting confirmation. Restore its original roll, date, order, length and cut count before retrying.');
+ if(pending?.projectionBlocked)throw new Error('CARPET_PROJECTION_MISSING: This cut is blocked until canonical roll and cloud inventory projection are reconciled. Draft and pending command preserved; do not retry.');
  if(!pending){
    const liveRoll=await v8ReadCutRoll(roll);
    const plan=RUNLU_V8_CUT_PLAN(liveRoll,x.requestedQuantity??x.quantity,x.numberOfCuts||1);
@@ -1491,7 +1492,19 @@ async function v8CommitCutOperation(x,roll){
    // Persist before sending: network timeout/reload must reuse the same command.
    localStorage.setItem(V8_PENDING_CUT_KEY,JSON.stringify(pending));
  }
- const result=await v8ExecuteCutCommand(pending.command);
+ let result;
+ try{result=await v8ExecuteCutCommand(pending.command)}
+ catch(error){
+  if(String(error?.message||error).includes('CARPET_PROJECTION_MISSING')){
+   // The server checks the projection before cutting. Keep the stable command
+   // for forensic review, but do not allow a blind retry against changed data.
+   pending.projectionBlocked=true;
+   localStorage.setItem(V8_PENDING_CUT_KEY,JSON.stringify(pending));
+   throw new Error('CARPET_PROJECTION_MISSING: Canonical roll '+String(pending.command.rollId||'unknown')+' has no active matching warehouse inventory projection. Cut not confirmed. Draft and pending command preserved. Do not retry or delete the roll; ask an administrator to reconcile canonical ID and cloud record.');
+  }
+  throw error;
+ }
+ if(pending.projectionBlocked)throw new Error('Previously blocked cut command requires projection reconciliation before retry. Pending command preserved.');
  if(result?.status==='rejected')localStorage.removeItem(V8_PENDING_CUT_KEY);
  RUNLU_V8_VALIDATE_CUT_RESULT(pending.plan,result);
  x.id=pending.operationId;
