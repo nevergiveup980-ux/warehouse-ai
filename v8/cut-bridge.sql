@@ -10,14 +10,27 @@ CREATE OR REPLACE FUNCTION public.warehouse_v8_cut_commit(p_tenant uuid, p_comma
  LANGUAGE plpgsql
  SET search_path TO ''
 AS $function$
-declare result jsonb; r warehouse_v7.carpet_roll; m public.warehouse_records; mirror_result jsonb; next_payload jsonb;
+declare result jsonb; r warehouse_v7.carpet_roll; m public.warehouse_records; candidate public.warehouse_records; mirror_result jsonb; next_payload jsonb; projection_count integer:=0;
 begin
  perform warehouse_v7.assert_command_identity(p_tenant,auth.uid());
  -- A missing/deleted UI projection must stop BEFORE any cut. The whole RPC is atomic.
- select * into m from public.warehouse_records
- where user_id=auth.uid() and dataset_key='runlu_carpet_inventory_v52'
- and record_id=p_roll::text and deleted_at is null for update;
- if not found then raise exception 'CARPET_PROJECTION_MISSING'; end if;
+ -- Legacy inventory projections may use a numeric record_id while retaining
+ -- the canonical UUID inside payload.canonicalId. Never rewrite their keys.
+ -- Lock and count every match: ambiguity is a hard stop, not a guessed winner.
+ for candidate in
+   select * from public.warehouse_records
+   where user_id=auth.uid() and dataset_key='runlu_carpet_inventory_v52'
+     and deleted_at is null
+     and (record_id=p_roll::text or payload->>'canonicalId'=p_roll::text)
+   for update
+ loop
+   projection_count:=projection_count+1;
+   m:=candidate;
+ end loop;
+ if projection_count=0 then raise exception 'CARPET_PROJECTION_MISSING'; end if;
+ if projection_count>1 then raise exception 'CARPET_PROJECTION_AMBIGUOUS'; end if;
+ if m.payload ? 'canonicalId' and m.payload->>'canonicalId' is distinct from p_roll::text
+ then raise exception 'CARPET_PROJECTION_ID_MISMATCH'; end if;
  result:=warehouse_v7.cut_carpet_roll(p_tenant,p_command,p_roll,p_expected_version,
    p_deduct_sixteenths,p_payload,auth.uid(),p_device);
  if result->>'status'<>'committed' then return result; end if;
