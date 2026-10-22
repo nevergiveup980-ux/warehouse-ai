@@ -3668,7 +3668,15 @@ async function saveOperation(){
     try{await recordSyncPull()}catch(e){console.warn('[V8] Cut committed; inventory refresh pending',e);}
    }catch(e){alert('Cut was not completed. '+e.message);return}
   }else if(!applyOperationImpact(x))return
- }if(!save(LOGDB,a)){alert('WORK ORDER NOT SAVED. Inventory processing may already have occurred. Do NOT submit this order again or manually add stock. Preserve this device data and ask for reconciliation before retrying.');return}if(x.v8CanonicalCut)localStorage.removeItem(V8_PENDING_CUT_KEY);const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
+ }if(!save(LOGDB,a)){
+   const receipt=localStorage.getItem(V8_PENDING_CUT_KEY);
+   let cutReceipt=null;try{cutReceipt=receipt?JSON.parse(receipt):null}catch(_){}
+   const confirmed=!!(x.v8CanonicalCut&&cutReceipt?.committedReceipt);
+   alert(confirmed
+    ?'WORK ORDER NOT SAVED. Stock cut already COMMITTED (command '+String(cutReceipt.committedReceipt.commandId||'unknown')+'). Do not cut again. Preserve this browser and draft; retry work-order recovery only after storage is available.'
+    :'WORK ORDER NOT SAVED. Inventory processing may already have occurred. Do NOT submit this order again or manually add stock. Preserve this device data and ask for reconciliation before retrying.');
+   return;
+  }if(x.v8CanonicalCut)localStorage.removeItem(V8_PENDING_CUT_KEY);const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
  }finally{window.__v8OperationSaving=false}
 }
 function cancelOperationEdit(){const hasDraft=operationDraftDirty||operationItemsDraft.length||operationItemFromForm(true);if(hasDraft){const leave=confirm('Save this unfinished order as a draft and leave the input screen?\n\nPress Cancel to continue entering.');if(!leave)return;saveOperationDraftNow()}operationEditId=null;operationContinuationId=null;if(activeOperationsDate)showPage('operationsDay');else showPage('operations')}
