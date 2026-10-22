@@ -2329,7 +2329,7 @@ function inventoryProductForMasterId(masterId,masters=loadMasters()){
 function inventoryProductForRecord(record,masters=loadMasters()){return inventoryProductForMasterId(record?.masterId,masters)}
 function inventoryMasterMatches(record,masterId){return inventoryCanonicalProductId(record?.masterId)===inventoryCanonicalProductId(masterId)}
 function inventoryRecordIdentity(r){return String(r?.inventoryId||r?.id||'')}
-function inventoryRecordJsRef(r){return JSON.stringify(inventoryRecordIdentity(r))}
+function inventoryRecordJsRef(r){return JSON.stringify(inventoryRecordIdentity(r)).replace(/'/g,'\\u0027').replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026')}
 function findInventoryRecordByIdentity(records,identity){
  const key=String(identity??'');if(!key)return null;
  const byInventoryId=(records||[]).filter(r=>String(r.inventoryId||'')===key);
