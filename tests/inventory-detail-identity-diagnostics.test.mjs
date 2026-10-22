@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const start=html.indexOf('function openInventoryDetail(identity){');
+const end=html.indexOf('function inventorySearchKey(',start);
+assert.ok(start>0&&end>start);
+const alerts=[],opened=[];let rows=[],masters=[];
+const ctx={console,alert:x=>alerts.push(x),loadInventoryRecords:()=>rows,inventoryProductForMasterId:id=>masters.find(m=>String(m.id)===String(id))||{},inventoryCanonicalProductId:id=>String(id),openInventoryManager:id=>opened.push(id)};
+vm.createContext(ctx);vm.runInContext(html.slice(start,end),ctx);
+ctx.openInventoryDetail('missing');assert.equal(opened.length,0);assert.match(alerts.at(-1),/not found/);
+rows=[{id:1,inventoryId:'same',masterId:'M1'},{id:2,inventoryId:'same',masterId:'M2'}];
+ctx.openInventoryDetail('same');assert.equal(opened.length,0);assert.match(alerts.at(-1),/duplicate identity/);
+rows=[{id:3,inventoryId:'cider',masterId:'orphan',quantity:88}];
+ctx.openInventoryDetail('cider');assert.equal(opened.length,0);assert.match(alerts.at(-1),/Product Master link/);
+masters=[{id:'M1',name:'Cider Barrel'}];rows=[{id:4,inventoryId:'cider',masterId:'M1',quantity:88}];
+ctx.openInventoryDetail('cider');assert.deepEqual(opened,['M1']);assert.equal(rows[0].quantity,88);
+console.log('Inventory detail diagnostics: missing, duplicate, orphan and valid records PASS');
