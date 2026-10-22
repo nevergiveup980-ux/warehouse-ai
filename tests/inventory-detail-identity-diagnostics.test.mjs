@@ -24,4 +24,15 @@ assert.equal(encoded.includes("'"),false);
 assert.equal(encoded.includes('<'),false);
 assert.equal(encoded.includes('&'),false);
 assert.equal(JSON.parse(encoded),"O'Brien<&");
+// Cider Barrel production shape: active 88 Box legacy numeric id, no inventoryId.
+masters=[{id:'8b75a52e-69ac-4567-9689-706f0b21c43a',name:'TRIO',color:'Cider Barrel'}];
+rows=[{id:1792170022853,masterId:masters[0].id,location:'CR4',quantity:88,unit:'Box',lifecycleStatus:'ACTIVE'}];
+ctx.openInventoryDetail('1792170022853');
+assert.equal(opened.at(-1),masters[0].id);
+assert.equal(rows[0].quantity,88);
+// An archived zero-quantity record for the same product must not shadow the legacy id.
+rows.push({id:'stock-archived',inventoryId:'stock-archived',masterId:masters[0].id,location:'CR4',quantity:0,lifecycleStatus:'ARCHIVED'});
+ctx.openInventoryDetail('1792170022853');
+assert.equal(opened.at(-1),masters[0].id);
+assert.equal(rows[0].quantity,88);
 console.log('Inventory detail diagnostics: missing, duplicate, orphan and valid records PASS');
