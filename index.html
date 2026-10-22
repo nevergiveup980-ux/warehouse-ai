@@ -2329,7 +2329,7 @@ function inventoryProductForMasterId(masterId,masters=loadMasters()){
 function inventoryProductForRecord(record,masters=loadMasters()){return inventoryProductForMasterId(record?.masterId,masters)}
 function inventoryMasterMatches(record,masterId){return inventoryCanonicalProductId(record?.masterId)===inventoryCanonicalProductId(masterId)}
 function inventoryRecordIdentity(r){return String(r?.inventoryId||r?.id||'')}
-function inventoryRecordJsRef(r){return JSON.stringify(inventoryRecordIdentity(r))}
+function inventoryRecordJsRef(r){return JSON.stringify(inventoryRecordIdentity(r)).replace(/'/g,'\\u0027').replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026')}
 function findInventoryRecordByIdentity(records,identity){
  const key=String(identity??'');if(!key)return null;
  const byInventoryId=(records||[]).filter(r=>String(r.inventoryId||'')===key);
@@ -2759,7 +2759,25 @@ function closeUpdateHistory(){$('updateHistoryModal').classList.add('hidden')}
 function updateBackdrop(e){if(e.target===$('updateHistoryModal'))closeUpdateHistory()}
 function addInventoryRecordForManagedProduct(){if(!managedProductId)return;newReceivingForProduct(managedProductId)}
 
-function openInventoryDetail(identity){const r=findInventoryRecordByIdentity(loadInventoryRecords(),identity)||loadInventoryRecords().find(x=>String(x.id)===String(identity));if(!r)return;openInventoryManager(inventoryCanonicalProductId(r.masterId))}
+function openInventoryDetail(identity){
+ // Read-only diagnostics: never guess among duplicate inventory identities.
+ const records=loadInventoryRecords(),key=String(identity??'');
+ const matches=records.filter(r=>String(r.inventoryId||'')===key);
+ const legacy=matches.length?matches:records.filter(r=>String(r.id)===key);
+ if(legacy.length!==1){
+  console.warn('[Inventory] Cannot uniquely open record',{identity:key,matchCount:legacy.length});
+  alert(legacy.length?'This inventory record has a duplicate identity. No stock was changed. Please request a record reconciliation.':'Inventory record not found. No stock was changed. Please refresh or request reconciliation.');
+  return;
+ }
+ const r=legacy[0],product=inventoryProductForMasterId(r.masterId);
+ if(!r.masterId||!product?.id){
+  console.warn('[Inventory] Product master link missing',{identity:key,masterId:r.masterId});
+  alert('Inventory record found, but its Product Master link is missing or invalid. No stock was changed. Please request reconciliation.');
+  return;
+ }
+ try{openInventoryManager(inventoryCanonicalProductId(r.masterId))}
+ catch(error){console.error('[Inventory] Could not open detail',error);alert('Inventory detail could not open. No stock was changed. Please report this error.')}
+}
 function inventorySearchKey(value){return normKey(value).replace(/\bblocer\b/g,'blocker').replace(/\bplatnium\b/g,'platinum').replace(/\bheatherchoice\b/g,'heather choice')}
 function renderInventory(){
  // Read-only browsing: no inventory reconciliation during rendering.
