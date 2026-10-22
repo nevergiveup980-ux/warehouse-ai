@@ -13,8 +13,13 @@ await assert.rejects(()=>c.v8CommitCutOperation({...x,quantity:63},roll),/previo
 timeout=false;const retry={...x,id:456};await c.v8CommitCutOperation(retry,roll);
 assert.equal(retry.id,123);assert.equal(reads,1);assert.deepEqual(sent,['stable-id','stable-id']);
 assert.equal(storage.size,1,'retain pending command until the work log is saved');
+// Once committed, a repeated work-order save must not resend the RPC,
+// even if the server would now reject a new cut.
+const sentAfterCommit=sent.length;
 c.v8ExecuteCutCommand=async()=>({status:'rejected'});
-await assert.rejects(()=>c.v8CommitCutOperation(x,roll),/rejected/);assert.equal(storage.size,0);
+await c.v8CommitCutOperation(x,roll);
+assert.equal(sent.length,sentAfterCommit);
+assert.equal(storage.size,1,'keep receipt until work log is saved');
 storage.clear();c.localStorage.setItem=()=>{throw Error('quota')};const sentBefore=sent.length;
 await assert.rejects(()=>c.v8CommitCutOperation(x,roll),/quota/);assert.equal(sent.length,sentBefore);
 assert.ok(html.includes('if(window.__v8OperationSaving)return;'));

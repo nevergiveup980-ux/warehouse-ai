@@ -1483,6 +1483,13 @@ async function v8CommitCutOperation(x,roll){
  const identity=JSON.stringify([roll.canonicalId,x.date,x.po,x.customer,Number(x.requestedQuantity??x.quantity),Number(x.numberOfCuts||1)]);
  let pending=JSON.parse(localStorage.getItem(V8_PENDING_CUT_KEY)||'null');
  if(pending&&pending.identity!==identity)throw new Error('A previous cut is awaiting confirmation. Restore its original roll, date, order, length and cut count before retrying.');
+ if(pending?.committedReceipt){
+   const receipt=pending.committedReceipt;
+   if(receipt.identity!==identity||receipt.commandId!==pending.command?.commandId||receipt.rollId!==pending.command?.rollId)
+    throw new Error('Committed cut receipt does not match this order. Preserve the draft and request reconciliation.');
+   x.id=pending.operationId;
+   return pending.plan; // Work-order-only recovery: never resend the cut RPC.
+ }
  if(!pending){
    const liveRoll=await v8ReadCutRoll(roll);
    const plan=RUNLU_V8_CUT_PLAN(liveRoll,x.requestedQuantity??x.quantity,x.numberOfCuts||1);
@@ -1494,6 +1501,10 @@ async function v8CommitCutOperation(x,roll){
  const result=await v8ExecuteCutCommand(pending.command);
  if(result?.status==='rejected')localStorage.removeItem(V8_PENDING_CUT_KEY);
  RUNLU_V8_VALIDATE_CUT_RESULT(pending.plan,result);
+ // Persist a committed receipt before saving the work order. A failed local
+ // work-order write must never trigger a second stock deduction.
+ pending.committedReceipt={commandId:pending.command.commandId,rollId:pending.command.rollId,identity,committedAt:new Date().toISOString()};
+ localStorage.setItem(V8_PENDING_CUT_KEY,JSON.stringify(pending));
  x.id=pending.operationId;
  return pending.plan;
 }
@@ -3657,7 +3668,15 @@ async function saveOperation(){
     try{await recordSyncPull()}catch(e){console.warn('[V8] Cut committed; inventory refresh pending',e);}
    }catch(e){alert('Cut was not completed. '+e.message);return}
   }else if(!applyOperationImpact(x))return
- }if(!save(LOGDB,a)){alert('WORK ORDER NOT SAVED. Inventory processing may already have occurred. Do NOT submit this order again or manually add stock. Preserve this device data and ask for reconciliation before retrying.');return}if(x.v8CanonicalCut)localStorage.removeItem(V8_PENDING_CUT_KEY);const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
+ }if(!save(LOGDB,a)){
+   const receipt=localStorage.getItem(V8_PENDING_CUT_KEY);
+   let cutReceipt=null;try{cutReceipt=receipt?JSON.parse(receipt):null}catch(_){}
+   const confirmed=!!(x.v8CanonicalCut&&cutReceipt?.committedReceipt);
+   alert(confirmed
+    ?'WORK ORDER NOT SAVED. Stock cut already COMMITTED (command '+String(cutReceipt.committedReceipt.commandId||'unknown')+'). Do not cut again. Preserve this browser and draft; retry work-order recovery only after storage is available.'
+    :'WORK ORDER NOT SAVED. Inventory processing may already have occurred. Do NOT submit this order again or manually add stock. Preserve this device data and ask for reconciliation before retrying.');
+   return;
+  }if(x.v8CanonicalCut)localStorage.removeItem(V8_PENDING_CUT_KEY);const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
  }finally{window.__v8OperationSaving=false}
 }
 function cancelOperationEdit(){const hasDraft=operationDraftDirty||operationItemsDraft.length||operationItemFromForm(true);if(hasDraft){const leave=confirm('Save this unfinished order as a draft and leave the input screen?\n\nPress Cancel to continue entering.');if(!leave)return;saveOperationDraftNow()}operationEditId=null;operationContinuationId=null;if(activeOperationsDate)showPage('operationsDay');else showPage('operations')}
