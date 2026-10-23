@@ -35,4 +35,20 @@ rows.push({id:'stock-archived',inventoryId:'stock-archived',masterId:masters[0].
 ctx.openInventoryDetail('1792170022853');
 assert.equal(opened.at(-1),masters[0].id);
 assert.equal(rows[0].quantity,88);
+// List rows navigate by the already-resolved Product Master, not a second
+// inventory lookup (which can differ after cloud synchronization).
+const directStart=html.indexOf('function openInventoryProductDetail(masterId){');
+const directEnd=html.indexOf('function inventorySearchKey(',directStart);
+assert.ok(directStart>0&&directEnd>directStart);
+vm.runInContext(html.slice(directStart,directEnd),ctx);
+assert.match(html,/onclick='openInventoryProductDetail\(\$\{inventoryRecordJsRef\(\{id:r\.masterId\}\)\}\)'/);
+masters=[{id:'8b75a52e-69ac-4567-9689-706f0b21c43a',name:'TRIO',color:'Cider Barrel'}];
+rows=[]; // Simulate an inventory reload where the legacy row id is no longer present.
+const beforeDirect=opened.length;
+ctx.openInventoryProductDetail(masters[0].id);
+assert.equal(opened.length,beforeDirect+1);
+assert.equal(opened.at(-1),masters[0].id);
+ctx.openInventoryProductDetail('missing-product');
+assert.equal(opened.length,beforeDirect+1);
+assert.match(alerts.at(-1),/Product Master link/);
 console.log('Inventory detail diagnostics: missing, duplicate, orphan and valid records PASS');

@@ -2778,6 +2778,18 @@ function openInventoryDetail(identity){
  try{openInventoryManager(inventoryCanonicalProductId(r.masterId))}
  catch(error){console.error('[Inventory] Could not open detail',error);alert('Inventory detail could not open. No stock was changed. Please report this error.')}
 }
+function openInventoryProductDetail(masterId){
+ // Inventory list rows already resolve a Product Master. Opening the product
+ // manager does not require re-fetching a potentially re-keyed inventory row.
+ const product=inventoryProductForMasterId(masterId);
+ if(!masterId||!product?.id){
+  console.warn('[Inventory] Cannot open listed product',{masterId});
+  alert('Product Master link could not be resolved. No stock was changed. Please request reconciliation.');
+  return;
+ }
+ try{openInventoryManager(inventoryCanonicalProductId(masterId))}
+ catch(error){console.error('[Inventory] Could not open listed product',error);alert('Inventory detail could not open. No stock was changed. Please report this error.')}
+}
 function inventorySearchKey(value){return normKey(value).replace(/\bblocer\b/g,'blocker').replace(/\bplatnium\b/g,'platinum').replace(/\bheatherchoice\b/g,'heather choice')}
 function renderInventory(){
  // Read-only browsing: no inventory reconciliation during rendering.
@@ -2786,7 +2798,7 @@ function renderInventory(){
  if(q)rows=rows.filter(x=>inventorySearchKey([x.m.name,x.m.brand,x.m.series,x.m.color,x.m.sku,x.m.category,x.r.location,x.r.lotNumber,x.r.poNumber,x.r.notes].join(' ')).includes(q));
  rows.sort((a,b)=>String(a.r.location||'').localeCompare(String(b.r.location||''),undefined,{numeric:true})||String(a.m.name||'').localeCompare(String(b.m.name||'')));
  if($('inventoryCount'))$('inventoryCount').textContent=`${rows.length} inventory record${rows.length===1?'':'s'} · sorted by location`;
- $('inventoryList').innerHTML=rows.length?rows.map(({r,m})=>{const pending=!!r.quantityPending,qty=Number(r.quantity||0),low=!pending&&qty<=30,status=pending?'':low?'low':'';const product=esc(m.name||'Unknown Product'),colour=esc(m.color||'');return `<button class="compactRow ${low?'lowStock':''}" onclick='openInventoryDetail(${inventoryRecordJsRef(r)})'><div class="compactMain"><div class="compactTitle"><span class="compactStatus ${status}"></span>${colour||product}</div><div class="compactSub">${colour?product:'Tap for details'}${pending?' · PHYSICAL COUNT REQUIRED':low?' · LOW STOCK':''}</div></div><div class="compactRight"><div class="compactQty">${pending?'COUNT':qty}</div><span class="compactUnit">${pending?'PENDING':esc(r.unit||'')}</span><div class="compactLoc">📍 ${esc(r.location||'No location')}</div></div></button>`}).join(''):'<div class="empty">No matching inventory records.</div>'
+ $('inventoryList').innerHTML=rows.length?rows.map(({r,m})=>{const pending=!!r.quantityPending,qty=Number(r.quantity||0),low=!pending&&qty<=30,status=pending?'':low?'low':'';const product=esc(m.name||'Unknown Product'),colour=esc(m.color||'');return `<button class="compactRow ${low?'lowStock':''}" onclick='openInventoryProductDetail(${inventoryRecordJsRef({id:r.masterId})})'><div class="compactMain"><div class="compactTitle"><span class="compactStatus ${status}"></span>${colour||product}</div><div class="compactSub">${colour?product:'Tap for details'}${pending?' · PHYSICAL COUNT REQUIRED':low?' · LOW STOCK':''}</div></div><div class="compactRight"><div class="compactQty">${pending?'COUNT':qty}</div><span class="compactUnit">${pending?'PENDING':esc(r.unit||'')}</span><div class="compactLoc">📍 ${esc(r.location||'No location')}</div></div></button>`}).join(''):'<div class="empty">No matching inventory records.</div>'
 }
 function openGlobalSearch(value=''){showPage('search');$('query').value=String(value||'').trim();renderSearch();setTimeout(()=>$('query')?.focus(),50)}
 function globalResult(title,detail,action){return `<button class="globalResult" onclick="${action}"><b>${esc(title)}</b><small>${esc(detail)}</small></button>`}
