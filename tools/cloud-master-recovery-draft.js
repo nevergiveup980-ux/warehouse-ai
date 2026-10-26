@@ -1,90 +1,86 @@
-/* RUNLU Cloud Master Recovery — DRAFT, NOT LOADED IN PRODUCTION.
- * Host integration must pass the existing cloud functions and DATA_KEYS.
- * No automatic execution. Requires explicit user confirmation.
+/* RUNLU Cloud Master Recovery — REVIEW-ONLY DRAFT. Not linked by production.
+ * Two-phase: exportBackup() -> user verifies file -> prepare() -> commit().
+ * Host must pause every writer/poller while commit runs. No cloud writes.
  */
 (function(global){
  'use strict';
- const OUTBOX='runlu_record_sync_outbox_v1';
- const CURSOR='runlu_record_sync_cursor_v1';
- const BOOTSTRAP='runlu_record_sync_bootstrapped_v1';
- const GENERATION='runlu_record_sync_generation_v1';
- const ERROR='runlu_cloud_last_error_v54';
+ const OUTBOX='runlu_record_sync_outbox_v1',CURSOR='runlu_record_sync_cursor_v1';
+ const BOOTSTRAP='runlu_record_sync_bootstrapped_v1',GENERATION='runlu_record_sync_generation_v1';
  const LOCK='runlu_cloud_master_recovery_lock_v1';
- function readStorage(keys){
-   const snapshot={};
-   for(const key of keys)snapshot[key]=localStorage.getItem(key);
-   return snapshot;
+ let prepared=null;
+ function assertHost(host){
+   if(!host||!Array.isArray(host.dataKeys)||!host.dataKeys.length||typeof host.fetchSnapshot!=='function'||typeof host.hydrate!=='function'||typeof host.syncBusy!=='function'||typeof host.setSyncBusy!=='function'||typeof host.protectedInputActive!=='function'||typeof host.session!=='function'||!host.generation)throw Error('Recovery host is incomplete');
+   if(host.syncBusy()||localStorage.getItem(LOCK))throw Error('Synchronization or recovery already active');
+   if(!host.session())throw Error('Sign in first');
+   if(host.protectedInputActive())throw Error('Close all editors first');
+   if(navigator.onLine===false)throw Error('Online connection required');
  }
- function restoreStorage(snapshot){
-   for(const [key,value] of Object.entries(snapshot)){
-     if(value===null)localStorage.removeItem(key);
-     else localStorage.setItem(key,value);
-   }
+ function keys(host){return [...new Set([...host.dataKeys,OUTBOX,CURSOR,BOOTSTRAP,GENERATION])];}
+ function capture(list){return Object.fromEntries(list.map(key=>[key,localStorage.getItem(key)]));}
+ function same(a,b){return Object.keys(a).every(key=>a[key]===b[key]);}
+ function restore(snapshot){for(const [key,v] of Object.entries(snapshot)){if(v===null)localStorage.removeItem(key);else localStorage.setItem(key,v);}}
+ function getQueue(raw){
+   if(raw===null)return [];
+   let parsed;
+   try{parsed=JSON.parse(raw)}catch{throw Error('Unreadable queue: recovery blocked to preserve data');}
+   if(!Array.isArray(parsed))throw Error('Invalid queue: recovery blocked to preserve data');
+   return parsed;
  }
- function downloadBackup(data){
-   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-   const url=URL.createObjectURL(blob);
-   const a=document.createElement('a');a.href=url;
-   a.download='RUNLU_CLOUD_MASTER_RECOVERY_BACKUP_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
-   document.body.appendChild(a);a.click();a.remove();
+ function exportBackup(host){
+   assertHost(host);
+   const original=capture(keys(host));
+   const queue=getQueue(original[OUTBOX]);
+   const backup={format:'runlu-cloud-master-recovery-backup-v2',created_at:new Date().toISOString(),origin:location.origin,keys:original};
+   const filename='RUNLU_RECOVERY_BACKUP_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+   const url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
    setTimeout(()=>URL.revokeObjectURL(url),60000);
+   // Browser download request is NOT evidence of file persistence.
+   return {filename,queueCount:queue.length,bytes:blob.size};
  }
- async function prepareRecovery(host){
-   if(!host||!Array.isArray(host.dataKeys)||!host.dataKeys.length)throw Error('Missing recovery host configuration');
-   if(typeof host.fetchSnapshot!=='function'||typeof host.hydrate!=='function')throw Error('Missing cloud snapshot reader');
-   if(host.syncBusy())throw Error('Cloud synchronization is running. Wait and retry.');
-   if(!host.session())throw Error('Sign in before starting recovery.');
-   if(host.protectedInputActive())throw Error('Close all editors before recovery.');
-   if(navigator.onLine===false)throw Error('An online connection is required.');
-   const raw=localStorage.getItem(OUTBOX);
-   if(raw!==null&&!Array.isArray(JSON.parse(raw)))throw Error('Malformed queue: stop and preserve original data.');
-   const keys=[...host.dataKeys,OUTBOX,CURSOR,BOOTSTRAP,GENERATION,ERROR];
-   const original=readStorage(keys);
-   const backup={format:'runlu-cloud-master-recovery-backup-v1',created_at:new Date().toISOString(),origin:location.origin,keys:original};
-   // The download must be completed and confirmed by the user before any local changes.
-   downloadBackup(backup);
-   const cloud=await host.fetchSnapshot();
-   if(!cloud||!Array.isArray(cloud.records)||!Number.isFinite(Number(cloud.cursor)))throw Error('Invalid cloud snapshot; local data untouched.');
+ async function prepare(host){
+   assertHost(host);
+   const original=capture(keys(host)),queue=getQueue(original[OUTBOX]);
+   const snapshot=await host.fetchSnapshot();
+   if(!snapshot||!Array.isArray(snapshot.records)||!Number.isSafeInteger(Number(snapshot.cursor))||Number(snapshot.cursor)<0)throw Error('Cloud snapshot invalid');
+   // A zero-row cloud snapshot must not erase local warehouse records.
+   if(!snapshot.records.length)throw Error('Cloud snapshot empty; recovery blocked');
    const grouped=new Map(host.dataKeys.map(k=>[k,[]]));
-   for(const row of cloud.records){
-     if(!grouped.has(row.dataset_key))continue;
-     if(row.deleted_at)continue;
+   for(const row of snapshot.records){
+     if(!grouped.has(row.dataset_key)||row.deleted_at)continue;
      const payload=await host.hydrate(row.payload);
+     if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('Cloud record invalid; recovery blocked');
      grouped.get(row.dataset_key).push({...payload,_cloudVersion:Number(row.version||0),_cloudChangeSeq:Number(row.change_seq||0),_cloudRecordId:String(row.record_id||'')});
    }
    const next={};
-   for(const [key,value] of grouped)next[key]=JSON.stringify(value);
-   next[OUTBOX]='[]';
-   next[CURSOR]=String(Number(cloud.cursor));
-   next[BOOTSTRAP]='1';
-   next[GENERATION]=host.generation;
-   next[ERROR]=null;
-   return {original,next,backup,cloudCount:cloud.records.length,queueCount:raw?JSON.parse(raw).length:0};
+   for(const [key,rows] of grouped)next[key]=JSON.stringify(rows);
+   next[OUTBOX]='[]';next[CURSOR]=String(Number(snapshot.cursor));
+   next[BOOTSTRAP]='1';next[GENERATION]=host.generation;
+   prepared={original,next,queueCount:queue.length,cloudCount:snapshot.records.length,at:Date.now()};
+   return {queueCount:queue.length,cloudCount:snapshot.records.length,requiresVerifiedBackup:true};
  }
- async function recover(host){
-   const plan=await prepareRecovery(host);
-   const warning='A recovery backup download was started. VERIFY the file is saved and accessible before continuing.\n\nThis device will DISCARD '+plan.queueCount+' pending local operations and replace its synchronized datasets with '+plan.cloudCount+' cloud snapshot records. Other devices are NOT changed.\n\nType CLOUD MASTER to continue:';
-   if(prompt(warning)!=='CLOUD MASTER')return {status:'cancelled'};
-   if(host.syncBusy()||host.protectedInputActive())throw Error('Sync/editor became active; recovery cancelled.');
-   // Prevent writes during the critical section; host must use this lock in sync entry points.
+ function commit(host,confirmation){
+   assertHost(host);
+   if(confirmation!=='CLOUD MASTER')throw Error('Explicit CLOUD MASTER confirmation required');
+   if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
+   const plan=prepared;prepared=null;
+   if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
+   // The caller must separately ask the user to verify the exported file exists.
+   // Guard existing sync entry points against LOCK before this function is integrated.
    localStorage.setItem(LOCK,new Date().toISOString());
    host.setSyncBusy(true);
    try{
-     // Preflight storage quota before replacing any records.
-     for(const [key,value] of Object.entries(plan.next))if(value!==null&&typeof value!=='string')throw Error('Invalid prepared storage value: '+key);
      try{
-       for(const [key,value] of Object.entries(plan.next)){
-         if(value===null)localStorage.removeItem(key);
-         else localStorage.setItem(key,value);
-       }
+       for(const [key,value] of Object.entries(plan.next))localStorage.setItem(key,value);
      }catch(e){
-       try{restoreStorage(plan.original)}catch(rollbackError){
-         throw Error('Recovery failed and rollback was incomplete. STOP editing. Preserve the downloaded backup. '+rollbackError.message);
+       try{restore(plan.original)}catch(rollback){
+         throw Error('Rollback incomplete; stop editing and preserve backup: '+rollback.message);
        }
-       throw Error('Recovery failed; previous local data restored: '+e.message);
+       throw Error('Recovery failed; local data restored: '+e.message);
      }
-     return {status:'restored',cloudCount:plan.cloudCount,queueCount:plan.queueCount};
+     return {status:'restored',queueCount:plan.queueCount,cloudCount:plan.cloudCount};
    }finally{host.setSyncBusy(false);localStorage.removeItem(LOCK);}
  }
- global.RUNLUCloudMasterRecovery={prepareRecovery,recover,lockKey:LOCK};
+ global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,lockKey:LOCK};
 })(window);
