@@ -9,13 +9,13 @@
  const LOCK='runlu_cloud_master_recovery_lock_v1';
  let prepared=null;
  function assertHost(host){
-   if(!host||!Array.isArray(host.dataKeys)||!host.dataKeys.length||typeof host.fetchSnapshot!=='function'||typeof host.hydrate!=='function'||typeof host.syncBusy!=='function'||typeof host.setSyncBusy!=='function'||typeof host.protectedInputActive!=='function'||typeof host.session!=='function'||!host.generation)throw Error('Recovery host is incomplete');
+   if(!host||!Array.isArray(host.dataKeys)||!host.dataKeys.length||typeof host.fetchSnapshot!=='function'||typeof host.hydrate!=='function'||typeof host.syncBusy!=='function'||typeof host.setSyncBusy!=='function'||typeof host.protectedInputActive!=='function'||typeof host.session!=='function'||!host.generation||!host.cursorKey||!host.bootstrapKey||!host.generationKey)throw Error('Recovery host is incomplete');
    if(host.syncBusy()||localStorage.getItem(LOCK))throw Error('Synchronization or recovery already active');
    if(!host.session())throw Error('Sign in first');
    if(host.protectedInputActive())throw Error('Close all editors first');
    if(navigator.onLine===false)throw Error('Online connection required');
  }
- function keys(host){return [...new Set([...host.dataKeys,OUTBOX,CURSOR,BOOTSTRAP,GENERATION])];}
+ function keys(host){return [...new Set([...host.dataKeys,OUTBOX,host.cursorKey,host.bootstrapKey,host.generationKey])];}
  function capture(list){return Object.fromEntries(list.map(key=>[key,localStorage.getItem(key)]));}
  function same(a,b){return Object.keys(a).every(key=>a[key]===b[key]);}
  function restore(snapshot){for(const [key,v] of Object.entries(snapshot)){if(v===null)localStorage.removeItem(key);else localStorage.setItem(key,v);}}
@@ -43,6 +43,7 @@
    assertHost(host);
    const original=capture(keys(host)),queue=getQueue(original[OUTBOX]);
    const snapshot=await host.fetchSnapshot();
+   if(host.syncBusy()||host.protectedInputActive()||!same(original,capture(keys(host))))throw Error('Device changed while fetching cloud snapshot; recovery cancelled');
    if(!snapshot||!Array.isArray(snapshot.records)||!Number.isSafeInteger(Number(snapshot.cursor))||Number(snapshot.cursor)<0)throw Error('Cloud snapshot invalid');
    // A zero-row cloud snapshot must not erase local warehouse records.
    if(!snapshot.records.length)throw Error('Cloud snapshot empty; recovery blocked');
@@ -55,14 +56,14 @@
    }
    const next={};
    for(const [key,rows] of grouped)next[key]=JSON.stringify(rows);
-   next[OUTBOX]='[]';next[CURSOR]=String(Number(snapshot.cursor));
-   next[BOOTSTRAP]='1';next[GENERATION]=host.generation;
+   next[OUTBOX]='[]';next[host.cursorKey]=String(Number(snapshot.cursor));
+   next[host.bootstrapKey]='1';next[host.generationKey]=host.generation;
    prepared={original,next,queueCount:queue.length,cloudCount:snapshot.records.length,at:Date.now()};
    return {queueCount:queue.length,cloudCount:snapshot.records.length,requiresVerifiedBackup:true};
  }
- function commit(host,confirmation){
+ function commit(host,confirmation,backupVerified){
    assertHost(host);
-   if(confirmation!=='CLOUD MASTER')throw Error('Explicit CLOUD MASTER confirmation required');
+   if(confirmation!=='CLOUD MASTER'||backupVerified!==true)throw Error('Explicit CLOUD MASTER confirmation and verified backup required');
    if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
    const plan=prepared;prepared=null;
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
