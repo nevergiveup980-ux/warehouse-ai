@@ -4,8 +4,10 @@ on:
     paths:
       - 'index.html'
       - 'tests/record-sync-ack.test.cjs'
-      - 'tests/cloud-master-recovery-journal.test.cjs'
+      - 'tests/cloud-master-recovery-journal.test.cjs tests/cross-tab-recovery-gate.test.cjs'
       - 'tools/cloud-master-recovery-draft.js'
+      - 'tools/cross-tab-recovery-gate-draft.js'
+      - 'tests/cross-tab-recovery-gate.test.cjs'
       - '.github/workflows/record-sync-ack.yml'
   workflow_dispatch:
 jobs:
