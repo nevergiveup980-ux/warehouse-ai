@@ -7,8 +7,10 @@
  const OUTBOX='runlu_record_sync_outbox_v1',CURSOR='runlu_record_sync_cursor_v1';
  const BOOTSTRAP='runlu_record_sync_bootstrapped_v1',GENERATION='runlu_record_sync_generation_v1';
  const LOCK='runlu_cloud_master_recovery_lock_v1';
+ const JOURNAL='runlu_cloud_master_recovery_journal_v1';
  let prepared=null;
  function assertHost(host){
+   if(localStorage.getItem(JOURNAL))throw Error('An interrupted recovery journal exists. Stop and inspect it before retrying');
    if(!host||!Array.isArray(host.dataKeys)||!host.dataKeys.length||typeof host.fetchSnapshot!=='function'||typeof host.hydrate!=='function'||typeof host.syncBusy!=='function'||typeof host.setSyncBusy!=='function'||typeof host.protectedInputActive!=='function'||typeof host.session!=='function'||!host.generation||!host.cursorKey||!host.bootstrapKey||!host.generationKey)throw Error('Recovery host is incomplete');
    if(host.syncBusy()||localStorage.getItem(LOCK))throw Error('Synchronization or recovery already active');
    if(!host.session())throw Error('Sign in first');
@@ -69,6 +71,9 @@
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
    // The caller must separately ask the user to verify the exported file exists.
    // Guard existing sync entry points against LOCK before this function is integrated.
+   // Persist the original values before any destructive write. This journal is intentionally
+   // NOT removed on partial failure: a future manual recovery can inspect it.
+   localStorage.setItem(JOURNAL,JSON.stringify({format:'runlu-recovery-journal-v1',created_at:new Date().toISOString(),original:plan.original}));
    localStorage.setItem(LOCK,new Date().toISOString());
    host.setSyncBusy(true);
    try{
@@ -80,8 +85,9 @@
        }
        throw Error('Recovery failed; local data restored: '+e.message);
      }
+     localStorage.removeItem(JOURNAL);
      return {status:'restored',queueCount:plan.queueCount,cloudCount:plan.cloudCount};
    }finally{host.setSyncBusy(false);localStorage.removeItem(LOCK);}
  }
- global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,lockKey:LOCK};
+ global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,lockKey:LOCK,journalKey:JOURNAL};
 })(window);
