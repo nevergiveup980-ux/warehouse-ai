@@ -63,6 +63,16 @@
    prepared={original,next,queueCount:queue.length,cloudCount:snapshot.records.length,at:Date.now()};
    return {queueCount:queue.length,cloudCount:snapshot.records.length,requiresVerifiedBackup:true};
  }
+ function inspectInterruptedRecovery(){
+   const raw=localStorage.getItem(JOURNAL);
+   if(!raw)return {status:'none'};
+   let journal;
+   try{journal=JSON.parse(raw)}catch{return {status:'corrupt',requiresManualReview:true};}
+   if(journal?.format!=='runlu-recovery-journal-v1'||!journal.original||typeof journal.original!=='object')return {status:'invalid',requiresManualReview:true};
+   const original=journal.original;
+   const current=capture(Object.keys(original));
+   return {status:'interrupted',createdAt:journal.created_at,keys:Object.keys(original),matchesOriginal:same(original,current),requiresManualReview:true};
+ }
  function commit(host,confirmation,backupVerified){
    assertHost(host);
    if(confirmation!=='CLOUD MASTER'||backupVerified!==true)throw Error('Explicit CLOUD MASTER confirmation and verified backup required');
@@ -89,5 +99,5 @@
      return {status:'restored',queueCount:plan.queueCount,cloudCount:plan.cloudCount};
    }finally{host.setSyncBusy(false);localStorage.removeItem(LOCK);}
  }
- global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,lockKey:LOCK,journalKey:JOURNAL};
+ global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
 })(window);
