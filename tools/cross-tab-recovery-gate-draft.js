@@ -1,5 +1,7 @@
 /* RUNLU cross-tab recovery gate. Draft only; every sync writer must participate.
  * Web Locks are atomic across participating same-origin browser contexts.
+ * Both recovery and sync are exclusive: multiple tabs may share one outbox.
+ * Separate installed-PWA/browser storage partitions are not coordinated.
  * A localStorage flag alone is NOT an atomic lock.
  */
 (function(global){
@@ -19,8 +21,8 @@
  }
  async function withSyncLock(task){
    if(typeof task!=='function')throw Error('Sync callback required');
-   return locks().request(NAME,{mode:'shared',ifAvailable:true},async lock=>{
-     if(!lock)return {status:'blocked-by-recovery'};
+   return locks().request(NAME,{mode:'exclusive',ifAvailable:true},async lock=>{
+     if(!lock)return {status:'blocked-by-another-tab'};
      return task();
    });
  }
