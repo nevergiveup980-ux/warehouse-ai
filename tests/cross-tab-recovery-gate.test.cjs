@@ -16,7 +16,7 @@ test('recovery refuses when another tab holds the lock',async()=>{
 test('sync skips when recovery holds exclusive lock',async()=>{
  const g=gate(async(name,options,callback)=>callback(null));
  const result=await g.withSyncLock(()=>{throw Error('must not run');});
- assert.equal(result.status,'blocked-by-recovery');
+ assert.equal(result.status,'blocked-by-another-tab');
 });
 test('exclusive recovery invokes task once',async()=>{
  let calls=0;
@@ -28,10 +28,10 @@ test('exclusive recovery invokes task once',async()=>{
  assert.equal(await g.withRecoveryLock(async()=>++calls),1);
  assert.equal(calls,1);
 });
-test('shared sync invokes task once',async()=>{
+test('exclusive sync invokes task once',async()=>{
  let calls=0;
  const g=gate(async(name,options,callback)=>{
-  assert.equal(options.mode,'shared');
+  assert.equal(options.mode,'exclusive');
   return callback({name});
  });
  assert.equal(await g.withSyncLock(async()=>++calls),1);
@@ -40,4 +40,22 @@ test('unsupported Web Locks fail closed',async()=>{
  const window={navigator:{}};
  vm.runInNewContext(source,{window});
  await assert.rejects(window.RUNLURecoveryGate.withRecoveryLock(()=>true),/unsupported/);
+});
+
+test('sync callbacks cannot overlap recovery using a simulated lock',async()=>{
+ let held=false, release;
+ const g=gate(async(name,options,callback)=>{
+  assert.equal(options.mode,'exclusive');
+  if(held)return callback(null);
+  held=true;
+  try{return await callback({name});}
+  finally{held=false;}
+ });
+ const recovery=g.withRecoveryLock(async()=>new Promise(resolve=>{release=resolve;}));
+ await Promise.resolve();
+ const skipped=await g.withSyncLock(()=>{throw Error('sync must not run during recovery');});
+ assert.equal(skipped.status,'blocked-by-another-tab');
+ release('done');
+ assert.equal(await recovery,'done');
+ assert.equal(await g.withSyncLock(()=> 'synchronized'),'synchronized');
 });
