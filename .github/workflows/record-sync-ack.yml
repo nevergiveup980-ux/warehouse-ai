@@ -4,6 +4,8 @@ on:
     paths:
       - 'index.html'
       - 'tests/record-sync-ack.test.cjs'
+      - 'tests/cloud-master-recovery-journal.test.cjs'
+      - 'tools/cloud-master-recovery-draft.js'
       - '.github/workflows/record-sync-ack.yml'
   workflow_dispatch:
 jobs:
@@ -25,4 +27,4 @@ jobs:
           if(!src.includes(expected))throw Error('Production acknowledgement expression changed; review tests');
           NODE
       - name: Test acknowledgement cases
-        run: node --test tests/record-sync-ack.test.cjs
+        run: node --test tests/record-sync-ack.test.cjs tests/cloud-master-recovery-journal.test.cjs
