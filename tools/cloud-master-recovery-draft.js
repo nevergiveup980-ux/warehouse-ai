@@ -4,8 +4,7 @@
  */
 (function(global){
  'use strict';
- const OUTBOX='runlu_record_sync_outbox_v1',CURSOR='runlu_record_sync_cursor_v1';
- const BOOTSTRAP='runlu_record_sync_bootstrapped_v1',GENERATION='runlu_record_sync_generation_v1';
+ const OUTBOX='runlu_record_sync_outbox_v1';
  const LOCK='runlu_cloud_master_recovery_lock_v1';
  const JOURNAL='runlu_cloud_master_recovery_journal_v1';
  let prepared=null;
@@ -79,14 +78,15 @@
    if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
    const plan=prepared;prepared=null;
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
+   if(host.syncBusy()||host.protectedInputActive())throw Error('Recovery no longer safe; retry');
    // The caller must separately ask the user to verify the exported file exists.
    // Guard existing sync entry points against LOCK before this function is integrated.
    // Persist the original values before any destructive write. This journal is intentionally
    // NOT removed on partial failure: a future manual recovery can inspect it.
    localStorage.setItem(JOURNAL,JSON.stringify({format:'runlu-recovery-journal-v1',created_at:new Date().toISOString(),original:plan.original}));
    localStorage.setItem(LOCK,new Date().toISOString());
-   host.setSyncBusy(true);
    try{
+     host.setSyncBusy(true);
      try{
        for(const [key,value] of Object.entries(plan.next))localStorage.setItem(key,value);
      }catch(e){
@@ -97,7 +97,7 @@
      }
      localStorage.removeItem(JOURNAL);
      return {status:'restored',queueCount:plan.queueCount,cloudCount:plan.cloudCount};
-   }finally{host.setSyncBusy(false);localStorage.removeItem(LOCK);}
+   }finally{try{host.setSyncBusy(false);}finally{localStorage.removeItem(LOCK);}}
  }
  global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
 })(window);
