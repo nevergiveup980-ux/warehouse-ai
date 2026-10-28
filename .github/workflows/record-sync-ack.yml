@@ -4,7 +4,7 @@ on:
     paths:
       - 'index.html'
       - 'tests/record-sync-ack.test.cjs'
-      - 'tests/cloud-master-recovery-journal.test.cjs tests/cross-tab-recovery-gate.test.cjs'
+      - 'tests/cloud-master-recovery-journal.test.cjs'
       - 'tools/cloud-master-recovery-draft.js'
       - 'tools/cross-tab-recovery-gate-draft.js'
       - 'tests/cross-tab-recovery-gate.test.cjs'
@@ -29,4 +29,4 @@ jobs:
           if(!src.includes(expected))throw Error('Production acknowledgement expression changed; review tests');
           NODE
       - name: Test acknowledgement cases
-        run: node --test tests/record-sync-ack.test.cjs tests/cloud-master-recovery-journal.test.cjs
+        run: node --test tests/record-sync-ack.test.cjs tests/cloud-master-recovery-journal.test.cjs tests/cross-tab-recovery-gate.test.cjs
