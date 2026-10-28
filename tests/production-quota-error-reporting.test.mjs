@@ -14,6 +14,7 @@ async function simulate({errorWriteFails=false,statusFails=false}={}){
  let busy=false, statusCalls=0, writeCalls=0;
  const context={
   cloudSyncBusy:false, cloudSession:()=>({user:{id:'test'}}),
+  window:{RUNLURecoveryGate:{withSyncLock:async task=>task()}},
   recordSyncPrepareGeneration:()=>{throw new Error('simulated sync failure')},
   localStorage:{setItem(){writeCalls++;if(errorWriteFails)throw Object.assign(new Error('quota exceeded'),{name:'QuotaExceededError'})}},
   CLOUD_LAST_ERROR_KEY:'cloud_error', CLOUD_ENABLED_KEY:'cloud_enabled',CLOUD_LAST_OK_KEY:'cloud_last_ok',
