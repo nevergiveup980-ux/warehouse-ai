@@ -125,3 +125,18 @@ test('commit refuses a confirmation checkbox without imported backup',async()=>{
  await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Import and verify/);
  assert.equal(values.get('inventory'),'old');
 });
+
+test('device mutation invalidates a previously imported backup',async()=>{
+ const {api,window,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ const backup=JSON.stringify({format:'runlu-cloud-master-recovery-backup-v2',origin:'https://warehouse.example',keys:{inventory:'old',runlu_record_sync_outbox_v1:null,cursor:null,bootstrap:null,generation:null}});
+ await api.prepare(host);
+ assert.equal(api.verifyBackupImport(host,backup).status,'verified');
+ values.set('inventory','changed');
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>task()};
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Import and verify/);
+ assert.equal(values.get('inventory'),'changed');
+ values.set('inventory','old');
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Import and verify/);
+ assert.equal(values.get('inventory'),'old');
+});
