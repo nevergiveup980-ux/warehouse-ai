@@ -115,7 +115,7 @@
    return gate.withRecoveryLock(async()=>{
    assertHost(host);
    if(confirmation!=='CLOUD MASTER'||backupVerified!==true)throw Error('Explicit CLOUD MASTER confirmation and verified backup required');
-   if(!verifiedBackup||Date.now()-verifiedBackup.at>120000||!same(verifiedBackup.original,capture(keys(host))))throw Error('Import and verify the downloaded backup JSON before recovery');
+   if(!verifiedBackup||Date.now()-verifiedBackup.at>120000||!same(verifiedBackup.original,capture(keys(host)))){verifiedBackup=null;throw Error('Import and verify the downloaded backup JSON before recovery');}
    if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
    const plan=prepared;prepared=null;verifiedBackup=null;
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
