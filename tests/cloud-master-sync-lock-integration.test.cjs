@@ -27,3 +27,16 @@ test('blocked lock result is not treated as successful cloud synchronization',()
  assert.match(body,/no cloud success recorded/);
  assert.ok(body.indexOf('CLOUD_LAST_OK_KEY')<body.indexOf("lockResult?.status==='blocked-by-another-tab'"));
 });
+
+test('record sync fails closed for recovery journal or lock both before and inside exclusive gate',()=>{
+ const from=html.indexOf('async function recordSyncNow(');
+ const to=html.indexOf('\nfunction assertLegacyDatasetSyncSafe()',from);
+ const body=html.slice(from,to);
+ const journal="localStorage.getItem('runlu_cloud_master_recovery_journal_v1')";
+ const lock="localStorage.getItem('runlu_cloud_master_recovery_lock_v1')";
+ assert.equal(body.split(journal).length-1,2);
+ assert.equal(body.split(lock).length-1,2);
+ assert.ok(body.indexOf(journal)<body.indexOf('gate.withSyncLock('));
+ assert.ok(body.lastIndexOf(journal)>body.indexOf('gate.withSyncLock('));
+ assert.ok(body.lastIndexOf(journal)<body.indexOf('await recordSyncPush()'));
+});
