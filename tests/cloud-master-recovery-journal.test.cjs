@@ -76,3 +76,32 @@ test('denied recovery gate preserves original records',async()=>{
  assert.equal(values.get('inventory'),'old');
  assert.equal(values.has(api.journalKey),false);
 });
+
+test('interrupted recovery rolls back original values under exclusive gate',async()=>{
+ const original={inventory:'old',queue:'[{"id":1}]'};
+ const journal={format:'runlu-recovery-journal-v1',created_at:'2026-10-28T00:00:00Z',original};
+ const {api,window,values}=setup({inventory:'partial',queue:'[]',[ 'runlu_cloud_master_recovery_journal_v1' ]:JSON.stringify(journal),runlu_cloud_master_recovery_lock_v1:'interrupted'});
+ let calls=0;
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>{calls++;return task();}};
+ const result=await api.rollbackInterruptedRecovery();
+ assert.equal(result.status,'rolled-back');
+ assert.equal(result.restoredKeys,2);
+ assert.equal(calls,1);
+ assert.equal(values.get('inventory'),'old');
+ assert.equal(values.get('queue'),original.queue);
+ assert.equal(values.has(api.journalKey),false);
+ assert.equal(values.has(api.lockKey),false);
+});
+test('invalid interrupted journal never overwrites inventory',async()=>{
+ const {api,window,values}=setup({inventory:'keep',runlu_cloud_master_recovery_journal_v1:'{bad'});
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>task()};
+ await assert.rejects(api.rollbackInterruptedRecovery(),/unreadable/);
+ assert.equal(values.get('inventory'),'keep');
+ assert.equal(values.has(api.journalKey),true);
+});
+test('rollback without exclusive lock is blocked',async()=>{
+ const original={inventory:'old'};
+ const {api,values}=setup({inventory:'partial',runlu_cloud_master_recovery_journal_v1:JSON.stringify({format:'runlu-recovery-journal-v1',original})});
+ await assert.rejects(api.rollbackInterruptedRecovery(),/Exclusive recovery gate unavailable/);
+ assert.equal(values.get('inventory'),'partial');
+});
