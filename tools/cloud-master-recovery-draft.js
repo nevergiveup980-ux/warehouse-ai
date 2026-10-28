@@ -65,6 +65,16 @@
    if(!snapshot||!Array.isArray(snapshot.records)||!Number.isSafeInteger(Number(snapshot.cursor))||Number(snapshot.cursor)<0)throw Error('Cloud snapshot invalid');
    // A zero-row cloud snapshot must not erase local warehouse records.
    if(!snapshot.records.length)throw Error('Cloud snapshot empty; recovery blocked');
+   // Require an explicit, trustworthy total from the snapshot provider.
+   // This blocks silent truncation from API pagination or result limits.
+   if(!Number.isSafeInteger(snapshot.totalCount)||snapshot.totalCount!==snapshot.records.length)throw Error('Cloud snapshot completeness unverified; recovery blocked');
+   const seen=new Set();
+   for(const row of snapshot.records){
+     if(!row||typeof row.dataset_key!=='string'||typeof row.record_id!=='string'||!row.record_id)throw Error('Cloud snapshot row identity invalid');
+     const identity=row.dataset_key+'\\u0000'+row.record_id;
+     if(seen.has(identity))throw Error('Cloud snapshot contains duplicate record identity');
+     seen.add(identity);
+   }
    const grouped=new Map(host.dataKeys.map(k=>[k,[]]));
    for(const row of snapshot.records){
      if(!grouped.has(row.dataset_key)||row.deleted_at)continue;
