@@ -140,3 +140,18 @@ test('device mutation invalidates a previously imported backup',async()=>{
  await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Import and verify/);
  assert.equal(values.get('inventory'),'old');
 });
+
+test('cloud cursor change cancels recovery without overwriting local data',async()=>{
+ const {api,window,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ let cursor=7;
+ host.fetchSnapshot=async()=>({cursor,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'},version:1,change_seq:7}]});
+ const backup=JSON.stringify({format:'runlu-cloud-master-recovery-backup-v2',origin:'https://warehouse.example',keys:{inventory:'old',runlu_record_sync_outbox_v1:null,cursor:null,bootstrap:null,generation:null}});
+ await api.prepare(host);
+ api.verifyBackupImport(host,backup);
+ cursor=8;
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>task()};
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Cloud changed since prepare/);
+ assert.equal(values.get('inventory'),'old');
+ assert.equal(values.has(api.journalKey),false);
+});
