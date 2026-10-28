@@ -37,7 +37,7 @@ test('pending journal blocks recovery entry points',()=>{
 
 function recoveryHost(storage){
  return {
-  dataKeys:['inventory'],fetchSnapshot:async()=>({cursor:7,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'},version:1,change_seq:7}]}),
+  dataKeys:['inventory'],fetchSnapshot:async()=>({cursor:7,totalCount:1,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'},version:1,change_seq:7}]}),
   hydrate:async x=>x,syncBusy:()=>false,setSyncBusy:()=>{},protectedInputActive:()=>false,
   session:()=>({user:{id:'test'}}),generation:'test-generation',cursorKey:'cursor',
   bootstrapKey:'bootstrap',generationKey:'generation'
@@ -145,7 +145,7 @@ test('cloud cursor change cancels recovery without overwriting local data',async
  const {api,window,values}=setup({inventory:'old'});
  const host=recoveryHost();
  let cursor=7;
- host.fetchSnapshot=async()=>({cursor,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'},version:1,change_seq:7}]});
+ host.fetchSnapshot=async()=>({cursor,totalCount:1,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'},version:1,change_seq:7}]});
  const backup=JSON.stringify({format:'runlu-cloud-master-recovery-backup-v2',origin:'https://warehouse.example',keys:{inventory:'old',runlu_record_sync_outbox_v1:null,cursor:null,bootstrap:null,generation:null}});
  await api.prepare(host);
  api.verifyBackupImport(host,backup);
@@ -154,4 +154,25 @@ test('cloud cursor change cancels recovery without overwriting local data',async
  await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Cloud changed since prepare/);
  assert.equal(values.get('inventory'),'old');
  assert.equal(values.has(api.journalKey),false);
+});
+
+test('truncated snapshot cannot prepare a destructive recovery',async()=>{
+ const {api,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ host.fetchSnapshot=async()=>({cursor:7,totalCount:2,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'}}]});
+ await assert.rejects(api.prepare(host),/completeness unverified/);
+ assert.equal(values.get('inventory'),'old');
+});
+test('snapshot without total count is rejected',async()=>{
+ const {api}=setup({inventory:'old'});
+ const host=recoveryHost();
+ host.fetchSnapshot=async()=>({cursor:7,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'}}]});
+ await assert.rejects(api.prepare(host),/completeness unverified/);
+});
+test('duplicate record identities block recovery',async()=>{
+ const {api}=setup({inventory:'old'});
+ const host=recoveryHost();
+ const row={dataset_key:'inventory',record_id:'a',payload:{id:'a'}};
+ host.fetchSnapshot=async()=>({cursor:7,totalCount:2,records:[row,row]});
+ await assert.rejects(api.prepare(host),/duplicate record identity/);
 });
