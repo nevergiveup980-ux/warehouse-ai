@@ -59,3 +59,39 @@ test('sync callbacks cannot overlap recovery using a simulated lock',async()=>{
  assert.equal(await recovery,'done');
  assert.equal(await g.withSyncLock(()=> 'synchronized'),'synchronized');
 });
+
+test('two simultaneous sync attempts never execute the second writer',async()=>{
+ let held=false,releaseFirst,firstWrites=0,secondWrites=0;
+ const g=gate(async(name,options,callback)=>{
+  assert.equal(options.mode,'exclusive');
+  assert.equal(options.ifAvailable,true);
+  if(held)return callback(null);
+  held=true;
+  try{return await callback({name});}
+  finally{held=false;}
+ });
+ const first=g.withSyncLock(async()=>{
+  firstWrites++;
+  return new Promise(resolve=>{releaseFirst=resolve;});
+ });
+ await Promise.resolve();
+ const second=await g.withSyncLock(async()=>{secondWrites++;return 'unsafe';});
+ assert.equal(second.status,'blocked-by-another-tab');
+ assert.equal(firstWrites,1);
+ assert.equal(secondWrites,0);
+ releaseFirst('first-completed');
+ assert.equal(await first,'first-completed');
+ assert.equal(await g.withSyncLock(async()=>{secondWrites++;return 'later';}),'later');
+ assert.equal(secondWrites,1);
+});
+test('lock is released when a sync task throws',async()=>{
+ let held=false;
+ const g=gate(async(name,options,callback)=>{
+  if(held)return callback(null);
+  held=true;
+  try{return await callback({name});}
+  finally{held=false;}
+ });
+ await assert.rejects(g.withSyncLock(async()=>{throw Error('simulated network failure');}),/simulated network failure/);
+ assert.equal(await g.withSyncLock(async()=> 'retry-ok'),'retry-ok');
+});
