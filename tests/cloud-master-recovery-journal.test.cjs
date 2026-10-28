@@ -34,3 +34,19 @@ test('pending journal blocks recovery entry points',()=>{
  const {api}=setup({'runlu_cloud_master_recovery_journal_v1':'{bad'});
  assert.throws(()=>api.exportBackup({}),/interrupted recovery journal/);
 });
+
+function recoveryHost(storage){
+ return {
+  dataKeys:['inventory'],fetchSnapshot:async()=>({cursor:7,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'},version:1,change_seq:7}]}),
+  hydrate:async x=>x,syncBusy:()=>false,setSyncBusy:()=>{},protectedInputActive:()=>false,
+  session:()=>({user:{id:'test'}}),generation:'test-generation',cursorKey:'cursor',
+  bootstrapKey:'bootstrap',generationKey:'generation'
+ };
+}
+test('commit fails closed when exclusive gate is absent',async()=>{
+ const {api,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ await api.prepare(host);
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Exclusive recovery gate unavailable/);
+ assert.equal(values.get('inventory'),'old');
+});
