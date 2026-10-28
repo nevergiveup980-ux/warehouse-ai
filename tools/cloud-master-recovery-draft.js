@@ -8,6 +8,7 @@
  const LOCK='runlu_cloud_master_recovery_lock_v1';
  const JOURNAL='runlu_cloud_master_recovery_journal_v1';
  let prepared=null;
+ let verifiedBackup=null;
  function assertHost(host){
    if(localStorage.getItem(JOURNAL))throw Error('An interrupted recovery journal exists. Stop and inspect it before retrying');
    if(!host||!Array.isArray(host.dataKeys)||!host.dataKeys.length||typeof host.fetchSnapshot!=='function'||typeof host.hydrate!=='function'||typeof host.syncBusy!=='function'||typeof host.setSyncBusy!=='function'||typeof host.protectedInputActive!=='function'||typeof host.session!=='function'||!host.generation||!host.cursorKey||!host.bootstrapKey||!host.generationKey)throw Error('Recovery host is incomplete');
@@ -29,6 +30,7 @@
  }
  function exportBackup(host){
    assertHost(host);
+   verifiedBackup=null;
    const original=capture(keys(host));
    const queue=getQueue(original[OUTBOX]);
    const backup={format:'runlu-cloud-master-recovery-backup-v2',created_at:new Date().toISOString(),origin:location.origin,keys:original};
@@ -39,6 +41,21 @@
    setTimeout(()=>URL.revokeObjectURL(url),60000);
    // Browser download request is NOT evidence of file persistence.
    return {filename,queueCount:queue.length,bytes:blob.size};
+ }
+ function verifyBackupImport(host,rawJson){
+   assertHost(host);
+   if(typeof rawJson!=='string'||!rawJson.trim())throw Error('Select and read the downloaded JSON backup file');
+   let backup;
+   try{backup=JSON.parse(rawJson)}catch{throw Error('Backup JSON cannot be parsed');}
+   if(!backup||backup.format!=='runlu-cloud-master-recovery-backup-v2'||backup.origin!==location.origin||!backup.keys||typeof backup.keys!=='object'||Array.isArray(backup.keys))throw Error('Backup format or origin mismatch');
+   const names=keys(host);
+   if(Object.keys(backup.keys).length!==names.length||names.some(k=>!Object.prototype.hasOwnProperty.call(backup.keys,k)))throw Error('Backup key set does not match this device');
+   if(names.some(k=>backup.keys[k]!==null&&typeof backup.keys[k]!=='string'))throw Error('Backup contains invalid storage values');
+   const current=capture(names);
+   if(!same(current,backup.keys))throw Error('Device changed or backup does not match current storage');
+   getQueue(backup.keys[OUTBOX]);
+   verifiedBackup={original:current,at:Date.now()};
+   return {status:'verified',keys:names.length,queueCount:getQueue(current[OUTBOX]).length};
  }
  async function prepare(host){
    assertHost(host);
@@ -98,8 +115,9 @@
    return gate.withRecoveryLock(async()=>{
    assertHost(host);
    if(confirmation!=='CLOUD MASTER'||backupVerified!==true)throw Error('Explicit CLOUD MASTER confirmation and verified backup required');
+   if(!verifiedBackup||Date.now()-verifiedBackup.at>120000||!same(verifiedBackup.original,capture(keys(host))))throw Error('Import and verify the downloaded backup JSON before recovery');
    if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
-   const plan=prepared;prepared=null;
+   const plan=prepared;prepared=null;verifiedBackup=null;
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
    if(host.syncBusy()||host.protectedInputActive())throw Error('Recovery no longer safe; retry');
    // The caller must separately ask the user to verify the exported file exists.
@@ -123,5 +141,5 @@
    }finally{try{host.setSyncBusy(false);}finally{localStorage.removeItem(LOCK);}}
    });
  }
- global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,rollbackInterruptedRecovery,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
+ global.RUNLUCloudMasterRecovery={exportBackup,verifyBackupImport,prepare,commit,rollbackInterruptedRecovery,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
 })(window);
