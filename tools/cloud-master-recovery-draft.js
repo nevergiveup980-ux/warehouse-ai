@@ -76,7 +76,7 @@
    for(const [key,rows] of grouped)next[key]=JSON.stringify(rows);
    next[OUTBOX]='[]';next[host.cursorKey]=String(Number(snapshot.cursor));
    next[host.bootstrapKey]='1';next[host.generationKey]=host.generation;
-   prepared={original,next,queueCount:queue.length,cloudCount:snapshot.records.length,at:Date.now()};
+   prepared={original,next,queueCount:queue.length,cloudCount:snapshot.records.length,cloudCursor:Number(snapshot.cursor),at:Date.now()};
    return {queueCount:queue.length,cloudCount:snapshot.records.length,requiresVerifiedBackup:true};
  }
  function inspectInterruptedRecovery(){
@@ -118,6 +118,9 @@
    if(!verifiedBackup||Date.now()-verifiedBackup.at>120000||!same(verifiedBackup.original,capture(keys(host)))){verifiedBackup=null;throw Error('Import and verify the downloaded backup JSON before recovery');}
    if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
    const plan=prepared;prepared=null;verifiedBackup=null;
+   // A second cloud read is required before any local storage replacement.
+   const latest=await host.fetchSnapshot();
+   if(!latest||!Number.isSafeInteger(Number(latest.cursor))||Number(latest.cursor)!==plan.cloudCursor)throw Error('Cloud changed since prepare; recovery cancelled. Prepare and verify backup again.');
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
    if(host.syncBusy()||host.protectedInputActive())throw Error('Recovery no longer safe; retry');
    // The caller must separately ask the user to verify the exported file exists.
