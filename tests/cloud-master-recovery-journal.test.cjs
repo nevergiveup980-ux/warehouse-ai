@@ -9,7 +9,7 @@ function setup(initial={}){
  const window={};
  const context={window,localStorage,navigator:{onLine:true},location:{origin:'https://warehouse.example'},Date,JSON,Map,Set,Number,String,Object,Array,Error};
  vm.runInNewContext(source,context);
- return {api:window.RUNLUCloudMasterRecovery,localStorage,values};
+ return {api:window.RUNLUCloudMasterRecovery,window,localStorage,values};
 }
 test('no journal means no interrupted recovery',()=>{
  const {api}=setup();
@@ -49,4 +49,30 @@ test('commit fails closed when exclusive gate is absent',async()=>{
  await api.prepare(host);
  await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Exclusive recovery gate unavailable/);
  assert.equal(values.get('inventory'),'old');
+});
+
+test('recovery commit holds exclusive gate while applying local data',async()=>{
+ const {api,window,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ await api.prepare(host);
+ let lockHeld=false,lockCalls=0;
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>{
+   lockHeld=true;lockCalls++;
+   try{return await task();}finally{lockHeld=false;}
+ }};
+ const result=await api.commit(host,'CLOUD MASTER',true);
+ assert.equal(result.status,'restored');
+ assert.equal(lockCalls,1);
+ assert.equal(lockHeld,false);
+ assert.equal(JSON.parse(values.get('inventory'))[0].id,'a');
+ assert.equal(values.has(api.journalKey),false);
+});
+test('denied recovery gate preserves original records',async()=>{
+ const {api,window,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ await api.prepare(host);
+ window.RUNLURecoveryGate={withRecoveryLock:async()=>{throw Error('Another warehouse tab is active; recovery blocked');}};
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Another warehouse tab/);
+ assert.equal(values.get('inventory'),'old');
+ assert.equal(values.has(api.journalKey),false);
 });
