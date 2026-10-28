@@ -72,6 +72,26 @@
    const current=capture(Object.keys(original));
    return {status:'interrupted',createdAt:journal.created_at,keys:Object.keys(original),matchesOriginal:same(original,current),requiresManualReview:true};
  }
+ async function rollbackInterruptedRecovery(){
+   const gate=global.RUNLURecoveryGate;
+   if(!gate?.withRecoveryLock)throw Error('Exclusive recovery gate unavailable; rollback blocked');
+   return gate.withRecoveryLock(async()=>{
+     const raw=localStorage.getItem(JOURNAL);
+     if(!raw)return {status:'none'};
+     let journal;
+     try{journal=JSON.parse(raw)}catch{throw Error('Recovery journal unreadable; preserve device and inspect manually');}
+     if(journal?.format!=='runlu-recovery-journal-v1'||!journal.original||typeof journal.original!=='object'||Array.isArray(journal.original))throw Error('Recovery journal invalid; preserve device and inspect manually');
+     const original=journal.original;
+     const names=Object.keys(original);
+     if(!names.length||names.some(k=>typeof k!=='string'||(original[k]!==null&&typeof original[k]!=='string')))throw Error('Recovery journal contents invalid; preserve device and inspect manually');
+     // Never erase the journal until every original value is restored and checked.
+     try{restore(original);}catch(e){throw Error('Rollback incomplete; preserve journal and device data: '+e.message);}
+     if(!same(original,capture(names)))throw Error('Rollback verification failed; journal retained');
+     localStorage.removeItem(LOCK);
+     localStorage.removeItem(JOURNAL);
+     return {status:'rolled-back',restoredKeys:names.length};
+   });
+ }
  async function commit(host,confirmation,backupVerified){
    const gate=global.RUNLURecoveryGate;
    if(!gate?.withRecoveryLock)throw Error('Exclusive recovery gate unavailable; recovery blocked');
@@ -103,5 +123,5 @@
    }finally{try{host.setSyncBusy(false);}finally{localStorage.removeItem(LOCK);}}
    });
  }
- global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
+ global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,rollbackInterruptedRecovery,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
 })(window);
