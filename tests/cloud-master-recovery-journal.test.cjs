@@ -55,6 +55,7 @@ test('recovery commit holds exclusive gate while applying local data',async()=>{
  const {api,window,values}=setup({inventory:'old'});
  const host=recoveryHost();
  await api.prepare(host);
+ api.verifyBackupImport(host,JSON.stringify({format:'runlu-cloud-master-recovery-backup-v2',origin:'https://warehouse.example',keys:{inventory:'old',runlu_record_sync_outbox_v1:null,cursor:null,bootstrap:null,generation:null}}));
  let lockHeld=false,lockCalls=0;
  window.RUNLURecoveryGate={withRecoveryLock:async task=>{
    lockHeld=true;lockCalls++;
@@ -104,4 +105,23 @@ test('rollback without exclusive lock is blocked',async()=>{
  const {api,values}=setup({inventory:'partial',runlu_cloud_master_recovery_journal_v1:JSON.stringify({format:'runlu-recovery-journal-v1',original})});
  await assert.rejects(api.rollbackInterruptedRecovery(),/Exclusive recovery gate unavailable/);
  assert.equal(values.get('inventory'),'partial');
+});
+
+test('backup import rejects mismatched device values and leaves storage intact',()=>{
+ const {api,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ assert.throws(()=>api.verifyBackupImport(host,JSON.stringify({format:'runlu-cloud-master-recovery-backup-v2',origin:'https://warehouse.example',keys:{inventory:'wrong',runlu_record_sync_outbox_v1:null,cursor:null,bootstrap:null,generation:null}})),/does not match/);
+ assert.equal(values.get('inventory'),'old');
+});
+test('backup import rejects malformed JSON',()=>{
+ const {api}=setup({inventory:'old'});
+ assert.throws(()=>api.verifyBackupImport(recoveryHost(),'{bad'),/cannot be parsed/);
+});
+test('commit refuses a confirmation checkbox without imported backup',async()=>{
+ const {api,window,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ await api.prepare(host);
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>task()};
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/Import and verify/);
+ assert.equal(values.get('inventory'),'old');
 });
