@@ -72,7 +72,10 @@
    const current=capture(Object.keys(original));
    return {status:'interrupted',createdAt:journal.created_at,keys:Object.keys(original),matchesOriginal:same(original,current),requiresManualReview:true};
  }
- function commit(host,confirmation,backupVerified){
+ async function commit(host,confirmation,backupVerified){
+   const gate=global.RUNLURecoveryGate;
+   if(!gate?.withRecoveryLock)throw Error('Exclusive recovery gate unavailable; recovery blocked');
+   return gate.withRecoveryLock(async()=>{
    assertHost(host);
    if(confirmation!=='CLOUD MASTER'||backupVerified!==true)throw Error('Explicit CLOUD MASTER confirmation and verified backup required');
    if(!prepared||Date.now()-prepared.at>120000)throw Error('Recovery plan missing or expired; prepare again');
@@ -98,6 +101,7 @@
      localStorage.removeItem(JOURNAL);
      return {status:'restored',queueCount:plan.queueCount,cloudCount:plan.cloudCount};
    }finally{try{host.setSyncBusy(false);}finally{localStorage.removeItem(LOCK);}}
+   });
  }
  global.RUNLUCloudMasterRecovery={exportBackup,prepare,commit,inspectInterruptedRecovery,lockKey:LOCK,journalKey:JOURNAL};
 })(window);
