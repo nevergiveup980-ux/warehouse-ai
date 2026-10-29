@@ -40,3 +40,15 @@ test('record sync fails closed for recovery journal or lock both before and insi
  assert.ok(body.lastIndexOf(journal)>body.indexOf('gate.withSyncLock('));
  assert.ok(body.lastIndexOf(journal)<body.indexOf('await recordSyncPush()'));
 });
+
+test('normal cloud bootstrap refuses unverified snapshots before any local replacement',()=>{
+ const from=html.indexOf('async function recordSyncBootstrap(');
+ const to=html.indexOf('\nasync function recordSyncPull(',from);
+ assert.ok(from>=0&&to>from);
+ const body=html.slice(from,to);
+ assert.match(body,/snap\?\.totalCount/);
+ assert.match(body,/snap\?\.completenessVerified!==true/);
+ assert.match(body,/snap\?\.totalCountSource!=='server'/);
+ assert.ok(body.indexOf('snapshot completeness is not server-verified')<body.indexOf('cloudApplying=true'));
+ assert.ok(body.indexOf('snapshot completeness is not server-verified')<body.indexOf('localStorage.setItem(k,JSON.stringify(v))'));
+});
