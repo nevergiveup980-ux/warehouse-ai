@@ -183,3 +183,18 @@ test('client-side count without server completeness provenance is rejected',asyn
  host.fetchSnapshot=async()=>({cursor:7,totalCount:1,records:[{dataset_key:'inventory',record_id:'a',payload:{id:'a'}}]});
  await assert.rejects(api.prepare(host),/server-verified completeness/);
 });
+
+test('commit refuses snapshot whose completeness proof disappears after prepare',async()=>{
+ const {api,window,values}=setup({inventory:'old'});
+ const host=recoveryHost();
+ const first=host.fetchSnapshot;
+ let reads=0;
+ host.fetchSnapshot=async()=>{const snapshot=await first();reads++;if(reads===2)delete snapshot.completenessVerified;return snapshot;};
+ const backup=JSON.stringify({format:'runlu-cloud-master-recovery-backup-v2',origin:'https://warehouse.example',keys:{inventory:'old',runlu_record_sync_outbox_v1:null,cursor:null,bootstrap:null,generation:null}});
+ await api.prepare(host);
+ api.verifyBackupImport(host,backup);
+ window.RUNLURecoveryGate={withRecoveryLock:async task=>task()};
+ await assert.rejects(api.commit(host,'CLOUD MASTER',true),/completeness changed/);
+ assert.equal(values.get('inventory'),'old');
+ assert.equal(values.has(api.journalKey),false);
+});
