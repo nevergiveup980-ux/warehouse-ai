@@ -134,6 +134,7 @@
    // A second cloud read is required before any local storage replacement.
    const latest=await host.fetchSnapshot();
    if(!latest||!Number.isSafeInteger(Number(latest.cursor))||Number(latest.cursor)!==plan.cloudCursor)throw Error('Cloud changed since prepare; recovery cancelled. Prepare and verify backup again.');
+   if(!Array.isArray(latest.records)||latest.completenessVerified!==true||latest.totalCountSource!=='server'||!Number.isSafeInteger(latest.totalCount)||latest.totalCount!==latest.records.length||latest.totalCount!==plan.cloudCount)throw Error('Cloud completeness changed or cannot be verified at commit; recovery cancelled');
    if(!same(plan.original,capture(keys(host))))throw Error('Local data changed since review; prepare again');
    if(host.syncBusy()||host.protectedInputActive())throw Error('Recovery no longer safe; retry');
    // The caller must separately ask the user to verify the exported file exists.
