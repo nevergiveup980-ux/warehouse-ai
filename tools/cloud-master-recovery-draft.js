@@ -75,6 +75,9 @@
      if(seen.has(identity))throw Error('Cloud snapshot contains duplicate record identity');
      seen.add(identity);
    }
+   // Snapshot completeness metadata must be supplied by a trusted backend,
+   // not computed as records.length in the browser.
+   if(snapshot.completenessVerified!==true||snapshot.totalCountSource!=='server')throw Error('Cloud snapshot lacks server-verified completeness; recovery blocked');
    const grouped=new Map(host.dataKeys.map(k=>[k,[]]));
    for(const row of snapshot.records){
      if(!grouped.has(row.dataset_key)||row.deleted_at)continue;
