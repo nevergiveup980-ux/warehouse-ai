@@ -1636,6 +1636,8 @@ async function recordSyncPush(){
  const latestQueue=recordSyncOutbox();if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue;sent++}return sent
 }
 async function recordSyncBootstrap(){
+ // Never bootstrap over existing local records, even when the outbox is empty.
+ for(const key of DATA_KEYS)if(localStorage.getItem(key)!==null)throw new Error('Cloud bootstrap blocked: existing local warehouse records require verified backup and controlled recovery.');
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
  const s=await cloudEnsureSession();if(!s)return 0;
  const snap=await cloudRequest('/rest/v1/rpc/warehouse_get_snapshot',{method:'POST',headers:cloudHeaders(s.access_token),body:'{}'}),rows=Array.isArray(snap?.records)?snap.records:[];
