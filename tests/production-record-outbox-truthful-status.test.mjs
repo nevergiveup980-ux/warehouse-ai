@@ -29,7 +29,8 @@ test('server non-acknowledgment retains queue and exposes a bounded diagnostic',
  const end=html.indexOf('\nasync function recordSyncBootstrap(',start);
  assert.ok(start>=0&&end>start);
  const fn=html.slice(start,end);
- assert.ok(fn.includes("const acknowledged=status===\'ok\'||(status===\'duplicate\'&&duplicateOriginalStatus===\'ok\')"));\n assert.ok(fn.includes("if(!acknowledged)"));
+ assert.ok(fn.includes("const acknowledged=status===\'ok\'||(status===\'duplicate\'&&duplicateOriginalStatus===\'ok\')"));
+ assert.ok(fn.includes("if(!acknowledged)"));
  assert.ok(fn.includes("localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue)"));
  assert.ok(fn.includes("operation(s) retained"));
  assert.ok(fn.indexOf("if(!acknowledged)") < fn.indexOf('latestQueue.shift()'));
