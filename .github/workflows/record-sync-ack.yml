@@ -1,0 +1,34 @@
+name: Record Sync Ack Regression
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/record-sync-ack.test.cjs'
+      - 'tests/cloud-master-recovery-journal.test.cjs'
+      - 'tools/cloud-master-recovery-draft.js'
+      - 'tools/cross-tab-recovery-gate-draft.js'
+      - 'tests/cross-tab-recovery-gate.test.cjs'
+      - 'tests/cloud-master-legacy-guard.test.cjs'
+      - 'tests/cloud-master-sync-lock-integration.test.cjs'
+      - '.github/workflows/record-sync-ack.yml'
+  workflow_dispatch:
+jobs:
+  ack-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify production acknowledgement expression
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const src=fs.readFileSync('index.html','utf8');
+          const expected="const acknowledged=status==='ok'||(status==='duplicate'&&duplicateOriginalStatus==='ok');";
+          if(!src.includes(expected))throw Error('Production acknowledgement expression changed; review tests');
+          NODE
+      - name: Test acknowledgement cases
+        run: node --test tests/record-sync-ack.test.cjs tests/cloud-master-recovery-journal.test.cjs tests/cross-tab-recovery-gate.test.cjs tests/cloud-master-legacy-guard.test.cjs tests/cloud-master-sync-lock-integration.test.cjs
