@@ -3866,8 +3866,9 @@ function isolateVerifiedOfflineQueue(){
   if(localStorage.getItem(archiveKey)!==proof.raw)throw new Error('Archive verification failed.');
   if(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)!==proof.raw)throw new Error('Queue changed before isolation.');
   localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,'[]');
+  if(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)!=='[]')throw new Error('Queue isolation write verification failed.');
   verifiedOfflineQueueEvidence=null;
-  updateHeaderCloudPill('auto');
+  try{updateHeaderCloudPill('auto')}catch(uiError){console.error('Queue isolated; cloud indicator refresh failed:',uiError)}
   alert('Old queue isolated locally and archived: '+proof.count+' operation(s). Keep the exported JSON backup. Local inventory has NOT been replaced. Cloud bootstrap remains blocked on existing records.');
   return true;
  }catch(e){alert('Queue isolation failed; inspect queue and archive before retry: '+String(e?.message||e));return false}
