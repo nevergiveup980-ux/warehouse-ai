@@ -4,6 +4,7 @@ on:
     paths:
       - 'index.html'
       - 'tests/production-emergency-offline-queue-export.test.mjs'
+      - 'tests/verified-offline-queue-isolation.test.mjs'
       - '.github/workflows/emergency-offline-queue-export.yml'
   workflow_dispatch:
 jobs:
@@ -14,4 +15,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/production-emergency-offline-queue-export.test.mjs
+      - run: node --test tests/production-emergency-offline-queue-export.test.mjs tests/verified-offline-queue-isolation.test.mjs
