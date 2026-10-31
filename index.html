@@ -786,7 +786,7 @@ img,video,canvas,svg{max-width:100%}
 
 <div class="settingRow"><div class="name">Data Protection Center</div><div class="meta">Your records stay in this browser when index.html is upgraded at the same GitHub Pages address. Before publishing an update, download an Upgrade Backup for protection against device loss, browser clearing or a changed website address.</div>
 <div id="backupStatus" class="notice" style="margin-top:10px">Checking data protection status...</div>
-<div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="exportEmergencyOfflineQueue()">Export Offline Queue (Emergency)</button><button class="primary" onclick="$('offlineQueueVerifyFile').click()">Verify Saved Queue File</button><input id="offlineQueueVerifyFile" class="hidden" type="file" accept=".json,application/json" onchange="verifySavedOfflineQueueFile(this)"><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
+<div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="exportEmergencyOfflineQueue()">Export Offline Queue (Emergency)</button><button class="primary" onclick="$('offlineQueueVerifyFile').click()">Verify Saved Queue File</button><button onclick="isolateVerifiedOfflineQueue()">Isolate Verified Queue</button><input id="offlineQueueVerifyFile" class="hidden" type="file" accept=".json,application/json" onchange="verifySavedOfflineQueueFile(this)"><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
 <div class="meta" style="margin-top:9px">Local snapshots protect against accidental editing, but they remain on this device. A downloaded JSON backup is the protection for phone replacement, browser data loss or moving the app to a different URL.</div></div>
 
 <div class="settingRow"><div class="name">Carpet Data Migration</div><div class="meta">The July 20 carpet inventory and cutting-log backup is built into this release. Migration adds missing legacy records once and never overwrites newer V5.2 balances.</div>
@@ -3834,7 +3834,9 @@ function downloadJSON(data,filename){
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+let verifiedOfflineQueueEvidence=null;
 async function verifySavedOfflineQueueFile(input){
+ verifiedOfflineQueueEvidence=null;
  const file=input?.files?.[0];if(!file)return false;
  try{
   const backup=JSON.parse(await file.text());
@@ -3844,10 +3846,31 @@ async function verifySavedOfflineQueueFile(input){
   if(backup.rawOutbox!==raw)throw new Error('Saved file does not match this device current queue. Export again before any recovery.');
   const queue=JSON.parse(raw);
   if(!Array.isArray(queue)||backup.operationCount!==queue.length||backup.parseError)throw new Error('Saved queue is malformed or its operation count does not match.');
+  verifiedOfflineQueueEvidence={raw,verifiedAt:Date.now(),count:queue.length};
   alert('Saved queue file verified: '+queue.length+' operation(s) match this device. No queue or inventory data was changed.');
   return true;
  }catch(e){alert('Queue backup verification failed: '+String(e?.message||e));return false}
  finally{input.value=''}
+}
+function isolateVerifiedOfflineQueue(){
+ if(cloudSyncBusy){alert('Sync is active. Try again after it finishes.');return false}
+ const proof=verifiedOfflineQueueEvidence;
+ if(!proof||Date.now()-proof.verifiedAt>120000){alert('Re-import and verify the saved queue file within 2 minutes before isolation.');return false}
+ let current;try{current=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)}catch(e){alert('Queue cannot be read; no changes made.');return false}
+ if(current!==proof.raw){verifiedOfflineQueueEvidence=null;alert('Queue changed since verification. Export and verify a new file.');return false}
+ if(!confirm('Isolate '+proof.count+' old offline operations on THIS device?\\n\\nThe verified external JSON backup must be kept. This will prevent these old operations from uploading. It does NOT replace local inventory or restore cloud data.'))return false;
+ const archiveKey='runlu_isolated_offline_queue_'+Date.now();
+ try{
+  if(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)!==proof.raw)throw new Error('Queue changed during confirmation.');
+  localStorage.setItem(archiveKey,proof.raw);
+  if(localStorage.getItem(archiveKey)!==proof.raw)throw new Error('Archive verification failed.');
+  if(localStorage.getItem(RECORD_SYNC_OUTBOX_KEY)!==proof.raw)throw new Error('Queue changed before isolation.');
+  localStorage.setItem(RECORD_SYNC_OUTBOX_KEY,'[]');
+  verifiedOfflineQueueEvidence=null;
+  updateHeaderCloudPill('auto');
+  alert('Old queue isolated locally and archived: '+proof.count+' operation(s). Keep the exported JSON backup. Local inventory has NOT been replaced. Cloud bootstrap remains blocked on existing records.');
+  return true;
+ }catch(e){alert('Queue isolation failed; inspect queue and archive before retry: '+String(e?.message||e));return false}
 }
 function exportEmergencyOfflineQueue(){
  // Read-only emergency extraction. Never parse-and-rewrite or clear the original queue.
