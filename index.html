@@ -786,7 +786,7 @@ img,video,canvas,svg{max-width:100%}
 
 <div class="settingRow"><div class="name">Data Protection Center</div><div class="meta">Your records stay in this browser when index.html is upgraded at the same GitHub Pages address. Before publishing an update, download an Upgrade Backup for protection against device loss, browser clearing or a changed website address.</div>
 <div id="backupStatus" class="notice" style="margin-top:10px">Checking data protection status...</div>
-<div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="exportEmergencyOfflineQueue()">Export Offline Queue (Emergency)</button><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
+<div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="exportEmergencyOfflineQueue()">Export Offline Queue (Emergency)</button><button class="primary" onclick="$('offlineQueueVerifyFile').click()">Verify Saved Queue File</button><input id="offlineQueueVerifyFile" class="hidden" type="file" accept=".json,application/json" onchange="verifySavedOfflineQueueFile(this)"><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
 <div class="meta" style="margin-top:9px">Local snapshots protect against accidental editing, but they remain on this device. A downloaded JSON backup is the protection for phone replacement, browser data loss or moving the app to a different URL.</div></div>
 
 <div class="settingRow"><div class="name">Carpet Data Migration</div><div class="meta">The July 20 carpet inventory and cutting-log backup is built into this release. Migration adds missing legacy records once and never overwrites newer V5.2 balances.</div>
@@ -3833,6 +3833,21 @@ function downloadJSON(data,filename){
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function verifySavedOfflineQueueFile(input){
+ const file=input?.files?.[0];if(!file)return false;
+ try{
+  const backup=JSON.parse(await file.text());
+  const raw=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
+  if(raw===null)throw new Error('This device has no offline queue to compare.');
+  if(backup?.format!=='RUNLU Offline Queue Emergency Export'||backup?.schema!==1||backup?.storageKey!==RECORD_SYNC_OUTBOX_KEY||typeof backup.rawOutbox!=='string')throw new Error('Not a valid offline queue export.');
+  if(backup.rawOutbox!==raw)throw new Error('Saved file does not match this device current queue. Export again before any recovery.');
+  const queue=JSON.parse(raw);
+  if(!Array.isArray(queue)||backup.operationCount!==queue.length||backup.parseError)throw new Error('Saved queue is malformed or its operation count does not match.');
+  alert('Saved queue file verified: '+queue.length+' operation(s) match this device. No queue or inventory data was changed.');
+  return true;
+ }catch(e){alert('Queue backup verification failed: '+String(e?.message||e));return false}
+ finally{input.value=''}
 }
 function exportEmergencyOfflineQueue(){
  // Read-only emergency extraction. Never parse-and-rewrite or clear the original queue.
