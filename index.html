@@ -1635,7 +1635,10 @@ async function recordSyncPush(){
  }
  const latestQueue=recordSyncOutbox();if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue;sent++}return sent
 }
+const RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY='runlu_record_sync_bootstrap_journal_v1';
 async function recordSyncBootstrap(){
+ // A previous interrupted bootstrap must be reviewed, never silently replayed.
+ if(localStorage.getItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY)!==null)throw new Error('Cloud bootstrap blocked: interrupted local write detected; preserve device data for recovery.');
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
  // Never bootstrap over existing local records, even when the outbox is empty.
  for(const key of DATA_KEYS)if(localStorage.getItem(key)!==null)throw new Error('Cloud bootstrap blocked: existing local warehouse records require verified backup and controlled recovery.');
@@ -1651,9 +1654,13 @@ async function recordSyncBootstrap(){
   const cursor=Number(snap?.cursor);
   if(!Number.isSafeInteger(cursor)||cursor<0)throw new Error('Cloud bootstrap blocked: invalid server cursor.');
   for(const [k,v] of staged)if(typeof v!=='string')throw new Error('Cloud bootstrap blocked: invalid dataset serialization for '+k);
+  // Persist a small write-ahead marker before the first dataset write.
+  // If quota fails or the browser closes mid-write, the marker blocks retries.
+  localStorage.setItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY,JSON.stringify({phase:'writing',count:rows.length,cursor,startedAt:new Date().toISOString()}));
   for(const [k,v] of staged)localStorage.setItem(k,v);
   localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor));
   localStorage.setItem(RECORD_SYNC_BOOTSTRAP_KEY,'1');
+  localStorage.removeItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY);
  }finally{cloudApplying=false}
  return rows.length
 }
