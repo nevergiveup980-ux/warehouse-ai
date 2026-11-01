@@ -1637,9 +1637,9 @@ async function recordSyncPush(){
 }
 const RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY='runlu_record_sync_bootstrap_journal_v1';
 async function recordSyncBootstrap(){
+ if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
  // A previous interrupted bootstrap must be reviewed, never silently replayed.
  if(localStorage.getItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY)!==null)throw new Error('Cloud bootstrap blocked: interrupted local write detected; preserve device data for recovery.');
- if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
  // Never bootstrap over existing local records, even when the outbox is empty.
  for(const key of DATA_KEYS)if(localStorage.getItem(key)!==null)throw new Error('Cloud bootstrap blocked: existing local warehouse records require verified backup and controlled recovery.');
  const s=await cloudEnsureSession();if(!s)return 0;
