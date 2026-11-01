@@ -1646,8 +1646,13 @@ async function recordSyncBootstrap(){
  cloudApplying=true;try{
   const grouped=new Map(DATA_KEYS.map(k=>[k,[]]));
   for(const r of rows)if(grouped.has(r.dataset_key)){const payload=await cloudHydratePayload(r.payload,s);grouped.get(r.dataset_key).push({...payload,_cloudVersion:Number(r.version||0),_cloudChangeSeq:Number(r.change_seq||0),_cloudRecordId:String(r.record_id||'')})}
-  for(const [k,v] of grouped)localStorage.setItem(k,JSON.stringify(v));
-  localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(Number(snap?.cursor||0)));
+  // Stage and validate all hydrated rows before any persistent warehouse write.
+  const staged=[...grouped].map(([k,v])=>[k,JSON.stringify(v)]);
+  const cursor=Number(snap?.cursor);
+  if(!Number.isSafeInteger(cursor)||cursor<0)throw new Error('Cloud bootstrap blocked: invalid server cursor.');
+  for(const [k,v] of staged)if(typeof v!=='string')throw new Error('Cloud bootstrap blocked: invalid dataset serialization for '+k);
+  for(const [k,v] of staged)localStorage.setItem(k,v);
+  localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor));
   localStorage.setItem(RECORD_SYNC_BOOTSTRAP_KEY,'1');
  }finally{cloudApplying=false}
  return rows.length
