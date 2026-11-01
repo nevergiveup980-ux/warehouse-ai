@@ -1557,8 +1557,9 @@ async function flushAndVerifyDatasets(keys){
 function cloudDeviceId(){let id=localStorage.getItem('runlu_cloud_device_id_v54');if(!id){id=(crypto.randomUUID?.()||('device-'+Date.now()+'-'+Math.random()));localStorage.setItem('runlu_cloud_device_id_v54',id)}return id}
 const RECORD_SYNC_OUTBOX_KEY='runlu_record_sync_outbox_v1', RECORD_SYNC_CURSOR_KEY='runlu_record_sync_cursor_v1';
 const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC_GENERATION_KEY='runlu_record_sync_generation_v1', RECORD_SYNC_GENERATION='20260927-hard-gate-212-v3';
-function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
+function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY)===null&&localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
 function recordSyncPrepareGeneration(){
+ if(localStorage.getItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY)!==null)throw new Error('Generation reset blocked: interrupted bootstrap requires controlled recovery.');
  if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
  // A version change must never silently erase offline operations or warehouse records.
  const rawOutbox=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
