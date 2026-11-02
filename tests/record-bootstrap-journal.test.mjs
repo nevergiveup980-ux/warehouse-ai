@@ -30,3 +30,7 @@ test('generation reset refuses interrupted journal without touching records',()=
  vm.createContext(ctx);vm.runInContext(html.slice(start,end),ctx);
  assert.throws(()=>vm.runInContext('recordSyncPrepareGeneration()',ctx),/interrupted bootstrap/);
 });
+
+test('journal records uncertain dataset before a failed inventory write',async()=>{const x=run({failAt:'inventory'});await assert.rejects(x.run(),/storage failure/);const j=JSON.parse(x.values.get('journal'));assert.equal(j.nextDatasetKey,'inventory');assert.equal(j.nextDatasetIndex,0);assert.equal(j.phase,'writing')});
+test('failed journal write never writes inventory or bootstrap flag',async()=>{const x=run({failAt:'journal'});await assert.rejects(x.run(),/storage failure/);assert.equal(x.values.has('inventory'),false);assert.equal(x.values.has('bootstrapped'),false)});
+test('restart after failed inventory write blocks retry and preserves journal',async()=>{const x=run({failAt:'inventory'});await assert.rejects(x.run(),/storage failure/);const original=x.values.get('journal');await assert.rejects(x.run(),/interrupted local write/);assert.equal(x.values.get('journal'),original)});
