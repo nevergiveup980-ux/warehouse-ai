@@ -1658,7 +1658,12 @@ async function recordSyncBootstrap(){
   // Persist a small write-ahead marker before the first dataset write.
   // If quota fails or the browser closes mid-write, the marker blocks retries.
   localStorage.setItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY,JSON.stringify({phase:'writing',count:rows.length,cursor,startedAt:new Date().toISOString(),datasets:staged.map(([key])=>key)}));
-  for(const [k,v] of staged)localStorage.setItem(k,v);
+  for(let i=0;i<staged.length;i++){
+   const [k,v]=staged[i];
+   // Journal the next dataset before its write, so a crash identifies the uncertain step.
+   localStorage.setItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY,JSON.stringify({phase:'writing',count:rows.length,cursor,datasets:staged.map(([key])=>key),nextDatasetIndex:i,nextDatasetKey:k}));
+   localStorage.setItem(k,v);
+  }
   localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor));
   localStorage.setItem(RECORD_SYNC_BOOTSTRAP_KEY,'1');
   localStorage.removeItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY);
