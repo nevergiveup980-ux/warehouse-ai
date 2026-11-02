@@ -16,3 +16,17 @@ test('successful bootstrap clears write-ahead journal after committing',async()=
 test('interrupted bootstrap refuses retry without touching local records',async()=>{const x=run({journal:'{\"phase\":\"writing\"}'});await assert.rejects(x.run(),/interrupted local write/);assert.equal(x.writes.length,0)});
 test('storage failure leaves journal for recovery and no committed flag',async()=>{const x=run({failAt:'inventory'});await assert.rejects(x.run(),/storage failure/);assert.equal(x.values.has('journal'),true);assert.equal(x.values.has('bootstrapped'),false)});
 test('pending outbox prevents bootstrap even with journal',async()=>{const x=run({pending:[{}],journal:'{}'});await assert.rejects(x.run(),/Pending offline operations/);assert.equal(x.writes.length,0)});
+
+function extractFunction(name,next){const start=html.indexOf('function '+name+'('),end=html.indexOf('\nfunction '+next+'(',start);assert.ok(start>=0&&end>start);return html.slice(start,end)}
+test('sync ready refuses interrupted journal even if bootstrap flag is set',()=>{
+ const source=html.slice(html.indexOf('function recordSyncReady(){'),html.indexOf('\nfunction recordSyncPrepareGeneration(){'));
+ const ctx={localStorage:{getItem:k=>k==='journal'?'pending':k==='generation'?'current':'1'},RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY:'journal',RECORD_SYNC_GENERATION_KEY:'generation',RECORD_SYNC_BOOTSTRAP_KEY:'bootstrapped',RECORD_SYNC_GENERATION:'current'};
+ vm.createContext(ctx);assert.equal(vm.runInContext(source+';recordSyncReady()',ctx),false);
+});
+test('generation reset refuses interrupted journal without touching records',()=>{
+ const start=html.indexOf('function recordSyncPrepareGeneration(){'),end=html.indexOf('\nfunction ',start+9);
+ assert.ok(start>=0&&end>start);
+ const ctx={localStorage:{getItem:k=>k==='journal'?'pending':null},RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY:'journal',Error};
+ vm.createContext(ctx);vm.runInContext(html.slice(start,end),ctx);
+ assert.throws(()=>vm.runInContext('recordSyncPrepareGeneration()',ctx),/interrupted bootstrap/);
+});
