@@ -1657,7 +1657,7 @@ async function recordSyncBootstrap(){
   for(const [k,v] of staged)if(typeof v!=='string')throw new Error('Cloud bootstrap blocked: invalid dataset serialization for '+k);
   // Persist a small write-ahead marker before the first dataset write.
   // If quota fails or the browser closes mid-write, the marker blocks retries.
-  localStorage.setItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY,JSON.stringify({phase:'writing',count:rows.length,cursor,startedAt:new Date().toISOString()}));
+  localStorage.setItem(RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY,JSON.stringify({phase:'writing',count:rows.length,cursor,startedAt:new Date().toISOString(),datasets:staged.map(([key])=>key)}));
   for(const [k,v] of staged)localStorage.setItem(k,v);
   localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor));
   localStorage.setItem(RECORD_SYNC_BOOTSTRAP_KEY,'1');
