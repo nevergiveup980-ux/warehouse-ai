@@ -786,7 +786,7 @@ img,video,canvas,svg{max-width:100%}
 
 <div class="settingRow"><div class="name">Data Protection Center</div><div class="meta">Your records stay in this browser when index.html is upgraded at the same GitHub Pages address. Before publishing an update, download an Upgrade Backup for protection against device loss, browser clearing or a changed website address.</div>
 <div id="backupStatus" class="notice" style="margin-top:10px">Checking data protection status...</div>
-<div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="exportEmergencyOfflineQueue()">Export Offline Queue (Emergency)</button><button class="primary" onclick="exportBootstrapRecoveryDiagnostics()">Export Bootstrap Recovery Diagnostics</button><button class="primary" onclick="$('offlineQueueVerifyFile').click()">Verify Saved Queue File</button><button onclick="isolateVerifiedOfflineQueue()">Isolate Verified Queue</button><input id="offlineQueueVerifyFile" class="hidden" type="file" accept=".json,application/json" onchange="verifySavedOfflineQueueFile(this)"><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
+<div class="actions"><button class="green" onclick="exportBackup(true)">Download Upgrade Backup</button><button class="primary" onclick="exportEmergencyOfflineQueue()">Export Offline Queue (Emergency)</button><button class="primary" onclick="exportBootstrapRecoveryDiagnostics()">Export Bootstrap Recovery Diagnostics</button><button class="primary" onclick="$('bootstrapRecoveryVerifyFile').click()">Verify Saved Recovery File</button><input id="bootstrapRecoveryVerifyFile" class="hidden" type="file" accept=".json,application/json" onchange="verifySavedBootstrapRecoveryFile(this)"><button class="primary" onclick="$('offlineQueueVerifyFile').click()">Verify Saved Queue File</button><button onclick="isolateVerifiedOfflineQueue()">Isolate Verified Queue</button><input id="offlineQueueVerifyFile" class="hidden" type="file" accept=".json,application/json" onchange="verifySavedOfflineQueueFile(this)"><button class="primary" onclick="createLocalSnapshot(true)">Create Local Snapshot</button><button onclick="restoreLatestSnapshot()">Restore Latest Snapshot</button><button onclick="$('restoreFile').click()">Restore JSON Backup</button><input id="restoreFile" class="hidden" type="file" accept=".json,application/json"></div>
 <div class="meta" style="margin-top:9px">Local snapshots protect against accidental editing, but they remain on this device. A downloaded JSON backup is the protection for phone replacement, browser data loss or moving the app to a different URL.</div></div>
 
 <div class="settingRow"><div class="name">Carpet Data Migration</div><div class="meta">The July 20 carpet inventory and cutting-log backup is built into this release. Migration adds missing legacy records once and never overwrites newer V5.2 balances.</div>
@@ -3901,6 +3901,25 @@ function exportBootstrapRecoveryDiagnostics(){
   downloadJSON(payload,'RUNLU_BOOTSTRAP_RECOVERY_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');
   return true;
  }catch(err){alert('Recovery diagnostic export failed. Do not clear site data. Keep this device unchanged.');return false}
+}
+async function verifySavedBootstrapRecoveryFile(input){
+ const file=input?.files?.[0];if(!file)return false;
+ try{
+  const backup=JSON.parse(await file.text());
+  if(backup?.format!=='RUNLU Bootstrap Recovery Diagnostics'||backup?.schema!==1||!backup.entries||typeof backup.entries!=='object'||Array.isArray(backup.entries))throw new Error('Invalid recovery diagnostic file.');
+  const keys=[...DATA_KEYS,RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY,RECORD_SYNC_OUTBOX_KEY,RECORD_SYNC_CURSOR_KEY,RECORD_SYNC_BOOTSTRAP_KEY,RECORD_SYNC_GENERATION_KEY];
+  const mismatches=[];
+  for(const key of keys){
+   if(!Object.prototype.hasOwnProperty.call(backup.entries,key))throw new Error('Missing dataset in saved file: '+key);
+   const saved=backup.entries[key];
+   if(saved!==null&&typeof saved!=='string')throw new Error('Invalid raw value for '+key);
+   if(localStorage.getItem(key)!==saved)mismatches.push(key);
+  }
+  if(mismatches.length)throw new Error('Device changed since export; '+mismatches.length+' key(s) differ: '+mismatches.join(', '));
+  alert('Recovery file verified: '+keys.length+' raw storage key(s) match this device. No data changed.');
+  return true;
+ }catch(err){alert('Recovery file verification failed: '+String(err?.message||err));return false}
+ finally{input.value=''}
 }
 function exportEmergencyOfflineQueue(){
  // Read-only emergency extraction. Never parse-and-rewrite or clear the original queue.
