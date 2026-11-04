@@ -15,8 +15,8 @@ function run({omit=null,change=null,format='RUNLU Bootstrap Recovery Diagnostics
  const file={text:async()=>invalid?'not-json':JSON.stringify(backup)};
  const input={files:[file],value:'chosen'};
  const alerts=[],writes=[];
- const ctx={DATA_KEYS:['inventory'],RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY:'journal',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_CURSOR_KEY:'cursor',RECORD_SYNC_BOOTSTRAP_KEY:'boot',RECORD_SYNC_GENERATION_KEY:'generation',localStorage:{getItem:k=>change===k?'different':original[k],setItem:()=>writes.push('set'),removeItem:()=>writes.push('remove')},alert:x=>alerts.push(x),JSON,Object,Array,String,Error};
- vm.createContext(ctx);vm.runInContext(source,ctx);return {run:()=>vm.runInContext('verifySavedBootstrapRecoveryFile(input)',{...ctx,input}),input,alerts,writes};
+ const ctx={DATA_KEYS:['inventory'],RECORD_SYNC_BOOTSTRAP_JOURNAL_KEY:'journal',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_CURSOR_KEY:'cursor',RECORD_SYNC_BOOTSTRAP_KEY:'boot',RECORD_SYNC_GENERATION_KEY:'generation',localStorage:{getItem:k=>change===k?'different':original[k],setItem:()=>writes.push('set'),removeItem:()=>writes.push('remove')},alert:x=>alerts.push(x),JSON,Object,Array,String,Error,input};
+ vm.createContext(ctx);vm.runInContext(source,ctx);return {run:()=>vm.runInContext('verifySavedBootstrapRecoveryFile(input)',ctx),input,alerts,writes};
 }
 test('matching saved file verifies without any storage changes',async()=>{const x=run();assert.equal(await x.run(),true);assert.equal(x.writes.length,0);assert.equal(x.input.value,'')});
 test('missing dataset is rejected',async()=>{const x=run({omit:'inventory'});assert.equal(await x.run(),false);assert.equal(x.writes.length,0)});
