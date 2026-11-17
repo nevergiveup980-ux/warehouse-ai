@@ -3757,12 +3757,14 @@ function isCarpetLabelEligible(x){if(!x)return false;const status=String(x.statu
 let cloudLabelRows=null;
 let cloudLabelReady=false;
 let cloudLabelCuts=[];
+let cloudLabelRequestSeq=0;
 function carpetLabelRows(){return cloudLabelRows||carpetRecords()}
 function carpetLabelById(id){return carpetLabelRows().find(x=>String(x.id)===String(id))}
 function carpetLabelCutRows(){return cloudLabelReady?cloudLabelCuts:cuttingRecords()}
 function labelOptions(selected){return carpetLabelRows().filter(isCarpetLabelEligible).sort((a,b)=>String(a.roll).localeCompare(String(b.roll),undefined,{numeric:true})).map(x=>`<option value="${esc(String(x.id))}" ${String(x.id)===String(selected)?'selected':''}>${esc(x.roll)} — ${esc(x.collection)} ${esc(x.colour)}</option>`).join('')}
 function carpetCloudLabelMessage(message){const el=$('carpetCloudLabelStatus');if(el)el.textContent=message}
 async function loadCarpetLabelsFromCloud(){
+ const requestSeq=++cloudLabelRequestSeq;
  cloudLabelReady=false;
  let session;
  try{session=await cloudEnsureSession()}catch(error){carpetCloudLabelMessage('Cloud sign-in error: '+String(error.message||error));return}
@@ -3772,12 +3774,14 @@ async function loadCarpetLabelsFromCloud(){
  try{
   const fetchDataset=async key=>{const url=CLOUD_URL+'/rest/v1/warehouse_records?dataset_key=eq.'+encodeURIComponent(key)+'&deleted_at=is.null&select=record_id,payload&limit=1000';const response=await fetch(url,{headers:cloudHeaders(session.access_token,false),signal:controller.signal});if(!response.ok)throw new Error('Cloud '+key+' query failed ('+response.status+')');return response.json()};
   const [result,cutResult]=await Promise.all([fetchDataset(CARPETDB),fetchDataset(CUTDB)]);
+  if(requestSeq!==cloudLabelRequestSeq)return;
   if(!Array.isArray(result))throw new Error('Cloud returned invalid inventory data');
   if(result.length===1000)throw new Error('Cloud carpet result reached 1000 records; pagination required');
   if(!Array.isArray(cutResult)||cutResult.length===1000)throw new Error('Cloud cutting history unavailable or truncated; printing blocked');
   const rows=result.map(r=>({...r.payload,id:r.payload?.id??r.record_id})).filter(x=>x&&x.roll);
   const eligible=rows.filter(isCarpetLabelEligible);
   if(!eligible.length)throw new Error('No eligible cloud carpet rolls found');
+  for(const roll of ['RC2376','RC2377','RC2378']){const matches=eligible.filter(x=>x.roll===roll);if(matches.length>1)throw new Error('Duplicate new arrival roll '+roll+'; printing blocked')}
   const duplicateIds=new Set(),seenIds=new Set();
   for(const x of eligible){const id=String(x.id);if(seenIds.has(id))duplicateIds.add(id);seenIds.add(id)}
   if(duplicateIds.size)throw new Error('Duplicate internal roll IDs detected in cloud; printing blocked for safety');
@@ -3790,6 +3794,7 @@ async function loadCarpetLabelsFromCloud(){
   carpetCloudLabelMessage('CLOUD LIVE · '+eligible.length+' printable rolls · Read-only · No browser inventory cache written');
   renderCarpetLabels();
  }catch(error){
+  if(requestSeq!==cloudLabelRequestSeq)return;
   cloudLabelRows=null;
   cloudLabelCuts=[];
   cloudLabelReady=false;
@@ -3798,14 +3803,16 @@ async function loadCarpetLabelsFromCloud(){
  }finally{clearTimeout(timer)}
 }
 function openCarpetLabelMaker(preselect){
+ ++cloudLabelRequestSeq;
  cloudLabelRows=null;
  cloudLabelCuts=[];
  cloudLabelReady=false;
  const rows=carpetRecords().filter(isCarpetLabelEligible);
  const left=preselect||rows[0]?.id,right=rows.find(x=>String(x.id)!==String(left))?.id||left;
  $('labelLeft').innerHTML=labelOptions(left);$('labelRight').innerHTML=labelOptions(right);
- showPage('carpetLabelMaker');renderCarpetLabels();
- carpetCloudLabelMessage('Local labels may be outdated. Loading fresh cloud records...');
+ showPage('carpetLabelMaker');
+ $('carpetLabelPreview').innerHTML='<div class="notice">Waiting for verified live cloud inventory and cutting history. Printing is disabled.</div>';
+ carpetCloudLabelMessage('Loading live cloud records. Printing is disabled until CLOUD LIVE appears.');
  void loadCarpetLabelsFromCloud();
 }
 function cutRowsForTag(x){const cuts=carpetLabelCutRows().filter(c=>cutBelongsToRoll(c,x)).slice(0,5);return Array.from({length:5},(_,i)=>{const c=cuts[i];return c?`<tr><td>${esc(c.date||'')}</td><td>${esc(c.po||'')}</td><td>${esc(c.customer||'')}</td><td>${esc(c.operator||'')}</td><td>${feetLabel(c.cutLength)}</td><td>${feetLabel(c.remainingLength)}</td></tr>`:'<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>'}).join('')}
