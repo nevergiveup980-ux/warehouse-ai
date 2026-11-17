@@ -422,7 +422,8 @@ img,video,canvas,svg{max-width:100%}
 </section>
 
 <section id="carpetLabelMaker" class="page hidden">
- <div class="card"><button class="back" onclick="showPage('carpetInventory')">‹ Carpet Inventory</button><div class="dayHeader"><div><div class="meta" style="letter-spacing:.16em;font-weight:800">RUNLU QR LABEL MAKER</div><h2>Double-Sided Carpet Tags</h2></div><div class="actions"><button class="green" onclick="downloadCarpetLabelsWord()">Download Word</button><button class="primary" onclick="printCarpetLabels()">Browser Print</button></div></div>
+ <div class="card"><button class="back" onclick="showPage('carpetInventory')">‹ Carpet Inventory</button><div class="dayHeader"><div><div class="meta" style="letter-spacing:.16em;font-weight:800">RUNLU QR LABEL MAKER</div><h2>Double-Sided Carpet Tags</h2></div><div class="actions"><button class="green" onclick="loadCarpetLabelsFromCloud()">Refresh Cloud Labels</button><button class="green" onclick="downloadCarpetLabelsWord()">Download Word</button><button class="primary" onclick="printCarpetLabels()">Browser Print</button></div></div>
+ <div id="carpetCloudLabelStatus" class="notice" role="status">Label list uses local inventory until the cloud list is loaded. Select Refresh Cloud Labels for the latest rolls.</div>
  <div class="labelControls"><div><label>Left Label</label><select id="labelLeft" onchange="renderCarpetLabels()"></select></div><div><label>Right Label</label><select id="labelRight" onchange="renderCarpetLabels()"></select></div></div><div class="notice" style="margin-top:12px">Print landscape, double-sided, flip on short edge. The back labels are automatically reversed for alignment.</div></div>
  <div id="carpetLabelPreview" class="labelPreview"></div>
 </section>
@@ -3753,11 +3754,53 @@ function deleteCarpetRecord(){const x=carpetById(activeCarpetId);if(!x||!confirm
 function startCarpetCut(roll,carpetRecordId=''){activeCutCarpetRecordId=carpetRecordId||'';showCarpetOrderPicker(roll)}
 function startCutPieceReturn(roll){activeOperationsDate='';newOperation();$('operationType').value='Cut Piece Return';$('operationInventoryMode').value='Stock';updateOperationForm();$('operationRoll').value=roll;$('operationUnit').value='Foot';const source=carpetRecords().find(x=>normKey(x.roll)===normKey(roll));if(source){$('operationCollection').value=source.collection||'';$('operationColour').value=source.colour||'';$('operationLot').value=source.lot||'';$('operationWidth').value=source.width||'12';$('operationLocation').value=source.location||''}}
 function isCarpetLabelEligible(x){if(!x)return false;const status=String(x.status||'').toUpperCase();if(status==='PENDING')return x.warehouseScope!=='external'&&x.transferredOut!==true&&!carpetExternalDestination(x.location);return isCarpetWarehouseActive(x)}
-function labelOptions(selected){return carpetRecords().filter(isCarpetLabelEligible).sort((a,b)=>String(a.roll).localeCompare(String(b.roll),undefined,{numeric:true})).map(x=>`<option value="${Number(x.id)}" ${Number(x.id)===Number(selected)?'selected':''}>${esc(x.roll)} — ${esc(x.collection)} ${esc(x.colour)}</option>`).join('')}
-function openCarpetLabelMaker(preselect){const rows=carpetRecords().filter(isCarpetLabelEligible);if(!rows.length){alert('No active or pending carpet rolls are available.');return}const left=preselect||rows[0].id,right=rows.find(x=>Number(x.id)!==Number(left))?.id||left;$('labelLeft').innerHTML=labelOptions(left);$('labelRight').innerHTML=labelOptions(right);showPage('carpetLabelMaker');renderCarpetLabels()}
+let cloudLabelRows=null;
+function carpetLabelRows(){return cloudLabelRows||carpetRecords()}
+function carpetLabelById(id){return carpetLabelRows().find(x=>String(x.id)===String(id))}
+function labelOptions(selected){return carpetLabelRows().filter(isCarpetLabelEligible).sort((a,b)=>String(a.roll).localeCompare(String(b.roll),undefined,{numeric:true})).map(x=>`<option value="${esc(String(x.id))}" ${String(x.id)===String(selected)?'selected':''}>${esc(x.roll)} — ${esc(x.collection)} ${esc(x.colour)}</option>`).join('')}
+function carpetCloudLabelMessage(message){const el=$('carpetCloudLabelStatus');if(el)el.textContent=message}
+async function loadCarpetLabelsFromCloud(){
+ const session=await cloudEnsureSession();
+ if(!session?.access_token){carpetCloudLabelMessage('Cloud labels unavailable: sign in to Warehouse Cloud first. Local list is not authoritative.');return}
+ carpetCloudLabelMessage('Loading current carpet rolls directly from Supabase (read-only)...');
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+ try{
+  const url=CLOUD_URL+'/rest/v1/warehouse_records?dataset_key=eq.'+encodeURIComponent(CARPETDB)+'&deleted_at=is.null&select=record_id,payload&limit=1000';
+  const response=await fetch(url,{headers:cloudHeaders(session.access_token,false),signal:controller.signal});
+  if(!response.ok)throw new Error('Cloud query failed ('+response.status+')');
+  const result=await response.json();
+  if(!Array.isArray(result))throw new Error('Cloud returned invalid inventory data');
+  if(result.length===1000)throw new Error('Cloud result reached 1000 records; pagination is required before labels can be trusted');
+  const rows=result.map(r=>({...r.payload,id:r.payload?.id??r.record_id})).filter(x=>x&&x.roll);
+  const eligible=rows.filter(isCarpetLabelEligible);
+  if(!eligible.length)throw new Error('No eligible cloud carpet rolls found');
+  const duplicateIds=new Set(),seenIds=new Set();
+  for(const x of eligible){const id=String(x.id);if(seenIds.has(id))duplicateIds.add(id);seenIds.add(id)}
+  if(duplicateIds.size)throw new Error('Duplicate internal roll IDs detected in cloud; printing blocked for safety');
+  cloudLabelRows=rows;
+  const left=eligible.find(x=>x.roll==='RC2376')||eligible[0];
+  const right=eligible.find(x=>x.roll==='RC2377')||eligible.find(x=>String(x.id)!==String(left.id))||left;
+  $('labelLeft').innerHTML=labelOptions(left.id);$('labelRight').innerHTML=labelOptions(right.id);
+  carpetCloudLabelMessage('CLOUD LIVE · '+eligible.length+' printable rolls · Read-only · No browser inventory cache written');
+  renderCarpetLabels();
+ }catch(error){
+  cloudLabelRows=null;
+  carpetCloudLabelMessage('Cloud refresh FAILED: '+String(error.message||error)+'. Do not use old local labels for new arrivals.');
+  console.error('Carpet label cloud fetch failed',error);
+ }finally{clearTimeout(timer)}
+}
+function openCarpetLabelMaker(preselect){
+ cloudLabelRows=null;
+ const rows=carpetRecords().filter(isCarpetLabelEligible);
+ const left=preselect||rows[0]?.id,right=rows.find(x=>String(x.id)!==String(left))?.id||left;
+ $('labelLeft').innerHTML=labelOptions(left);$('labelRight').innerHTML=labelOptions(right);
+ showPage('carpetLabelMaker');renderCarpetLabels();
+ carpetCloudLabelMessage('Local labels may be outdated. Loading fresh cloud records...');
+ void loadCarpetLabelsFromCloud();
+}
 function cutRowsForTag(x){const cuts=cuttingRecords().filter(c=>cutBelongsToRoll(c,x)).slice(0,5);return Array.from({length:5},(_,i)=>{const c=cuts[i];return c?`<tr><td>${esc(c.date||'')}</td><td>${esc(c.po||'')}</td><td>${esc(c.customer||'')}</td><td>${esc(c.operator||'')}</td><td>${feetLabel(c.cutLength)}</td><td>${feetLabel(c.remainingLength)}</td></tr>`:'<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>'}).join('')}
 function carpetTagHTML(x,back=false){if(!x)return'<div class="carpetTag"></div>';const qr=carpetQRImage(x);if(!back)return`<div class="carpetTag"><div class="tagRoll">${esc(x.roll)}</div><div class="tagProduct">${esc(x.collection)}</div><div class="tagColour">${esc(x.colour)}</div><div class="tagMeta">LOT: <b>${esc(x.lot||'')}</b><br>SIZE: <b>${esc(x.width||'12')}×${feetLabel(x.length)}</b><br>MFG ROLL: <b class="tagMfgRoll">${esc((cleanManufacturerRoll(x.manufacturerRoll)||'').slice(-4)||'—')}</b></div><div class="tagQR"><img src="${qr}"></div><div class="tagScan">SCAN TO VIEW &amp; EDIT</div></div>`;return`<div class="carpetTag tagBack"><div class="tagRoll">${esc(x.roll)}</div><div class="tagOriginal">(ORIGINAL SIZE: ${feetLabel(x.originalLength)})</div><table class="cutTable"><thead><tr><th>DATE</th><th>PO</th><th>NAME</th><th>SALES</th><th>CUT</th><th>BAL.</th></tr></thead><tbody>${cutRowsForTag(x)}</tbody></table><div class="tagQR"><img src="${qr}"></div></div>`}
-function renderCarpetLabels(){const l=carpetById($('labelLeft').value),r=carpetById($('labelRight').value);$('carpetLabelPreview').innerHTML=`<div class="labelPage labelFront">${carpetTagHTML(l)}${carpetTagHTML(r)}</div><div class="labelPage labelBack">${carpetTagHTML(r,true)}${carpetTagHTML(l,true)}</div>`}
+function renderCarpetLabels(){const l=carpetLabelById($('labelLeft').value),r=carpetLabelById($('labelRight').value);$('carpetLabelPreview').innerHTML=`<div class="labelPage labelFront">${carpetTagHTML(l)}${carpetTagHTML(r)}</div><div class="labelPage labelBack">${carpetTagHTML(r,true)}${carpetTagHTML(l,true)}</div>`}
 function printCarpetLabels(){renderCarpetLabels();document.body.classList.add('printingCarpetLabels');const done=()=>document.body.classList.remove('printingCarpetLabels');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
 function downloadCarpetLabelsWord(){renderCarpetLabels();const content=$('carpetLabelPreview').innerHTML,css=`@page{size:11in 8.5in;margin:.25in}body{font-family:Arial,sans-serif}.labelPage{width:10.5in;height:8in;display:table;page-break-after:always}.carpetTag{display:table-cell;width:50%;padding:.34in .45in;text-align:center;vertical-align:top;border-right:1px dashed #aaa;position:relative}.carpetTag:before{content:"";position:absolute;inset:.16in;border:1.4px solid #222;border-radius:16px}.tagRoll{font-size:46pt;font-weight:bold;margin-top:5pt}.tagProduct{font-size:21pt;font-weight:bold;margin-top:14pt}.tagColour{font-size:29pt;font-weight:bold;margin-top:12pt;padding:8pt 2pt;border-top:1px solid #555;border-bottom:1px solid #555}.tagMeta{font-size:15pt;line-height:1.5;margin-top:14pt}.tagMfgRoll{font-size:26pt;font-weight:900;letter-spacing:.035em}.tagQR{position:absolute;left:50%;transform:translateX(-50%);bottom:22pt}.tagQR img{width:74pt;height:74pt}.tagScan{position:absolute;left:50%;transform:translateX(-50%);bottom:7pt;width:150pt;font-size:7pt;font-weight:bold;letter-spacing:1pt}.tagBack .tagQR{left:auto;right:20pt;transform:none}.tagOriginal{font-size:14pt;font-weight:bold;margin:12pt}.cutTable{width:100%;border-collapse:collapse;font-size:8pt}.cutTable th,.cutTable td{border:1px solid #111;height:28pt}`;const html=`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${content}</body></html>`,blob=new Blob(['\ufeff',html],{type:'application/msword'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Runlu_Carpet_Tags_${$('labelLeft').selectedOptions[0].text.split(' — ')[0]}_${$('labelRight').selectedOptions[0].text.split(' — ')[0]}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
 function exportCarpetCSV(){const headers=['Roll','Product','Colour','Current Feet','Location','Measure','Status','LOT','Width','Original Feet','Manufacturer Roll','Review Note','Updated At'],rows=carpetRecords().map(x=>[x.roll,x.collection,x.colour,x.length,x.location,x.measure,x.status,x.lot,x.width,x.originalLength,x.manufacturerRoll,x.reviewNote,x.updatedAt]);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n'),blob=new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Runlu_Carpet_Inventory_${todayISO()}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
