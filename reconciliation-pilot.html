@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Warehouse OS | Reconciliation Pilot</title>
+<style>:root{font-family:system-ui,-apple-system,sans-serif;color:#17263a;background:#f4f7fa}*{box-sizing:border-box}body{margin:0;padding:16px}main{max-width:820px;margin:auto}h1{font-size:1.5rem}p{line-height:1.5}.notice{padding:12px;border-radius:10px;background:#fff3d5;border:1px solid #e5c16b}.card{background:white;border-radius:14px;padding:16px;margin:14px 0;box-shadow:0 1px 5px #0001}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}label{display:block;font-weight:650;font-size:.9rem}input,select,textarea{display:block;width:100%;padding:12px;margin-top:5px;border:1px solid #9ba8b8;border-radius:8px;font:inherit}button{padding:12px 16px;border:0;border-radius:8px;background:#123e69;color:white;font-weight:650;cursor:pointer;margin:4px 4px 4px 0}button.secondary{background:#e6edf5;color:#173754}button:disabled{opacity:.5}small{color:#526579}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{padding:9px;border-bottom:1px solid #dde4ec;text-align:left}output{font-weight:bold}a{color:#125c9b}</style></head><body><main>
+<h1>Inventory Reconciliation · Pilot</h1>
+<p class="notice"><strong>Offline review prototype only.</strong> Does not read or change live inventory, Supabase, or store transfers. Drafts are kept in this browser only; export them before clearing browser data. Do not use as an authoritative warehouse record.</p>
+<div class="card"><h2>1 · Record physical observation</h2>
+<form id="entry"><div class="grid">
+<label>Operational roll ID<input id="roll" required placeholder="RC1876" maxlength="40"></label>
+<label>Observed date<input id="observedAt" type="date" required></label>
+<label>Product / collection<input id="collection" placeholder="Debonair Invitation"></label>
+<label>Colour<input id="colour" placeholder="Opulence"></label>
+<label>Feet<input id="feet" type="number" min="0" max="100000" step="1" required></label>
+<label>Inches (0–11)<input id="inches" type="number" min="0" max="11" step="1" required value="0"></label>
+<label>Physical rack<input id="location" placeholder="6D"></label>
+<label>Observation source<select id="source"><option>Physical measurement</option><option>Handwritten sheet</option><option>Label photo</option><option>Other</option></select></label>
+<label>Finding type<select id="finding"><option>Length discrepancy</option><option>Product mismatch</option><option>Missing cloud record</option><option>REM pending transfer</option><option>Location discrepancy</option><option>Other</option></select></label>
+<label>Reviewer status<select id="decision"><option>Pending review</option><option>Needs identity check</option><option>Rejected</option></select></label>
+</div><label>Existing cloud snapshot (manual, optional)<textarea id="existing" rows="2" placeholder="Paste current roll/product/length for side-by-side review"></textarea></label>
+<label>Reason / evidence reference<textarea id="reason" rows="2" placeholder="Photo reference, who measured, why data may differ"></textarea></label>
+<p><output id="preview">Length: —</output></p><button type="submit">Save local review draft</button><button type="reset" class="secondary">Clear form</button></form></div>
+<div class="card"><h2>2 · Pending findings</h2><p><small>Review-only queue; no approve/apply action exists in this pilot.</small></p><div style="overflow-x:auto"><table><thead><tr><th>Roll</th><th>Observed</th><th>Finding</th><th>Decision</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div><p id="empty">No findings saved.</p><button id="export" type="button">Export JSON audit draft</button><button id="csv" type="button" class="secondary">Export CSV</button></div>
+</main><script>
+'use strict';
+const KEY='runlu_reconciliation_pilot_drafts_v1';
+const $=id=>document.getElementById(id);
+const today=new Date().toISOString().slice(0,10);$('observedAt').value=today;
+function read(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch{return[]}}
+function fmt(f,i){return f+'′'+String(i).padStart(2,'0')+'″'}
+function preview(){const f=Number($('feet').value),i=Number($('inches').value);$('preview').textContent=$('feet').value!==''&&$('inches').value!==''&&Number.isInteger(f)&&Number.isInteger(i)&&i>=0&&i<=11?('Length: '+fmt(f,i)+' = '+(f+i/12).toFixed(4)+' ft'):'Length: —'}
+['feet','inches'].forEach(id=>$(id).addEventListener('input',preview));
+function saveDrafts(rows){try{localStorage.setItem(KEY,JSON.stringify(rows));return true}catch(e){alert('Local storage unavailable. Export existing drafts before leaving.');return false}}
+$('entry').addEventListener('submit',e=>{e.preventDefault();const f=Number($('feet').value),i=Number($('inches').value);if(!Number.isInteger(f)||f<0||!Number.isInteger(i)||i<0||i>11){alert('Enter whole feet and inches 0–11.');return}const roll=$('roll').value.trim().toUpperCase();if(!/^[A-Z0-9_-]{2,40}$/.test(roll)){alert('Check roll ID.');return}const a=read();a.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+a.length,createdAt:new Date().toISOString(),roll,observedAt:$('observedAt').value,collection:$('collection').value.trim(),colour:$('colour').value.trim(),feet:f,inches:i,decimalFeet:f+i/12,location:$('location').value.trim(),source:$('source').value,finding:$('finding').value,decision:$('decision').value,existing:$('existing').value.trim(),reason:$('reason').value.trim(),applied:false});if(saveDrafts(a)){$('entry').reset();$('observedAt').value=today;preview();render()}});
+function render(){const a=read(),body=$('rows');body.replaceChildren();$('empty').hidden=!!a.length;for(const x of a){const tr=document.createElement('tr');for(const value of [x.roll,fmt(x.feet,x.inches),x.finding,x.decision]){const td=document.createElement('td');td.textContent=value;tr.append(td)}const td=document.createElement('td'),b=document.createElement('button');b.className='secondary';b.textContent='Remove draft';b.addEventListener('click',()=>{if(confirm('Remove this local draft? Export first if needed.')){saveDrafts(read().filter(z=>z.id!==x.id));render()}});td.append(b);tr.append(td);body.append(tr)}}
+function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$('export').onclick=()=>download('reconciliation-drafts.json',JSON.stringify({schema:'runlu-reconciliation-pilot-v1',exportedAt:new Date().toISOString(),findings:read()},null,2),'application/json');
+$('csv').onclick=()=>{const a=read(),keys=['id','createdAt','roll','observedAt','collection','colour','feet','inches','decimalFeet','location','source','finding','decision','existing','reason','applied'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';download('reconciliation-drafts.csv',[keys.join(','),...a.map(x=>keys.map(k=>esc(x[k])).join(','))].join('\r\n'),'text/csv')};
+preview();render();
+</script></body></html>
