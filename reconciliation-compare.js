@@ -3,7 +3,7 @@
 (function(root){
 'use strict';
 const norm=x=>String(x??'').trim().toUpperCase().replace(/\s+/g,' ');
-const numeric=x=>x==null||x===''?null:Number(x);
+const numeric=x=>x==null||String(x).trim()===''?null:Number(x);
 const close=(a,b)=>a!==null&&b!==null&&Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<1/1200;
 function compare(observed,inventory){
  const roll=norm(observed.roll), matches=(inventory||[]).filter(x=>norm(x.roll)===roll);
@@ -18,6 +18,7 @@ function compare(observed,inventory){
  }
  const len=numeric(observed.decimalFeet),previous=numeric(old.length);
  if(len!==null&&(!Number.isFinite(len)||len<0))differences.push({field:'length',message:'Invalid observed length'});
+ else if(len!==null&&previous===null)differences.push({field:'length',before:null,observed:len,message:'Existing length missing'});
  else if(len!==null&&!close(len,previous))differences.push({field:'length',before:previous,observed:len});
  return {result:differences.length?'DIFFERENT':'MATCH',differences,matches:[{roll:old.roll,id:old.id,version:old.version,length:old.length,collection:old.collection,colour:old.colour,location:old.location}]};
 }
