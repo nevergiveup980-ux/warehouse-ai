@@ -29,3 +29,17 @@ No DB schema, RLS, RPC, or inventory data changes are authorized by this investi
 - Recommended next implementation: centralize insert identity protection inside `warehouse_apply_mutation`, with concurrency-safe locking and carefully chosen manufacturer/product identity. Preserve the existing version checks and explicit-delete intent. Distinct manufacturer rolls sharing a business roll must not be automatically discarded.
 - Separate review required for direct table INSERT permissions and RLS policies; do not revoke access without verifying snapshot, legacy clients, and all production flows.
 - This update is evidence and design guidance only. No database code or data has been changed.
+
+## Identity design review (2026-11-18, read-only)
+
+Cloud snapshot: 312 live carpet rows; 147 rows have a manufacturerRoll; 208 have a physicalKey. ManufacturerRoll alone is **not unique**: `0000` occurs on eight distinct business rolls; `60797078` occurs on SP011-1/2/3. Short identifiers such as `4232` are reused. A blanket unique index on manufacturerRoll would corrupt legitimate workflows.
+
+### Proposed staged protection
+- Introduce an **audit-only** duplicate-candidate report keyed by owner + normalized business roll + normalized manufacturer roll (when non-placeholder), optionally supplemented by supplier/product/lot/length; never auto-delete.
+- For *new* records in the lower-level mutation function, compare against active rows of the same user. If the normalized business roll **and** credible manufacturer roll match but the internal record ID differs, return `status='conflict'`, `reason='possible_duplicate_physical_roll'` and details. If a legitimate split/rename is intended, require an explicit audited reconciliation workflow.
+- When manufacturerRoll is blank or a placeholder (`0000`, `N/A`, `UNKNOWN`), do **not** silently deduplicate by business roll; flag for review and enforce an explicit resolution path.
+- Ensure all write paths (RPC and direct table INSERT) share the same server-side invariant, ideally via a carefully scoped trigger or constrained write API after caller compatibility testing. Avoid non-atomic SELECT-then-INSERT; use transaction-safe serialization and regression tests.
+- Keep reads working while write protection is introduced. Rollback plan must restore the previous function and trigger definitions without touching data.
+- Test: same physical roll/different record ID; distinct manufacturer rolls sharing a business roll; same manufacturer roll across different products; placeholders; concurrent inserts; updates; soft-deleted records; mobile and office workflows.
+
+No SQL patch has been deployed and no inventory records have been altered by this review.
