@@ -20,3 +20,12 @@
 
 ## Production safety
 No DB schema, RLS, RPC, or inventory data changes are authorized by this investigation document. Do not deploy any blanket DELETE, truncate, or roll-only uniqueness rule.
+
+## Root-cause evidence update (2026-11-18)
+
+- Verified the complete definition of `public.warehouse_apply_mutation`. Its insert branch checks `(user_id,dataset_key,record_id)` only and then inserts a new row with `origin='cloud-master'`. It does **not** check the carpet business identity before inserting. Different record IDs can therefore create duplicate physical carpets.
+- `warehouse_apply_operation` calls `warehouse_apply_mutation` after its own guards, but `warehouse_apply_mutation` is independently executable by the authenticated role. Consequently an older or alternate caller can bypass the higher-level guard.
+- Both inspected original and replay copies of RC2375 and RC2376 lack `physicalKey`.
+- Recommended next implementation: centralize insert identity protection inside `warehouse_apply_mutation`, with concurrency-safe locking and carefully chosen manufacturer/product identity. Preserve the existing version checks and explicit-delete intent. Distinct manufacturer rolls sharing a business roll must not be automatically discarded.
+- Separate review required for direct table INSERT permissions and RLS policies; do not revoke access without verifying snapshot, legacy clients, and all production flows.
+- This update is evidence and design guidance only. No database code or data has been changed.
