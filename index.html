@@ -3781,17 +3781,28 @@ async function loadCarpetLabelsFromCloud(){
   const rows=result.map(r=>({...r.payload,id:r.payload?.id??r.record_id})).filter(x=>x&&x.roll);
   const eligible=rows.filter(isCarpetLabelEligible);
   if(!eligible.length)throw new Error('No eligible cloud carpet rolls found');
-  for(const roll of ['RC2376','RC2377','RC2378']){const matches=eligible.filter(x=>x.roll===roll);if(matches.length>1)throw new Error('Duplicate new arrival roll '+roll+'; printing blocked')}
+  // Identical cloud replay copies are hidden from the label picker, never deleted.
+  // Conflicting copies still block printing to avoid selecting the wrong physical roll.
+  const replayCopies=new Set();
+  for(const roll of ['RC2376','RC2377','RC2378']){
+   const matches=eligible.filter(x=>x.roll===roll);
+   if(matches.length<2)continue;
+   const signature=x=>[x.roll,cleanManufacturerRoll(x.manufacturerRoll),String(x.width||''),Number(x.length),String(x.collection||''),String(x.colour||''),String(x.location||''),String(x.status||'')].join('|').toUpperCase();
+   if(matches.some(x=>signature(x)!==signature(matches[0])))throw new Error('Conflicting cloud records for '+roll+'; printing blocked');
+   matches.slice(1).forEach(x=>replayCopies.add(String(x.id)));
+  }
+  const uniqueRows=rows.filter(x=>!replayCopies.has(String(x.id)));
+  const uniqueEligible=uniqueRows.filter(isCarpetLabelEligible);
   const duplicateIds=new Set(),seenIds=new Set();
   for(const x of eligible){const id=String(x.id);if(seenIds.has(id))duplicateIds.add(id);seenIds.add(id)}
   if(duplicateIds.size)throw new Error('Duplicate internal roll IDs detected in cloud; printing blocked for safety');
-  cloudLabelRows=rows;
+  cloudLabelRows=uniqueRows;
   cloudLabelCuts=cutResult.map(r=>r.payload).filter(Boolean);
   cloudLabelReady=true;
-  const left=eligible.find(x=>x.roll==='RC2376')||eligible[0];
-  const right=eligible.find(x=>x.roll==='RC2377')||eligible.find(x=>String(x.id)!==String(left.id))||left;
+  const left=uniqueEligible.find(x=>x.roll==='RC2376')||uniqueEligible[0];
+  const right=uniqueEligible.find(x=>x.roll==='RC2377')||uniqueEligible.find(x=>String(x.id)!==String(left.id))||left;
   $('labelLeft').innerHTML=labelOptions(left.id);$('labelRight').innerHTML=labelOptions(right.id);
-  carpetCloudLabelMessage('CLOUD LIVE · '+eligible.length+' printable rolls · Read-only · No browser inventory cache written');
+  carpetCloudLabelMessage('CLOUD LIVE · '+uniqueEligible.length+' printable rolls · '+replayCopies.size+' identical replay copies hidden · Read-only');
   renderCarpetLabels();
  }catch(error){
   if(requestSeq!==cloudLabelRequestSeq)return;
