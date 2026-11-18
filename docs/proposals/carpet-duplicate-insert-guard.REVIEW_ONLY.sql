@@ -1,5 +1,7 @@
 -- REVIEW-ONLY PROPOSAL. DO NOT RUN ON PRODUCTION WITHOUT APPROVAL AND TESTS.
--- Existing duplicate rows are untouched. This guards INSERT of NEW carpet records
+-- Existing duplicate rows are untouched.
+-- Use P0001 (not 23505) because warehouse_apply_operation catches unique_violation
+-- and may otherwise misreport a rejected duplicate as an operation-id replay. This guards INSERT of NEW carpet records
 -- regardless of whether a caller uses warehouse_apply_operation, warehouse_apply_mutation,
 -- or direct REST INSERT. Narrow matching: normalized roll + non-placeholder manufacturerRoll.
 -- Important: this is NOT a complete fix for missing manufacturerRoll, historical replay,
@@ -24,6 +26,8 @@ BEGIN
   END IF;
 
   -- Serialize inserts for a given tenant+business roll to avoid concurrent replay.
+  -- This advisory lock only protects writers using this trigger; the trigger is
+  -- installed on the base table so both RPC and direct INSERT use it.
   PERFORM pg_advisory_xact_lock(hashtextextended(
     NEW.user_id::text || ':runlu_carpet_inventory_v52:' || v_roll, 0
   ));
@@ -40,7 +44,7 @@ BEGIN
 
   IF v_existing_id IS NOT NULL THEN
     RAISE EXCEPTION USING
-      ERRCODE = '23505',
+      ERRCODE = 'P0001',
       MESSAGE = 'possible_duplicate_physical_roll',
       DETAIL = 'A live carpet record already uses this business roll and manufacturer roll. Review before creating a second record.';
   END IF;
