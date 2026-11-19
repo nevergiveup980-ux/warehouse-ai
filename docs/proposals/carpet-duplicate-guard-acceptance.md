@@ -21,8 +21,12 @@
 11. Review rollback script, change window, and explicit approval before production execution.
 
 ## Known limitations
-- Trigger protects INSERT only, not UPDATE that changes physical identifiers.
-- Missing/placeholder manufacturerRoll is not protected; 165 of 312 live rows have no manufacturerRoll at the last check.
+- Current REVIEW_ONLY trigger draft covers INSERT, identity-changing UPDATE and reactivation; single-session isolated tests have run. Real concurrent writers have not been verified.
+- Current REVIEW_ONLY trigger draft blocks collisions involving missing/placeholder manufacturerRoll when a business roll already exists; unique business rolls with missing manufacturerRoll remain allowed for legacy compatibility. Last read-only census: 312 active carpet records, 173 with blank or placeholder manufacturerRoll, and 104 without physicalKey.
 - The SQL proposal does not fix legacy bulk replay or reconcile the 27 existing duplicate candidate groups.
-- SQLSTATE P0001 is not the same as a structured `status=conflict` response; frontend error handling needs integration testing.
+- Draft RPC maps known trigger P0001 errors to structured conflict/blocked results; real authenticated RPC and frontend integration remain unverified.
 - Do not merge the investigation PR as a substitute for applying a reviewed database migration.
+
+## CI verification — 2026-11-19
+- GitHub commit `b14723a936e13b8e6633c9e0ae38a57ebca47595`: 13/13 reported workflow runs completed successfully, including `Production Record Outbox Truthful Status` and `Warehouse sync safety (isolated)`.
+- CI success does **not** satisfy gate 9 (two concurrent database transactions), gate 10 (authenticated RPC integration), or gate 1 (verified backup).
