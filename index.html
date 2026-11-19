@@ -1626,7 +1626,16 @@ async function recordSyncPush(){
  let q=recordSyncOutbox(),sent=0;
  while(q.length){
   const op=q[0],s=await cloudEnsureSession();if(!s)break;
-  const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});
+  let data;
+  try{
+   data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});
+  }catch(err){
+   // A timeout or RPC rejection is not an acknowledgement. Keep the operation
+   // (and its stable operation_id) queued for reconciliation or safe retry.
+   const reason=String(err?.message||err||'cloud request failed').slice(0,160);
+   const issue=`Record sync paused: cloud request failed (${reason}); ${q.length} operation(s) retained. No queued operations were discarded.`;
+   localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue);console.warn(issue);break;
+  }
   const status=data?.status,original=data?.original;
   // An operation-ID replay is successful only when the original operation really
   // succeeded. A replayed conflict or silent carpet discard must remain queued.
