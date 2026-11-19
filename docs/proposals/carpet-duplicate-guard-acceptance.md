@@ -30,3 +30,9 @@
 ## CI verification — 2026-11-19
 - GitHub commit `b14723a936e13b8e6633c9e0ae38a57ebca47595`: 13/13 reported workflow runs completed successfully, including `Production Record Outbox Truthful Status` and `Warehouse sync safety (isolated)`.
 - CI success does **not** satisfy gate 9 (two concurrent database transactions), gate 10 (authenticated RPC integration), or gate 1 (verified backup).
+
+## Real two-connection disposable PostgreSQL evidence — 2026-11-19
+- GitHub Actions run: https://github.com/nevergiveup980-ux/warehouse-ai/actions/runs/44587806400 — `disposable-race` completed successfully.
+- Actual REVIEW_ONLY trigger SQL installed in ephemeral PostgreSQL service; five two-connection cases reported `PASS`: identical identity (one active), reversed order (one active), distinct manufacturer rolls (two active), ambiguous manufacturer roll (one active), tenant isolation (two active).
+- PostgreSQL logs show expected `possible_duplicate_physical_roll` exceptions on conflicting writes.
+- This closes the disposable two-connection insert-race portion of gate 9, **not** production authorization/RPC end-to-end, historical data reconciliation, or verified backup/rollback.
