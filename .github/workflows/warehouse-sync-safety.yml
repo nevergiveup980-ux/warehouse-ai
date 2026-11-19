@@ -1,0 +1,28 @@
+name: Warehouse sync safety (isolated)
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/record-sync-push-regression.cjs'
+      - '.github/workflows/warehouse-sync-safety.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record-sync-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout proposed code only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run isolated recordSyncPush regression
+        run: node tests/record-sync-push-regression.cjs
