@@ -6,6 +6,8 @@ on:
       - 'index.html'
       - 'tests/record-sync-push-regression.cjs'
       - '.github/workflows/warehouse-sync-safety.yml'
+      - 'docs/proposals/warehouse-apply-operation-safe-conflict.REVIEW_ONLY.sql'
+      - 'tests/carpet-rpc-conflict-contract.cjs'
   workflow_dispatch:
 
 permissions:
@@ -25,4 +27,6 @@ jobs:
         with:
           node-version: '22'
       - name: Run isolated recordSyncPush regression
-        run: node tests/record-sync-push-regression.cjs
+        run: |
+          node tests/record-sync-push-regression.cjs
+          node tests/carpet-rpc-conflict-contract.cjs
