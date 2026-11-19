@@ -2,8 +2,8 @@
 -- Derived from current production warehouse_apply_operation function definition.
 -- Differences: no silent carpet discard; no delete of incomplete rows;
 -- collision => structured conflict; catch proposed trigger P0001.
--- REVIEW NOTE: SQL exception handlers roll back inner changes; trigger conflicts
--- returned here are not mutation-logged. Never interpret these as success.
+-- Trigger P0001 conflicts are caught in a nested block and then written to
+-- warehouse_mutations as conflict/blocked, preserving replay semantics.
 -- WARNING: this is a candidate migration, not approved production SQL.
 BEGIN;
 CREATE OR REPLACE FUNCTION public.warehouse_apply_operation(p_operation_id uuid, p_dataset_key text, p_record_id text, p_payload jsonb DEFAULT '{}'::jsonb, p_base_version bigint DEFAULT NULL::bigint, p_delete boolean DEFAULT false, p_device_id text DEFAULT NULL::text)
@@ -52,7 +52,19 @@ begin
  end if;
 
  if v_result is null then
-   v_result:=public.warehouse_apply_mutation(p_dataset_key,p_record_id,p_payload,p_base_version,p_delete,p_device_id);
+   -- Catch trigger rejection INSIDE a nested block so the outer mutation ledger
+   -- insert still runs. A replayed blocked operation remains blocked.
+   begin
+     v_result:=public.warehouse_apply_mutation(p_dataset_key,p_record_id,p_payload,p_base_version,p_delete,p_device_id);
+   exception when raise_exception then
+     if SQLERRM='possible_duplicate_physical_roll' then
+       v_result:=jsonb_build_object('status','conflict','reason','possible_duplicate_physical_roll','requires_review',true,'record',null);
+     elsif SQLERRM='carpet_identity_requires_review' then
+       v_result:=jsonb_build_object('status','blocked','reason','carpet_identity_requires_review','requires_review',true,'record',null);
+     else
+       raise;
+     end if;
+   end;
  end if;
  v_status:=coalesce(v_result->>'status','blocked'); v_result_version:=nullif(v_result#>>'{record,version}','')::bigint;
  insert into public.warehouse_mutations(user_id,operation_id,dataset_key,record_id,device_id,mutation_kind,base_version,result_version,status,result)
