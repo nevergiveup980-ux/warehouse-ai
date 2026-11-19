@@ -17,7 +17,7 @@ async function scenario(name, response, expectedRemaining, expectedSent) {
   recordSyncOutbox:()=>outbox.slice(),
   setRecordSyncOutbox:(next)=>{outbox.splice(0,outbox.length,...next)},
   cloudEnsureSession:async()=>({access_token:'fake'}),
-  cloudRequest:async()=>response,
+  cloudRequest:async()=>{if(response instanceof Error)throw response;return response},
   cloudHeaders:()=>({}),
   CLOUD_LAST_ERROR_KEY:'last-error',
   localStorage:{setItem:(k,v)=>storage.set(k,v)},
@@ -39,5 +39,7 @@ async function scenario(name, response, expectedRemaining, expectedSent) {
  await scenario('replayed old discard',{status:'duplicate',original:{status:'ok',reason:'duplicate_carpet_record_discarded',discarded:true}},1,0);
  await scenario('blocked',{status:'blocked',reason:'review_required'},1,0);
  await scenario('missing original',{status:'duplicate'},1,0);
- console.log('PASS: eight recordSyncPush regression scenarios');
+ await scenario('request timeout',new Error('timeout'),1,0);
+ await scenario('trigger rejection',new Error('possible_duplicate_physical_roll'),1,0);
+ console.log('PASS: ten recordSyncPush regression scenarios');
 })().catch(err=>{console.error(err);process.exitCode=1});
