@@ -1624,17 +1624,29 @@ function queueRecordDeltaSave(key,before,after){
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
- while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status)){const reason=String(data?.reason||data?.error||data?.message||'server did not acknowledge operation').slice(0,160);const safeStatus=String(status??'missing').slice(0,40);const issue=`Record sync paused: ${safeStatus} (${reason}); ${q.length} operation(s) retained. No queued operations were discarded.`;localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue);console.warn(issue);break;}
- const discardedReason=status==='duplicate'?data?.original?.reason:data?.reason;
- const discarded=discardedReason==='incomplete_carpet_record_discarded'||discardedReason==='duplicate_carpet_record_discarded';
- if(discarded&&op.dataset_key==='runlu_carpet_inventory_v52'){
-  const list=load(op.dataset_key),idx=list.findIndex((row,i)=>recordSyncId(row,i)===String(op.record_id));
-  if(idx>=0){const row=list[idx];if((discardedReason==='incomplete_carpet_record_discarded'&&(String(row?.status??'').trim()===''||String(row?.length??'').trim()===''))||
-      (discardedReason==='duplicate_carpet_record_discarded'&&String(row?.physicalKey??'')===String(op.payload?.physicalKey??'')&&String(row?.physicalKey??'')!=='')){
-   const next=list.slice();next.splice(idx,1);localStorage.setItem(op.dataset_key,JSON.stringify(next));
-  }}
+ while(q.length){
+  const op=q[0],s=await cloudEnsureSession();if(!s)break;
+  const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});
+  const status=data?.status,original=data?.original;
+  // An operation-ID replay is successful only when the original operation really
+  // succeeded. A replayed conflict or silent carpet discard must remain queued.
+  const acknowledged=status==='ok'?data:(status==='duplicate'?original:null);
+  const acknowledgedOk=acknowledged?.status==='ok';
+  const discarded=acknowledged?.discarded===true||
+   ['incomplete_carpet_record_discarded','duplicate_carpet_record_discarded'].includes(acknowledged?.reason);
+  if(!acknowledgedOk||discarded){
+   const reason=String(acknowledged?.reason||data?.reason||data?.error||data?.message||(status==='duplicate'?'missing original acknowledgement':'server did not acknowledge operation')).slice(0,160);
+   const safeStatus=String(status??'missing').slice(0,40);
+   const roll=op.dataset_key==='runlu_carpet_inventory_v52'?String(op.payload?.roll||'').slice(0,48):'';
+   const issue=`Record sync paused: ${safeStatus} (${reason})${roll?' — roll '+roll:''}; ${q.length} operation(s) retained. No queued operations were discarded.`;
+   localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue);console.warn(issue);break;
+  }
+  // Never remove a local inventory row in response to a server-side discard.
+  const latestQueue=recordSyncOutbox();
+  if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');
+  latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue;sent++;
  }
- const latestQueue=recordSyncOutbox();if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue;sent++}return sent
+ return sent;
 }
 async function recordSyncBootstrap(){
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
