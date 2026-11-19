@@ -61,6 +61,8 @@ begin
 exception when raise_exception then
  if SQLERRM='possible_duplicate_physical_roll' then
    return jsonb_build_object('status','conflict','reason','possible_duplicate_physical_roll','requires_review',true,'operation_id',p_operation_id);
+ elsif SQLERRM='carpet_identity_requires_review' then
+   return jsonb_build_object('status','blocked','reason','carpet_identity_requires_review','requires_review',true,'operation_id',p_operation_id);
  end if;
  raise;
 when unique_violation then
