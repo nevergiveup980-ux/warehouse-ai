@@ -3,9 +3,11 @@
 -- Use P0001 (not 23505) because warehouse_apply_operation catches unique_violation
 -- and may otherwise misreport a rejected duplicate as an operation-id replay. This guards INSERT of NEW carpet records
 -- regardless of whether a caller uses warehouse_apply_operation, warehouse_apply_mutation,
--- or direct REST INSERT. Narrow matching: normalized roll + non-placeholder manufacturerRoll.
+-- or direct REST INSERT. Matching: same normalized business roll and same manufacturerRoll, or ambiguous placeholder manufacturerRoll.
 -- Important: this is NOT a complete fix for missing manufacturerRoll, historical replay,
 -- or historical duplicate cleanup. Identity-changing updates are guarded.
+-- Missing/placeholder manufacturerRoll is ambiguous only when the business roll
+-- already exists; new unique business rolls remain permitted for legacy compatibility.
 BEGIN;
 CREATE OR REPLACE FUNCTION public.runlu_guard_new_carpet_identity()
 RETURNS trigger
@@ -21,8 +23,8 @@ BEGIN
   IF NEW.dataset_key <> 'runlu_carpet_inventory_v52' OR NEW.deleted_at IS NOT NULL THEN
     RETURN NEW;
   END IF;
-  IF v_roll = '' OR v_mfr IN ('','0000','N/A','NA','UNKNOWN','NONE','-') THEN
-    RETURN NEW; -- review separately; do not assume these are unique
+  IF v_roll = '' THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'carpet_identity_requires_review';
   END IF;
 
   -- Existing rows may legitimately predate this guard. An update that does not
@@ -53,7 +55,11 @@ BEGIN
     AND r.deleted_at IS NULL
     AND r.record_id <> NEW.record_id
     AND upper(btrim(coalesce(r.payload->>'roll',''))) = v_roll
-    AND upper(btrim(coalesce(r.payload->>'manufacturerRoll',''))) = v_mfr
+    AND (
+      upper(btrim(coalesce(r.payload->>'manufacturerRoll',''))) = v_mfr
+      OR upper(btrim(coalesce(r.payload->>'manufacturerRoll',''))) IN ('','0000','N/A','NA','UNKNOWN','NONE','-')
+      OR v_mfr IN ('','0000','N/A','NA','UNKNOWN','NONE','-')
+    )
   LIMIT 1;
 
   IF v_existing_id IS NOT NULL THEN
