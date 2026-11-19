@@ -25,7 +25,8 @@ BEGIN
     RETURN NEW; -- review separately; do not assume these are unique
   END IF;
 
-  -- Existing rows may legitimately predate this guard. An update that does not\n  -- change physical identity must remain possible even when old duplicates exist.\n  IF TG_OP = 'UPDATE' AND OLD.deleted_at IS NULL\n     AND OLD.dataset_key = NEW.dataset_key\n     AND OLD.user_id = NEW.user_id\n     AND upper(btrim(coalesce(OLD.payload->>'roll',''))) = v_roll\n     AND upper(btrim(coalesce(OLD.payload->>'manufacturerRoll',''))) = v_mfr\n     AND btrim(coalesce(OLD.payload->>'physicalKey','')) = btrim(coalesce(NEW.payload->>'physicalKey',''))\n  THEN\n    RETURN NEW;\n  END IF;\n\n  -- Serialize inserts and identity-changing updates for a given tenant+business roll to avoid concurrent replay.
+  -- Existing rows may legitimately predate this guard. An update that does not\n  -- change physical identity must remain possible even when old duplicates exist.\n  IF TG_OP = 'UPDATE' THEN
+   IF OLD.deleted_at IS NULL\n     AND OLD.dataset_key = NEW.dataset_key\n     AND OLD.user_id = NEW.user_id\n     AND upper(btrim(coalesce(OLD.payload->>'roll',''))) = v_roll\n     AND upper(btrim(coalesce(OLD.payload->>'manufacturerRoll',''))) = v_mfr\n     AND btrim(coalesce(OLD.payload->>'physicalKey','')) = btrim(coalesce(NEW.payload->>'physicalKey',''))\n  THEN\n    RETURN NEW;\n  END IF;\n\n  -- Serialize inserts and identity-changing updates for a given tenant+business roll to avoid concurrent replay.
   -- This advisory lock only protects writers using this trigger; the trigger is
   -- installed on the base table so both RPC and direct INSERT use it.
   PERFORM pg_advisory_xact_lock(hashtextextended(
