@@ -1,3 +1,5 @@
+-- Each psql invocation opens a new connection; establish fixture identity here.
+SELECT set_config('runlu.test_uid','11111111-1111-1111-1111-111111111111',false);
 -- Executed ONLY in disposable GitHub PostgreSQL.
 DO $verify$
 DECLARE
