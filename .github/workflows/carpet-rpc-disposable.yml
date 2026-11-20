@@ -1,0 +1,66 @@
+name: Carpet RPC disposable integration
+
+on:
+  pull_request:
+    paths:
+      - 'docs/proposals/warehouse-apply-operation-safe-conflict.REVIEW_ONLY.sql'
+      - 'docs/proposals/carpet-duplicate-insert-guard.REVIEW_ONLY.sql'
+      - 'tests/carpet-rpc-disposable-*.sql'
+      - 'tests/carpet-rpc-simulated-auth-assertions.sql'
+      - 'tests/carpet-disposable-rls-enforcement.sql'
+      - 'tests/carpet-guard-rollback-disposable.sql'
+      - '.github/workflows/carpet-rpc-disposable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rpc-disposable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: testonly
+          POSTGRES_DB: runlu_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d runlu_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PG_DSN: postgresql://postgres:testonly@127.0.0.1:5432/runlu_disposable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - name: Create disposable inventory table
+        run: |
+          psql "$PG_DSN" -X -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.warehouse_records(
+            user_id uuid NOT NULL, dataset_key text NOT NULL,
+            record_id text PRIMARY KEY, payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+            deleted_at timestamptz
+          );
+          SQL
+      - name: Install isolated RPC dependencies
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-rpc-disposable-fixture.sql
+      - name: Install proposed guard and RPC in disposable database
+        run: |
+          psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f docs/proposals/carpet-duplicate-insert-guard.REVIEW_ONLY.sql
+          psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f docs/proposals/warehouse-apply-operation-safe-conflict.REVIEW_ONLY.sql
+      - name: Assert RPC replay and ledger invariants
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-rpc-disposable-assertions.sql
+
+      - name: Assert simulated tenant isolation and missing authentication
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-rpc-simulated-auth-assertions.sql
+
+      - name: Assert PostgreSQL role-based RLS enforcement
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-disposable-rls-enforcement.sql
+
+      - name: Verify guard rollback without inventory deletion
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-guard-rollback-disposable.sql
