@@ -36,3 +36,9 @@
 - Actual REVIEW_ONLY trigger SQL installed in ephemeral PostgreSQL service; five two-connection cases reported `PASS`: identical identity (one active), reversed order (one active), distinct manufacturer rolls (two active), ambiguous manufacturer roll (one active), tenant isolation (two active).
 - PostgreSQL logs show expected `possible_duplicate_physical_roll` exceptions on conflicting writes.
 - This closes the disposable two-connection insert-race portion of gate 9, **not** production authorization/RPC end-to-end, historical data reconciliation, or verified backup/rollback.
+
+## Disposable RPC integration evidence — 2026-11-19/20 UTC
+- GitHub Actions run https://github.com/nevergiveup980-ux/warehouse-ai/actions/runs/44665732940 succeeded after fixing missing SQL function terminator.
+- Exact REVIEW_ONLY guard and RPC installed in disposable PostgreSQL with simplified auth and mutation fixtures.
+- Log: `PASS RPC success, conflict, replayed conflict, blocked, and mutation ledger`.
+- This verifies replayed conflict retains its original result in the operation ledger, not full production auth/RLS, production mutation semantics, or backup readiness. No production deployment.
