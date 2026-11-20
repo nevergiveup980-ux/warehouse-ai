@@ -8,6 +8,7 @@ on:
       - 'tests/carpet-rpc-disposable-*.sql'
       - 'tests/carpet-rpc-simulated-auth-assertions.sql'
       - 'tests/carpet-disposable-rls-enforcement.sql'
+      - 'tests/carpet-guard-rollback-disposable.sql'
       - '.github/workflows/carpet-rpc-disposable.yml'
   workflow_dispatch:
 
@@ -60,3 +61,6 @@ jobs:
 
       - name: Assert PostgreSQL role-based RLS enforcement
         run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-disposable-rls-enforcement.sql
+
+      - name: Verify guard rollback without inventory deletion
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-guard-rollback-disposable.sql
