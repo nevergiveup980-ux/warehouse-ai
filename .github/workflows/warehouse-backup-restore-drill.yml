@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: testonly
           POSTGRES_DB: runlu_disposable
@@ -47,6 +47,8 @@ jobs:
           ('11111111-1111-1111-1111-111111111111','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','restore-a','applied','{"status":"ok"}'),
           ('11111111-1111-1111-1111-111111111111','bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','restore-b','conflict','{"status":"conflict"}');
           SQL
+      # Match the disposable server major version to the runner client to avoid
+      # pg_restore emitting unsupported session parameters.
       - name: Dump and verify archive
         run: |
           pg_dump -Fc -d runlu_disposable -f /tmp/runlu-disposable.backup
