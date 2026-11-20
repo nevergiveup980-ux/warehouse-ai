@@ -6,6 +6,7 @@ on:
       - 'docs/proposals/warehouse-apply-operation-safe-conflict.REVIEW_ONLY.sql'
       - 'docs/proposals/carpet-duplicate-insert-guard.REVIEW_ONLY.sql'
       - 'tests/carpet-rpc-disposable-*.sql'
+      - 'tests/carpet-rpc-simulated-auth-assertions.sql'
       - '.github/workflows/carpet-rpc-disposable.yml'
   workflow_dispatch:
 
@@ -52,3 +53,6 @@ jobs:
           psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f docs/proposals/warehouse-apply-operation-safe-conflict.REVIEW_ONLY.sql
       - name: Assert RPC replay and ledger invariants
         run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-rpc-disposable-assertions.sql
+
+      - name: Assert simulated tenant isolation and missing authentication
+        run: psql "$PG_DSN" -X -v ON_ERROR_STOP=1 -f tests/carpet-rpc-simulated-auth-assertions.sql
