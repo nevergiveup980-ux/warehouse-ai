@@ -42,3 +42,9 @@
 - Exact REVIEW_ONLY guard and RPC installed in disposable PostgreSQL with simplified auth and mutation fixtures.
 - Log: `PASS RPC success, conflict, replayed conflict, blocked, and mutation ledger`.
 - This verifies replayed conflict retains its original result in the operation ledger, not full production auth/RLS, production mutation semantics, or backup readiness. No production deployment.
+
+## Disposable RLS enforcement evidence — 2026-11-20 UTC
+- Run https://github.com/nevergiveup980-ux/warehouse-ai/actions/runs/44675518268 passed.
+- Actual PostgreSQL `SET ROLE` plus enabled RLS fixture rejected cross-tenant SELECT/UPDATE/DELETE and forged INSERT; log: `PASS disposable PostgreSQL RLS select/update/delete isolation and forged insert rejection`.
+- Simulated auth RPC assertions and replay ledger passed in same run. The fixture policy is intentionally simplified, **not** an exact reproduction of production policies, JWT, or grants.
+- Production tenant policy was previously verified restrictive/permissive correctly; do not infer cross-tenant leakage from a permissive policy alone.
