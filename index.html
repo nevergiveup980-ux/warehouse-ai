@@ -3120,7 +3120,28 @@ function saveSpecialOrder(){const customer=$('spCustomer').value.trim(),product=
 function setSpecialStatus(id,status){const rows=load(SPODB),r=rows.find(x=>x.id===id);if(!r)return;const now=new Date().toISOString();r.status=status;r.updatedAt=now;if(['Received','Ready for Pickup','Picked Up'].includes(status)&&!r.receivedAt)r.receivedAt=now;if(status==='Picked Up'&&!r.pickedUpAt)r.pickedUpAt=now;if(status==='Cancelled'&&!r.cancelledAt)r.cancelledAt=now;save(SPODB,rows);renderSpecialOrders();renderDashboard()}
 function extendSpecialOrder(id){const rows=load(SPODB),r=rows.find(x=>x.id===id);if(!r)return;r.reviewExtendedAt=new Date().toISOString();r.updatedAt=r.reviewExtendedAt;save(SPODB,rows);renderSpecialOrders()}
 function deleteCurrentSpecialOrder(){if(specialEditId!=null)deleteSpecialOrder(specialEditId)}
-function deleteSpecialOrder(id){const rows=load(SPODB),r=rows.find(x=>String(x.id)===String(id));if(!r)return;const linked=load(ODB).some(x=>String(x.sourceSpecialId)===String(r.id));if(linked){alert('Delete blocked: this Special Order has been copied to Customer Orders. Remove or resolve the linked record first.');return}// Completed/cancelled Special Orders can be removed when no Customer Order references them.\n // Keep the linked-record check above: deleting the source must not orphan a Customer Order.\n if(!confirm(`Permanently delete this Special Order?\n\nRecord ID: ${r.id}\nStatus: ${r.status||'—'}\nCustomer: ${r.customer||'—'}\nPO: ${r.po||'—'}\nProduct: ${r.product||'—'}\n\nThis deletion will synchronize to other devices. Check that no other business records rely on it.`))return;createLocalSnapshot(false);if(!save(SPODB,rows.filter(x=>String(x.id)!==String(r.id))))return;specialEditId=null;renderSpecialOrders();renderDashboard();showPage('specialOrders')}
+function deleteSpecialOrder(id){
+ const rows=load(SPODB);
+ const record=rows.find(x=>String(x.id)===String(id));
+ if(!record)return;
+ const linked=load(ODB).some(x=>String(x.sourceSpecialId)===String(record.id));
+ if(linked){
+  alert('Delete blocked: this Special Order is linked to a Customer Order. Resolve the linked record first.');
+  return;
+ }
+ const message='Permanently delete this Special Order?\\n\\n'
+  +'Record ID: '+record.id+'\\nStatus: '+(record.status||'—')
+  +'\\nCustomer: '+(record.customer||'—')+'\\nPO: '+(record.po||'—')
+  +'\\nProduct: '+(record.product||'—')
+  +'\\n\\nThis deletion will synchronize to other devices.';
+ if(!confirm(message))return;
+ createLocalSnapshot(false);
+ if(!save(SPODB,rows.filter(x=>String(x.id)!==String(record.id))))return;
+ specialEditId=null;
+ renderSpecialOrders();
+ renderDashboard();
+ showPage('specialOrders');
+}
 function renderSpecialOrders(){
  let rows=cleanupSpecialOrders();const waiting=rows.filter(r=>!['Picked Up','Cancelled'].includes(r.status));const review=waiting.filter(r=>dayDiff(r.receivedAt||r.createdAt)>=330&&!r.reviewExtendedAt);
  $('specialWaiting').textContent=waiting.length;$('specialReview').textContent=review.length;$('specialDone').textContent=rows.filter(r=>r.status==='Picked Up').length;
