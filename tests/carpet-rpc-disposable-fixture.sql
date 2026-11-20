@@ -3,8 +3,9 @@
 -- stub auth.uid(), access control and warehouse_apply_mutation().
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
- SELECT '11111111-1111-1111-1111-111111111111'::uuid
+ SELECT nullif(current_setting('runlu.test_uid', true),'')::uuid
 $$;
+SELECT set_config('runlu.test_uid','11111111-1111-1111-1111-111111111111',false);
 CREATE TABLE public.warehouse_mutations(
  user_id uuid NOT NULL, operation_id uuid NOT NULL, dataset_key text,
  record_id text, device_id text, mutation_kind text, base_version bigint,
