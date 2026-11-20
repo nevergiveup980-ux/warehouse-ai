@@ -83,6 +83,6 @@ when unique_violation then
    return jsonb_build_object('status','duplicate','operation_id',p_operation_id,'original',v_existing.result);
  end if;
  raise;
-end $function$
+end $function$;
 
 COMMIT;
