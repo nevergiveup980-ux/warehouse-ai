@@ -13,10 +13,13 @@ function applyCorrectionTransaction(state,request){
   // Replayed requests must match exactly; never silently accept a different payload.
   const fingerprint=JSON.stringify({recordId,revision,oldEffect,newEffect,dependents});
   if(prior){assert(prior.fingerprint===fingerprint,'Mutation ID reused with different request');return {state,result:prior.result,replayed:true}}
+  assert(Object.hasOwn(state.records,recordId),'Record not found');
   const existing=state.records[recordId];
   assert(existing,'Record not found');
+  assert(typeof revision==='number'||typeof revision==='string','Invalid requested revision');
   assert(String(existing.revision)===String(revision),'Record revision conflict');
   assert(JSON.stringify(existing.effect)===JSON.stringify(oldEffect),'Original stock effect conflict');
+  assert(Number.isSafeInteger(existing.revision+1),'Revision overflow');
   const plan=planCorrection(request);
   const inventory={...state.inventory};
   for(const delta of plan.deltas){
