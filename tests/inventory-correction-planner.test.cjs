@@ -13,3 +13,6 @@ test('dependent record blocks correction',()=>assert.throws(()=>planCorrection({
 test('unknown unit blocks correction',()=>assert.throws(()=>planCorrection({...base,oldEffect:effect(100,'roll-1','METERS'),newEffect:null}),/Unsupported/));
 test('missing revision blocks correction',()=>assert.throws(()=>planCorrection({...base,revision:'',oldEffect:effect(100),newEffect:null}),/revision/));
 test('missing mutation ID blocks correction',()=>assert.throws(()=>planCorrection({...base,mutationId:'',oldEffect:effect(100),newEffect:null}),/mutation ID/));
+test('missing quantity must not become zero',()=>assert.throws(()=>planCorrection({...base,oldEffect:{itemId:'roll-1',unit:'LF'},newEffect:null}),/Invalid stock effect/));
+test('null quantity must not become zero',()=>assert.throws(()=>planCorrection({...base,oldEffect:{itemId:'roll-1',unit:'LF',quantity:null},newEffect:null}),/Invalid stock effect/));
+test('numeric string quantity is rejected to avoid silent coercion',()=>assert.throws(()=>planCorrection({...base,oldEffect:effect(100),newEffect:{itemId:'roll-1',unit:'LF',quantity:'80'}}),/Invalid stock effect/));
