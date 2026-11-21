@@ -5,6 +5,8 @@ on:
       - 'src/inventory-correction-planner.js'
       - 'tests/inventory-correction-planner.test.cjs'
       - 'tests/warehouse-mutation-ledger.test.cjs'
+      - 'src/inventory-correction-transaction-reference.js'
+      - 'tests/inventory-correction-transaction-reference.test.cjs'
       - 'migrations/20261121_warehouse_mutation_ledger_draft.sql'
       - '.github/workflows/inventory-correction-tests.yml'
   push:
@@ -14,6 +16,8 @@ on:
       - 'src/inventory-correction-planner.js'
       - 'tests/inventory-correction-planner.test.cjs'
       - 'tests/warehouse-mutation-ledger.test.cjs'
+      - 'src/inventory-correction-transaction-reference.js'
+      - 'tests/inventory-correction-transaction-reference.test.cjs'
       - 'migrations/20261121_warehouse_mutation_ledger_draft.sql'
       - '.github/workflows/inventory-correction-tests.yml'
 jobs:
@@ -26,4 +30,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/inventory-correction-planner.test.cjs tests/warehouse-mutation-ledger.test.cjs
+      - run: node --test tests/*.test.cjs
