@@ -15,3 +15,6 @@ test('negative balance blocked without partial write',()=>{const s=state(50);ass
 test('dependent records block correction',()=>assert.throws(()=>applyCorrectionTransaction(state(),{...request(null),dependents:['cut-1']}),/Dependent/));
 test('cross-roll move checks both balances',()=>{const s=state();s.inventory[key('r2')]=10;const r=applyCorrectionTransaction(s,request(effect(100,'r2')));assert.equal(r.state.inventory[key()],0);assert.equal(r.state.inventory[key('r2')],110)});
 test('missing target balance blocks move',()=>assert.throws(()=>applyCorrectionTransaction(state(),request(effect(100,'r2'))),/balance missing/));
+test('inherited mutation names are not treated as prior commits',()=>{const q=request(effect(80),'toString');const r=applyCorrectionTransaction(state(),q);assert.equal(r.replayed,false);assert.equal(r.state.inventory[key()],80)});
+test('invalid stored revision is blocked',()=>{const s=state();s.records.a.revision='bad';assert.throws(()=>applyCorrectionTransaction(s,request(effect(80))),/Invalid stored record revision/)});
+test('blank mutation id is blocked',()=>assert.throws(()=>applyCorrectionTransaction(state(),request(effect(80),'  ')),/Mutation ID required/));
