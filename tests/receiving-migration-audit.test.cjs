@@ -1,0 +1,10 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const {auditReceiving}=require('../src/receiving-migration-audit.js');
+const receipt={id:1,masterId:'m1',location:'Receiving',lotNumber:'L1',unit:'Carton',quantity:20,inventoryPosted:true};
+const inv={id:9,masterId:'m1',location:'Receiving',lotNumber:'L1',unit:'Carton',quantity:15};
+test('flags legacy missing link without changing inventory',()=>{const rows=[{...receipt}],stock=[{...inv}];const r=auditReceiving(rows,stock);assert.equal(r.postedReceipts,1);assert.equal(r.groups[0].postedQuantity,20);assert.equal(r.groups[0].inventoryQuantity,15);assert.equal(stock[0].quantity,15);assert(r.issues.some(x=>x.reason==='missing_inventory_record_link'))});
+test('does not treat consumed stock as automatic discrepancy',()=>{const r=auditReceiving([receipt],[inv]);assert(!r.issues.some(x=>x.reason==='inventory_quantity_mismatch'))});
+test('flags ambiguous matching rows',()=>assert(auditReceiving([receipt],[inv,{...inv,id:10}]).issues.some(x=>x.reason==='multiple_matching_inventory_rows')));
+test('ignores unposted receipts',()=>assert.equal(auditReceiving([{...receipt,inventoryPosted:false}],[]).postedReceipts,0));
+test('flags missing inventory row',()=>assert(auditReceiving([receipt],[]).issues.some(x=>x.reason==='no_matching_current_inventory')));
+test('rejects non-array input',()=>assert.throws(()=>auditReceiving({},[]),/arrays/));
