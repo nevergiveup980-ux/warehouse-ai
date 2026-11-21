@@ -18,3 +18,5 @@ test('missing target balance blocks move',()=>assert.throws(()=>applyCorrectionT
 test('inherited mutation names are not treated as prior commits',()=>{const q=request(effect(80),'toString');const r=applyCorrectionTransaction(state(),q);assert.equal(r.replayed,false);assert.equal(r.state.inventory[key()],80)});
 test('invalid stored revision is blocked',()=>{const s=state();s.records.a.revision='bad';assert.throws(()=>applyCorrectionTransaction(s,request(effect(80))),/Invalid stored record revision/)});
 test('blank mutation id is blocked',()=>assert.throws(()=>applyCorrectionTransaction(state(),request(effect(80),'  ')),/Mutation ID required/));
+test('inherited record name cannot be corrected',()=>assert.throws(()=>applyCorrectionTransaction(state(),{...request(effect(80)),recordId:'toString'}),/Record not found/));
+test('revision overflow is blocked',()=>{const s=state();s.records.a.revision=Number.MAX_SAFE_INTEGER;assert.throws(()=>applyCorrectionTransaction(s,{...request(effect(80)),revision:String(Number.MAX_SAFE_INTEGER)}),/Revision overflow/)});
