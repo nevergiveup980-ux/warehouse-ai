@@ -19,8 +19,8 @@
     return {itemId,unit,quantity};
   }
   function planCorrection({recordId,revision,mutationId,oldEffect,newEffect,dependents=[]}){
-    assert(String(recordId??'').trim(),'Record ID is required');
-    assert(String(revision??'').trim(),'Expected revision is required');
+    assert(recordId!==null&&recordId!==undefined&&String(recordId).trim(),'Record ID is required');
+    assert(revision!==null&&revision!==undefined&&String(revision).trim(),'Expected revision is required');
     assert(String(mutationId??'').trim(),'Idempotency mutation ID is required');
     assert(Array.isArray(dependents),'Dependent references must be an array');
     assert(dependents.length===0,'Dependent records must be resolved before correction');
