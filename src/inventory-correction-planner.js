@@ -10,7 +10,8 @@
     assert(effect&&typeof effect==='object','Original stock effect is required');
     const itemId=String(effect.itemId??'').trim();
     const unit=String(effect.unit??'').trim().toUpperCase();
-    const quantity=Number(effect.quantity);
+    assert(typeof effect.quantity==='number'&&Number.isFinite(effect.quantity),'Invalid stock effect quantity');
+    const quantity=effect.quantity;
     assert(itemId,'Stock item/roll ID is required');
     assert(['LF','SF','SYD','EA','CARTON','BOX'].includes(unit),'Unsupported inventory unit');
     assert(Number.isFinite(quantity),'Invalid stock effect quantity');
