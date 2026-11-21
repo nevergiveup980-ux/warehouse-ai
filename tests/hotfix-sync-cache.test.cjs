@@ -40,3 +40,14 @@ test('duplicate identities cannot be queued to cloud',()=>{
  assert.throws(()=>context.queueRecordDeltaSave('inventory',[],[{id:1},{id:1}]),/Duplicate record identity/);
  assert.match(store.getItem('error'),/Duplicate record identity/);
 });
+
+test('cloud identity wins over colliding legacy local identity',()=>{
+ const start=source.indexOf('function recordSyncId('),end=source.indexOf('function recordSyncOutbox(',start);
+ assert.ok(start>=0&&end>start);
+ const context={};
+ vm.createContext(context);vm.runInContext(source.slice(start,end),context);
+ const rows=[{id:'shared',_cloudRecordId:'other'},{id:'legacy',_cloudRecordId:'shared'}];
+ assert.equal(context.recordSyncFindExistingIndex(rows,'shared'),1);
+ assert.equal(context.recordSyncFindExistingIndex([{id:42}],'42'),0);
+ assert.equal(context.recordSyncFindExistingIndex([{id:42}],'absent'),-1);
+});
