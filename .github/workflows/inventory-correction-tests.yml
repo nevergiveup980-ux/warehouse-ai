@@ -1,0 +1,39 @@
+name: Inventory correction planner tests
+on:
+  pull_request:
+    paths:
+      - 'src/inventory-correction-planner.js'
+      - 'src/receiving-migration-audit.js'
+      - 'tests/receiving-migration-audit.test.cjs'
+      - 'index.html'
+      - 'tests/inventory-correction-planner.test.cjs'
+      - 'tests/warehouse-mutation-ledger.test.cjs'
+      - 'src/inventory-correction-transaction-reference.js'
+      - 'tests/inventory-correction-transaction-reference.test.cjs'
+      - 'migrations/20261121_warehouse_mutation_ledger_draft.sql'
+      - '.github/workflows/inventory-correction-tests.yml'
+  push:
+    branches:
+      - 'feature/record-edit-delete-inventory-20261120'
+    paths:
+      - 'src/inventory-correction-planner.js'
+      - 'src/receiving-migration-audit.js'
+      - 'tests/receiving-migration-audit.test.cjs'
+      - 'index.html'
+      - 'tests/inventory-correction-planner.test.cjs'
+      - 'tests/warehouse-mutation-ledger.test.cjs'
+      - 'src/inventory-correction-transaction-reference.js'
+      - 'tests/inventory-correction-transaction-reference.test.cjs'
+      - 'migrations/20261121_warehouse_mutation_ledger_draft.sql'
+      - '.github/workflows/inventory-correction-tests.yml'
+jobs:
+  planner-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/*.test.cjs

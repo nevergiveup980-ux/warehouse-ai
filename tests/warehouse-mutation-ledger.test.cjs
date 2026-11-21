@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const test=require('node:test');
+const fs=require('node:fs');
+const path=require('node:path');
+const sql=fs.readFileSync(path.join(__dirname,'../migrations/20261121_warehouse_mutation_ledger_draft.sql'),'utf8');
+test('ledger has per-user idempotency primary key',()=>assert.match(sql,/primary key\s*\(user_id, mutation_id\)/i));
+test('ledger enables RLS',()=>assert.match(sql,/alter table public\.warehouse_record_mutations enable row level security/i));
+test('ledger has no public write policy',()=>assert.doesNotMatch(sql,/create policy[^;]*for\s+(insert|update|delete|all)\b/i));
+test('ledger grants only read and revokes direct client writes',()=>{assert.match(sql,/grant select on public\.warehouse_record_mutations to authenticated/i);assert.match(sql,/revoke insert, update, delete on public\.warehouse_record_mutations from authenticated/i)});
+test('migration does not expose unsafe RPC',()=>assert.doesNotMatch(sql,/create\s+(or replace\s+)?function/i));
