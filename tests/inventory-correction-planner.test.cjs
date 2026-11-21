@@ -16,3 +16,6 @@ test('missing mutation ID blocks correction',()=>assert.throws(()=>planCorrectio
 test('missing quantity must not become zero',()=>assert.throws(()=>planCorrection({...base,oldEffect:{itemId:'roll-1',unit:'LF'},newEffect:null}),/Invalid stock effect/));
 test('null quantity must not become zero',()=>assert.throws(()=>planCorrection({...base,oldEffect:{itemId:'roll-1',unit:'LF',quantity:null},newEffect:null}),/Invalid stock effect/));
 test('numeric string quantity is rejected to avoid silent coercion',()=>assert.throws(()=>planCorrection({...base,oldEffect:effect(100),newEffect:{itemId:'roll-1',unit:'LF',quantity:'80'}}),/Invalid stock effect/));
+test('missing stock item blocks correction',()=>assert.throws(()=>planCorrection({...base,oldEffect:effect(100,''),newEffect:null}),/Stock item/));
+test('NaN quantity blocks correction',()=>assert.throws(()=>planCorrection({...base,oldEffect:effect(NaN),newEffect:null}),/Invalid stock effect/));
+test('infinite quantity blocks correction',()=>assert.throws(()=>planCorrection({...base,oldEffect:effect(Infinity),newEffect:null}),/Invalid stock effect/));
