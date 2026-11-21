@@ -1,0 +1,25 @@
+name: Inventory correction planner tests
+on:
+  pull_request:
+    paths:
+      - 'src/inventory-correction-planner.js'
+      - 'tests/inventory-correction-planner.test.cjs'
+      - '.github/workflows/inventory-correction-tests.yml'
+  push:
+    branches:
+      - 'feature/record-edit-delete-inventory-20261120'
+    paths:
+      - 'src/inventory-correction-planner.js'
+      - 'tests/inventory-correction-planner.test.cjs'
+      - '.github/workflows/inventory-correction-tests.yml'
+jobs:
+  planner-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/inventory-correction-planner.test.cjs
