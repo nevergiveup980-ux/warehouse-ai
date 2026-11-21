@@ -1,0 +1,19 @@
+name: Warehouse emergency sync regression
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/hotfix-sync-cache.test.cjs'
+      - '.github/workflows/hotfix-sync-regression.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/hotfix-sync-cache.test.cjs
