@@ -162,3 +162,13 @@ test('cloud download does not overwrite record-sync data using legacy datasets',
  assert.match(fn,/await recordSyncNow\(true\)/);
  assert.ok(fn.indexOf('return;\n }if(silent')<fn.indexOf('await applyCloudRows('));
 });
+
+test('manual Sync Now uses record operations after cloud bootstrap',()=>{
+ const start=source.indexOf('async function cloudSyncNow('),end=source.indexOf('\nasync function cloudAutoRefresh(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(recordSyncReady\(\)\)/);
+ assert.match(fn,/await recordSyncNow\(false\)/);
+ assert.match(fn,/recordSyncOutbox\(\)\.length/);
+ assert.ok(fn.indexOf('return;\n }if(cloudSyncBusy)')<fn.indexOf('await cloudSmartSync(false)'));
+});
