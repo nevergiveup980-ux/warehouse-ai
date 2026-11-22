@@ -88,7 +88,7 @@ test('quantity correction never reports cloud success before sync acknowledgemen
  const code=source.slice(start,end);
  assert.match(code,/await recordSyncNow\(true\)/);
  assert.match(code,/recordSyncOutbox\(\)\.some\(op=>op\.dataset_key===INVDB/);
- assert.match(code,/if\(pending\|\|cloudError\)/);
+ assert.match(code,/if\(pending\|\|cloudError\|\|!correctionOps\.length\|\|!correctionOps\.every\(id=>recordSyncAcknowledgedOperations\.has\(id\)\)\)/);
  assert.match(code,/cloud save is NOT confirmed/);
  assert.ok(code.indexOf('await recordSyncNow(true)')<code.indexOf('Quantity correction acknowledged by cloud sync'));
 });
@@ -100,7 +100,7 @@ test('inventory deletion requires cloud readiness and acknowledged tombstone',()
  assert.match(fn,/if\(cloudSyncBusy\|\|!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
  assert.match(fn,/await recordSyncNow\(true\)/);
  assert.match(fn,/recordSyncOutbox\(\)\.some\(op=>op\.dataset_key===INVDB/);
- assert.match(fn,/if\(pending\|\|cloudError\)/);
+ assert.match(fn,/if\(pending\|\|cloudError\|\|!deletionOps\.length\|\|!deletionOps\.every\(id=>recordSyncAcknowledgedOperations\.has\(id\)\)\)/);
  assert.ok(fn.indexOf('await recordSyncNow(true)')<fn.indexOf('Inventory deletion acknowledged by cloud sync'));
 });
 
@@ -115,4 +115,12 @@ test('quantity correction does not claim success while cloud sync is busy',()=>{
  const fn=source.slice(start,end);
  assert.match(fn,/if\(cloudSyncBusy\|\|!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
  assert.ok(fn.indexOf('if(cloudSyncBusy||')<fn.indexOf('await recordSyncNow(true)'));
+});
+
+test('cloud success requires acknowledged operation IDs rather than empty outbox alone',()=>{
+ const start=source.indexOf('async function recordSyncPush('),end=source.indexOf('async function recordSyncBootstrap(',start);
+ const fn=source.slice(start,end);
+ assert.match(source,/const recordSyncAcknowledgedOperations=new Set\(\)/);
+ assert.match(fn,/recordSyncAcknowledgedOperations\.add\(op\.operation_id\)/);
+ assert.ok(fn.indexOf('latestQueue.shift()')<fn.indexOf('recordSyncAcknowledgedOperations.add(op.operation_id)'));
 });
