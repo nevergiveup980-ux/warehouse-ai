@@ -14,23 +14,33 @@ function storage(seed={}){
  const m=new Map(Object.entries(seed));
  return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)};
 }
-test('stale generation marker retains bootstrapped local records and cursor',()=>{
+test('stale generation discards device cache and requires fresh cloud bootstrap',()=>{
  const store=storage({inventory:'[{"id":12}]',bootstrap:'1',cursor:'27',generation:'old'});
  const code=functionBody('recordSyncPrepareGeneration','function recordSyncId(');
  const context={localStorage:store,RECORD_SYNC_GENERATION_KEY:'generation',RECORD_SYNC_GENERATION:'current',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_BOOTSTRAP_KEY:'bootstrap',RECORD_SYNC_CURSOR_KEY:'cursor',DATA_KEYS:['inventory'],cloudApplying:false};
  vm.createContext(context);vm.runInContext(code,context);
- assert.equal(context.recordSyncPrepareGeneration(),false);
- assert.equal(store.getItem('inventory'),'[{"id":12}]');
- assert.equal(store.getItem('cursor'),'27');
+ assert.equal(context.recordSyncPrepareGeneration(),true);
+ assert.equal(store.getItem('inventory'),null);
+ assert.equal(store.getItem('cursor'),null);
+ assert.equal(store.getItem('bootstrap'),null);
  assert.equal(store.getItem('generation'),'current');
+ assert.equal(context.cloudApplying,false);
 });
-test('pending offline changes are never cleared by generation recovery',()=>{
+test('stale offline operations cannot override cloud after migration',()=>{
  const store=storage({inventory:'[{"id":12}]',bootstrap:'1',cursor:'27',generation:'old',outbox:'[{"operation_id":"p"}]'});
  const context={localStorage:store,RECORD_SYNC_GENERATION_KEY:'generation',RECORD_SYNC_GENERATION:'current',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_BOOTSTRAP_KEY:'bootstrap',RECORD_SYNC_CURSOR_KEY:'cursor',DATA_KEYS:['inventory'],cloudApplying:false};
  vm.createContext(context);vm.runInContext(functionBody('recordSyncPrepareGeneration','function recordSyncId('),context);
- assert.throws(()=>context.recordSyncPrepareGeneration(),/Pending offline operations/);
- assert.equal(store.getItem('inventory'),'[{"id":12}]');
- assert.equal(store.getItem('outbox'),'[{"operation_id":"p"}]');
+ assert.equal(context.recordSyncPrepareGeneration(),true);
+ assert.equal(store.getItem('inventory'),null);
+ assert.equal(store.getItem('outbox'),null);
+});
+test('bulk device upload is disabled',async()=>{
+ const code=source.slice(source.indexOf('async function cloudUploadAll(){'),source.indexOf('async function cloudPutDatasetInitial('));
+ const alerts=[];
+ const context={alert:x=>alerts.push(x)};
+ vm.createContext(context);vm.runInContext(code,context);
+ assert.equal(await context.cloudUploadAll(),false);
+ assert.match(alerts[0],/Bulk upload.*disabled/);
 });
 test('duplicate identities cannot be queued to cloud',()=>{
  const store=storage();
