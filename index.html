@@ -1628,6 +1628,7 @@ function queueRecordDeltaSave(key,before,after){
  if(added)setRecordSyncOutbox(q);
  if(navigator.onLine!==false&&cloudSession())setTimeout(()=>recordSyncNow(true),50)
 }
+const recordSyncAcknowledgedOperations=new Set();
 async function recordSyncPush(){
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
@@ -1641,7 +1642,7 @@ async function recordSyncPush(){
    const next=list.slice();next.splice(idx,1);localStorage.setItem(op.dataset_key,JSON.stringify(next));
   }}
  }
- const latestQueue=recordSyncOutbox();if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue;sent++}return sent
+ const latestQueue=recordSyncOutbox();if(latestQueue[0]?.operation_id!==op.operation_id)throw new Error('Offline queue changed during sync; stopping without overwriting new operations.');latestQueue.shift();setRecordSyncOutbox(latestQueue);recordSyncAcknowledgedOperations.add(op.operation_id);q=latestQueue;sent++}return sent
 }
 async function recordSyncBootstrap(){
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud bootstrap paused to preserve device data.');
@@ -2570,6 +2571,7 @@ async function removeInventory(id){
   alert('Deletion could not be queued. No cloud deletion was confirmed.');
   return;
  }
+ const deletionOps=recordSyncOutbox().filter(op=>op.dataset_key===INVDB&&String(op.record_id)===recordId&&op.delete).map(op=>op.operation_id);
  renderInventory();renderDashboard();renderMap();refreshMemory();
  // A local removal is not a cloud deletion. The record remains queued until
  // warehouse_apply_operation acknowledges its explicit deletion tombstone.
@@ -2578,7 +2580,7 @@ async function removeInventory(id){
  try{pending=recordSyncOutbox().some(op=>op.dataset_key===INVDB&&String(op.record_id)===recordId);}
  catch(err){console.error('Cannot verify inventory deletion queue',err);}
  const cloudError=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
- if(pending||cloudError){
+ if(pending||cloudError||!deletionOps.length||!deletionOps.every(id=>recordSyncAcknowledgedOperations.has(id))){
   alert('Record hidden locally, but cloud deletion is NOT confirmed. Check Cloud status before relying on this change.'+(cloudError?'\\n\\n'+cloudError:''));
  }else{
   alert('Inventory deletion acknowledged by cloud sync.');
@@ -2600,6 +2602,7 @@ Enter the NEW TOTAL quantity. It will replace the old quantity, not add to it.`,
 This is a correction and will NOT add the two quantities together.`))return;
  x.quantity=Number(q.toFixed(2));x.updated=new Date().toLocaleString();x.lastAction='Quantity corrected (replace)';
  if(save(INVDB,inv)){
+  const correctionOps=recordSyncOutbox().filter(op=>op.dataset_key===INVDB&&String(op.record_id)===String(recordSyncId(x))&&!op.delete).map(op=>op.operation_id);
   renderInventory();renderDashboard();renderMap();refreshMemory();
   // Local persistence is not cloud acknowledgment. Never report a completed
   // correction while this record still has a pending cloud operation.
@@ -2612,7 +2615,7 @@ This is a correction and will NOT add the two quantities together.`))return;
   try{pending=recordSyncOutbox().some(op=>op.dataset_key===INVDB&&String(op.record_id)===String(recordSyncId(x)));}
   catch(err){console.error('Cannot verify inventory correction queue',err);}
   const cloudError=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
-  if(pending||cloudError){
+  if(pending||cloudError||!correctionOps.length||!correctionOps.every(id=>recordSyncAcknowledgedOperations.has(id))){
    alert('Quantity changed locally, but cloud save is NOT confirmed. Check the Cloud status before continuing.'+(cloudError?'\\n\\n'+cloudError:''));
   }else{
    alert('Quantity correction acknowledged by cloud sync. The old quantity was replaced.');
