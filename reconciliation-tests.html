@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Reconciliation comparison tests</title><h1>Reconciliation comparison tests</h1><pre id="result">Running...</pre><script src="reconciliation-compare.js"></script><script>
+const compare=RunluReconciliation.compare;
+const inventory=[{id:1,roll:'RC1876',collection:'Debonair Invitation',colour:'Opulence',length:10.25,location:'6D',version:3},{id:2,roll:'RC2268',collection:'Natural Texture',colour:'768 - Frosted Honey',length:142.1666667,location:'5B',version:4}];
+const tests=[
+ ['RC1876 length differs',compare({roll:'RC1876',decimalFeet:10},inventory).result==='DIFFERENT'],
+ ['RC2268 product mismatch',compare({roll:'RC2268',collection:'ELEVATED',colour:'RIVER ROCK',decimalFeet:5.5},inventory).differences.some(x=>x.field==='collection')],
+ ['RC2122 not found',compare({roll:'RC2122',decimalFeet:9.25},inventory).result==='NOT_FOUND'],
+ ['exact match',compare({roll:'RC1876',decimalFeet:10.25,collection:'Debonair Invitation'},inventory).result==='MATCH'],
+ ['ambiguous roll blocks',compare({roll:'RC1876'},[inventory[0],inventory[0]]).result==='AMBIGUOUS'],
+ ['empty roll invalid',compare({roll:''},inventory).result==='INVALID'],
+ ['inch precision',compare({roll:'RC1876',decimalFeet:10+3/12},inventory).result==='MATCH'],
+ ['Supabase payload wrapper',compare({roll:'RC1876',decimalFeet:10},[{record_id:'1',dataset_key:'runlu_carpet_inventory_v52',version:7,payload:inventory[0]}]).matches[0].version===7],
+ ['deleted records ignored',compare({roll:'RC1876'},[{record_id:'1',dataset_key:'runlu_carpet_inventory_v52',deleted_at:'2026-01-01',payload:inventory[0]}]).result==='NOT_FOUND'],
+ ['other dataset ignored',compare({roll:'RC1876'},[{dataset_key:'other_dataset',payload:inventory[0]}]).result==='NOT_FOUND']
+];
+document.getElementById('result').textContent=tests.map(([name,pass])=>(pass?'PASS':'FAIL')+' — '+name).join('\n')+'\n'+tests.filter(x=>x[1]).length+'/'+tests.length+' passed';
+</script></html>
