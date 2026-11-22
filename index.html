@@ -4249,6 +4249,7 @@ async function reloadLatestApp(){
  if(recordSyncReady()){
   if(cloudSyncBusy){alert('Update blocked: cloud sync is already running. Try again when it finishes.');return}
   if(!cloudSession()){alert('Update blocked: sign in and verify cloud sync before reloading.');return}
+  if(protectedInputActive()){alert('Update blocked: finish editing the active form before syncing and reloading.');return}
   await recordSyncNow(true);
   let pending;
   try{pending=recordSyncOutbox().length}catch(err){alert('Update blocked: offline operation queue cannot be verified. '+err.message);return}
