@@ -152,3 +152,13 @@ test('reload is blocked when an active form prevents cloud pull',()=>{
  assert.match(fn,/if\(protectedInputActive\(\)\)/);
  assert.ok(fn.indexOf('if(protectedInputActive())')<fn.indexOf('await recordSyncNow(true)'));
 });
+
+test('cloud download does not overwrite record-sync data using legacy datasets',()=>{
+ const start=source.indexOf('async function cloudDownloadAll('),end=source.indexOf('\nasync function flushCloudDirty(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(recordSyncReady\(\)\)/);
+ assert.match(fn,/if\(recordSyncOutbox\(\)\.length\)/);
+ assert.match(fn,/await recordSyncNow\(true\)/);
+ assert.ok(fn.indexOf('return;\n }if(silent')<fn.indexOf('await applyCloudRows('));
+});
