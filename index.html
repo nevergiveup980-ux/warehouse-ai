@@ -2558,7 +2558,32 @@ For an accidental duplicate, choose Cancel and edit the existing record instead.
 }
 function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;editId=id;photoData=x.photo||'';masterTextFields.forEach(k=>$(k).value=x[k]??'');['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category||'Other';$('coverageUnit').value=x.coverageUnit||'Other';['location','quantity','lotNumber','inventoryPo'].forEach(k=>$(k).value='');$('locationType').value='Rack';$('unit').value='Box';if($('productPailSize'))$('productPailSize').value='1 gal';updateProductPailSize();showPage('editor')}
 function removeItem(id){const x=loadMasters().find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+' and all of its inventory records?'))return;save(PMDB,loadMasters().filter(v=>v.id!==id));save(INVDB,loadInventoryRecords().filter(v=>v.masterId!==id));renderProducts();renderInventory();refreshMemory()}
-function removeInventory(id){const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x||!confirm('Delete this inventory record?'))return;save(INVDB,inv.filter(v=>v.id!==id));renderInventory();renderDashboard();renderMap();refreshMemory()}
+async function removeInventory(id){
+ const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);
+ if(!x||!confirm('Permanently delete this inventory record from the active cloud inventory?'))return;
+ if(!cloudSession()||!recordSyncReady()){
+  alert('Cloud is not ready. No inventory record was deleted. Sign in and finish cloud sync first.');
+  return;
+ }
+ const recordId=String(recordSyncId(x));
+ if(!save(INVDB,inv.filter(v=>v.id!==id))){
+  alert('Deletion could not be queued. No cloud deletion was confirmed.');
+  return;
+ }
+ renderInventory();renderDashboard();renderMap();refreshMemory();
+ // A local removal is not a cloud deletion. The record remains queued until
+ // warehouse_apply_operation acknowledges its explicit deletion tombstone.
+ await recordSyncNow(true);
+ let pending=true;
+ try{pending=recordSyncOutbox().some(op=>op.dataset_key===INVDB&&String(op.record_id)===recordId);}
+ catch(err){console.error('Cannot verify inventory deletion queue',err);}
+ const cloudError=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
+ if(pending||cloudError){
+  alert('Record hidden locally, but cloud deletion is NOT confirmed. Check Cloud status before relying on this change.'+(cloudError?'\\n\\n'+cloudError:''));
+ }else{
+  alert('Inventory deletion acknowledged by cloud sync.');
+ }
+}
 function adjust(id,d){const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x)return;x.quantity=Math.max(0,Number((Number(x.quantity||0)+d).toFixed(2)));x.updated=new Date().toLocaleString();save(INVDB,inv);renderInventory();renderDashboard()}
 async function editInventoryQuantity(id){
  const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x)return;
