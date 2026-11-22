@@ -97,7 +97,7 @@ test('inventory deletion requires cloud readiness and acknowledged tombstone',()
  const start=source.indexOf('async function removeInventory('),end=source.indexOf('\nfunction adjust(',start);
  assert.ok(start>=0&&end>start);
  const fn=source.slice(start,end);
- assert.match(fn,/if\(!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
+ assert.match(fn,/if\(cloudSyncBusy\|\|!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
  assert.match(fn,/await recordSyncNow\(true\)/);
  assert.match(fn,/recordSyncOutbox\(\)\.some\(op=>op\.dataset_key===INVDB/);
  assert.match(fn,/if\(pending\|\|cloudError\)/);
