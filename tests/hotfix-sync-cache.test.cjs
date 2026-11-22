@@ -71,3 +71,12 @@ test('cloud success timestamp requires completed pull after empty outbox',()=>{
  assert.match(sync,/if\(canPull\)await recordSyncPull\(\)/);
  assert.match(sync,/if\(canPull\)\{localStorage\.removeItem\(CLOUD_LAST_ERROR_KEY\);localStorage\.setItem\(CLOUD_LAST_OK_KEY/);
 });
+
+test('legacy whole-dataset cloud upload cannot overwrite record-sync cloud master',async()=>{
+ const start=source.indexOf('async function cloudPutDataset('),end=source.indexOf('function queueCloudSave(',start);
+ assert.ok(start>=0&&end>start);
+ const code=source.slice(start,end);
+ const context={cloudApplying:false,localStorage:storage({enabled:'1'}),CLOUD_ENABLED_KEY:'enabled',DATA_KEYS:['inventory'],recordSyncReady:()=>true,cloudEnsureSession:()=>{throw Error('legacy cloud request must never execute')}};
+ vm.createContext(context);vm.runInContext(code,context);
+ await assert.rejects(context.cloudPutDataset('inventory',[{id:'stale'}]),/Legacy whole-dataset upload is disabled/);
+});
