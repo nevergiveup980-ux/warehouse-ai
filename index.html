@@ -4246,6 +4246,17 @@ function renderOrderDataCenter(){
  $('odSpecialList').innerHTML=special.length?special.map(r=>`<div class="item"><span class="status ${r.status==='Picked Up'?'done':'waiting'}">${esc(r.status||'Waiting')}</span><div class="name">${esc(r.customer||'-')} — ${esc(r.product||'Unnamed product')}${r.color?' · '+esc(r.color):''}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">PO: ${esc(r.po||'-')} · Supplier: ${esc(r.supplier||'-')}<br>Location: ${esc(r.location||'-')}</div><div class="actions"><button class="primary" onclick="copySpecialToCustomer('${String(r.id).replace(/'/g,'')}')">Copy to Customer Orders</button></div></div>`).join(''):'<div class="empty">No Special Order records found.</div>';
 }
 async function reloadLatestApp(){
+ if(recordSyncReady()){
+  if(cloudSyncBusy){alert('Update blocked: cloud sync is already running. Try again when it finishes.');return}
+  if(!cloudSession()){alert('Update blocked: sign in and verify cloud sync before reloading.');return}
+  await recordSyncNow(true);
+  let pending;
+  try{pending=recordSyncOutbox().length}catch(err){alert('Update blocked: offline operation queue cannot be verified. '+err.message);return}
+  const error=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
+  if(pending||error){alert('Update blocked: '+pending+' cloud operation(s) still pending.'+(error?'\\n\\n'+error:''));return}
+  if(!confirm('No pending cloud operations. Reload the latest published app? A local safety snapshot will also be created.'))return;
+  createLocalSnapshot(false);const u=new URL(location.href);u.searchParams.set('update',Date.now());location.replace(u.toString());return;
+ }
  const dirty=cloudDirtyKeys();
  if(dirty.length){
   if(!cloudSession()||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'){
