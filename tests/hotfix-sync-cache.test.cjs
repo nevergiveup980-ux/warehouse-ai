@@ -134,3 +134,14 @@ test('legacy save verification uses record acknowledgements after bootstrap',()=
  assert.match(fn,/pendingBefore\.every\(op=>recordSyncAcknowledgedOperations\.has\(op\.operation_id\)\)/);
  assert.ok(fn.indexOf('if(recordSyncReady())')<fn.indexOf('await cloudPutDataset(key,value)'));
 });
+
+test('app update reload respects record outbox and cloud errors',()=>{
+ const start=source.indexOf('async function reloadLatestApp('),end=source.indexOf('\nasync function checkForUpdate(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(recordSyncReady\(\)\)/);
+ assert.match(fn,/await recordSyncNow\(true\)/);
+ assert.match(fn,/recordSyncOutbox\(\)\.length/);
+ assert.match(fn,/if\(pending\|\|error\)/);
+ assert.ok(fn.indexOf('if(pending||error)')<fn.indexOf('location.replace(u.toString());return;'));
+});
