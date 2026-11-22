@@ -2561,8 +2561,8 @@ function removeItem(id){const x=loadMasters().find(v=>v.id===id);if(!x||!confirm
 async function removeInventory(id){
  const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);
  if(!x||!confirm('Permanently delete this inventory record from the active cloud inventory?'))return;
- if(!cloudSession()||!recordSyncReady()){
-  alert('Cloud is not ready. No inventory record was deleted. Sign in and finish cloud sync first.');
+ if(cloudSyncBusy||!cloudSession()||!recordSyncReady()){
+  alert('Cloud is not ready or is already syncing. No inventory record was deleted. Sign in and finish cloud sync first.');
   return;
  }
  const recordId=String(recordSyncId(x));
@@ -2603,7 +2603,7 @@ This is a correction and will NOT add the two quantities together.`))return;
   renderInventory();renderDashboard();renderMap();refreshMemory();
   // Local persistence is not cloud acknowledgment. Never report a completed
   // correction while this record still has a pending cloud operation.
-  if(!cloudSession()||!recordSyncReady()){
+  if(cloudSyncBusy||!cloudSession()||!recordSyncReady()){
    alert('Quantity changed on this device only. Cloud save is NOT confirmed. Sign in and sync before relying on this correction.');
    return;
   }
