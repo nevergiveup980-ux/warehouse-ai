@@ -61,3 +61,13 @@ test('cloud identity wins over colliding legacy local identity',()=>{
  assert.equal(context.recordSyncFindExistingIndex([{id:42}],'42'),0);
  assert.equal(context.recordSyncFindExistingIndex([{id:42}],'absent'),-1);
 });
+
+test('cloud success timestamp requires completed pull after empty outbox',()=>{
+ const start=source.indexOf('async function recordSyncNow(');
+ const end=source.indexOf('async function cloudUploadAll(',start);
+ assert.ok(start>=0&&end>start);
+ const sync=source.slice(start,end);
+ assert.match(sync,/const canPull=!remainingOutbox&&!protectedInputActive\(\)/);
+ assert.match(sync,/if\(canPull\)await recordSyncPull\(\)/);
+ assert.match(sync,/if\(canPull\)\{localStorage\.removeItem\(CLOUD_LAST_ERROR_KEY\);localStorage\.setItem\(CLOUD_LAST_OK_KEY/);
+});
