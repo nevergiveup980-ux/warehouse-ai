@@ -1561,36 +1561,18 @@ const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC
 function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
 function recordSyncPrepareGeneration(){
  if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
- // A version change must never silently erase offline operations or warehouse records.
- const rawOutbox=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
- if(rawOutbox!==null){
-  let pending;
-  try{pending=JSON.parse(rawOutbox)}catch{throw new Error('Unreadable offline queue: generation reset blocked; preserve this device data.')}
-  if(!Array.isArray(pending))throw new Error('Invalid offline queue: generation reset blocked; preserve this device data.');
-  if(pending.length)throw new Error('Pending offline operations: generation reset blocked; preserve this device data.');
- }
- const existingKeys=DATA_KEYS.filter(key=>localStorage.getItem(key)!==null);
- if(existingKeys.length){
-  // A previously bootstrapped device can safely keep its local cache and delta
-  // cursor when only the generation marker is stale. Never clear warehouse data.
-  // Refuse migration when there are pending edits or no established cloud cursor.
-  const bootstrapped=localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1';
-  const cursor=localStorage.getItem(RECORD_SYNC_CURSOR_KEY);
-  if(!bootstrapped||cursor===null||!Number.isSafeInteger(Number(cursor))||Number(cursor)<0)
-   throw new Error('Existing warehouse records require recovery before sync migration. Local data preserved.');
-  localStorage.setItem(RECORD_SYNC_GENERATION_KEY,RECORD_SYNC_GENERATION);
-  return false;
- }
- cloudApplying=true;try{
+ // The cloud is authoritative: discard stale device records and queued operations
+ // when migrating sync generations. Never replay an old device snapshot.
+ cloudApplying=true;
+ try{
   for(const k of DATA_KEYS)localStorage.removeItem(k);
   localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
   localStorage.removeItem(RECORD_SYNC_CURSOR_KEY);
   localStorage.removeItem(RECORD_SYNC_BOOTSTRAP_KEY);
-  localStorage.removeItem('runlu_cloud_device_id_v54');
-  try{setCloudDirtyKeys([]);setCloudConflictKeys([])}catch{}
+  try{setCloudDirtyKeys([]);setCloudConflictKeys([])}catch(e){console.warn('Cloud sync status reset incomplete',e)}
   localStorage.setItem(RECORD_SYNC_GENERATION_KEY,RECORD_SYNC_GENERATION);
  }finally{cloudApplying=false}
- return true
+ return true;
 }
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
 function recordSyncFindExistingIndex(rows,cloudId){
