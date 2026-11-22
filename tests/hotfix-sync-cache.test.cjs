@@ -145,3 +145,10 @@ test('app update reload respects record outbox and cloud errors',()=>{
  assert.match(fn,/if\(pending\|\|error\)/);
  assert.ok(fn.indexOf('if(pending||error)')<fn.indexOf('location.replace(u.toString());return;'));
 });
+
+test('reload is blocked when an active form prevents cloud pull',()=>{
+ const start=source.indexOf('async function reloadLatestApp('),end=source.indexOf('\nasync function checkForUpdate(',start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(protectedInputActive\(\)\)/);
+ assert.ok(fn.indexOf('if(protectedInputActive())')<fn.indexOf('await recordSyncNow(true)'));
+});
