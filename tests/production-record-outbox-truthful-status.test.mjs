@@ -60,6 +60,6 @@ test('acknowledged push dequeues from latest persisted outbox, not stale snapsho
  const fn=html.slice(start,end);
  assert.ok(fn.includes('const latestQueue=recordSyncOutbox()'));
  assert.ok(fn.includes('latestQueue[0]?.operation_id!==op.operation_id'));
- assert.ok(fn.includes('latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue'));
+ assert.ok(fn.includes('latestQueue.shift();setRecordSyncOutbox(latestQueue);recordSyncAcknowledgedOperations.add(op.operation_id);q=latestQueue'));
  assert.ok(!fn.includes('q.shift();setRecordSyncOutbox(q)'));
 });
