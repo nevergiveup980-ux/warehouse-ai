@@ -103,3 +103,16 @@ test('inventory deletion requires cloud readiness and acknowledged tombstone',()
  assert.match(fn,/if\(pending\|\|cloudError\)/);
  assert.ok(fn.indexOf('await recordSyncNow(true)')<fn.indexOf('Inventory deletion acknowledged by cloud sync'));
 });
+
+test('inventory delete is blocked while cloud sync is already running',()=>{
+ const start=source.indexOf('async function removeInventory('),end=source.indexOf('\nfunction adjust(',start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(cloudSyncBusy\|\|!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
+ assert.ok(fn.indexOf('if(cloudSyncBusy||')<fn.indexOf('save(INVDB,'));
+});
+test('quantity correction does not claim success while cloud sync is busy',()=>{
+ const start=source.indexOf('async function editInventoryQuantity('),end=source.indexOf('\nfunction esc(',start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(cloudSyncBusy\|\|!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
+ assert.ok(fn.indexOf('if(cloudSyncBusy||')<fn.indexOf('await recordSyncNow(true)'));
+});
