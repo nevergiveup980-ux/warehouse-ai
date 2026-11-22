@@ -124,3 +124,13 @@ test('cloud success requires acknowledged operation IDs rather than empty outbox
  assert.match(fn,/recordSyncAcknowledgedOperations\.add\(op\.operation_id\)/);
  assert.ok(fn.indexOf('latestQueue.shift()')<fn.indexOf('recordSyncAcknowledgedOperations.add(op.operation_id)'));
 });
+
+test('legacy save verification uses record acknowledgements after bootstrap',()=>{
+ const start=source.indexOf('async function flushAndVerifyDatasets('),end=source.indexOf('\nfunction cloudDeviceId(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(recordSyncReady\(\)\)/);
+ assert.match(fn,/await recordSyncNow\(true\)/);
+ assert.match(fn,/pendingBefore\.every\(op=>recordSyncAcknowledgedOperations\.has\(op\.operation_id\)\)/);
+ assert.ok(fn.indexOf('if(recordSyncReady())')<fn.indexOf('await cloudPutDataset(key,value)'));
+});
