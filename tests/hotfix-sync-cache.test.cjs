@@ -80,3 +80,15 @@ test('legacy whole-dataset cloud upload cannot overwrite record-sync cloud maste
  vm.createContext(context);vm.runInContext(code,context);
  await assert.rejects(context.cloudPutDataset('inventory',[{id:'stale'}]),/Legacy whole-dataset upload is disabled/);
 });
+
+test('quantity correction never reports cloud success before sync acknowledgement',()=>{
+ const start=source.indexOf('async function editInventoryQuantity(');
+ const end=source.indexOf('\nfunction esc(',start);
+ assert.ok(start>=0&&end>start);
+ const code=source.slice(start,end);
+ assert.match(code,/await recordSyncNow\(true\)/);
+ assert.match(code,/recordSyncOutbox\(\)\.some\(op=>op\.dataset_key===INVDB/);
+ assert.match(code,/if\(pending\|\|cloudError\)/);
+ assert.match(code,/cloud save is NOT confirmed/);
+ assert.ok(code.indexOf('await recordSyncNow(true)')<code.indexOf('Quantity correction acknowledged by cloud sync'));
+});
