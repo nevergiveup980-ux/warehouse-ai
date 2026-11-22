@@ -92,3 +92,14 @@ test('quantity correction never reports cloud success before sync acknowledgemen
  assert.match(code,/cloud save is NOT confirmed/);
  assert.ok(code.indexOf('await recordSyncNow(true)')<code.indexOf('Quantity correction acknowledged by cloud sync'));
 });
+
+test('inventory deletion requires cloud readiness and acknowledged tombstone',()=>{
+ const start=source.indexOf('async function removeInventory('),end=source.indexOf('\nfunction adjust(',start);
+ assert.ok(start>=0&&end>start);
+ const fn=source.slice(start,end);
+ assert.match(fn,/if\(!cloudSession\(\)\|\|!recordSyncReady\(\)\)/);
+ assert.match(fn,/await recordSyncNow\(true\)/);
+ assert.match(fn,/recordSyncOutbox\(\)\.some\(op=>op\.dataset_key===INVDB/);
+ assert.match(fn,/if\(pending\|\|cloudError\)/);
+ assert.ok(fn.indexOf('await recordSyncNow(true)')<fn.indexOf('Inventory deletion acknowledged by cloud sync'));
+});
