@@ -16,6 +16,7 @@ function harness(initial,respond){
  let calls=0;
  const context={
   recordSyncReady:()=>true,
+  recordSyncAcknowledgedOperations:new Set(),
   recordSyncOutbox:()=>structuredClone(queue),
   setRecordSyncOutbox:q=>{queue=structuredClone(q)},
   cloudEnsureSession:async()=>({access_token:'test'}),
