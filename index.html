@@ -2560,7 +2560,7 @@ function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;edit
 function removeItem(id){const x=loadMasters().find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+' and all of its inventory records?'))return;save(PMDB,loadMasters().filter(v=>v.id!==id));save(INVDB,loadInventoryRecords().filter(v=>v.masterId!==id));renderProducts();renderInventory();refreshMemory()}
 function removeInventory(id){const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x||!confirm('Delete this inventory record?'))return;save(INVDB,inv.filter(v=>v.id!==id));renderInventory();renderDashboard();renderMap();refreshMemory()}
 function adjust(id,d){const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x)return;x.quantity=Math.max(0,Number((Number(x.quantity||0)+d).toFixed(2)));x.updated=new Date().toLocaleString();save(INVDB,inv);renderInventory();renderDashboard()}
-function editInventoryQuantity(id){
+async function editInventoryQuantity(id){
  const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);if(!x)return;
  const m=loadMasters().find(v=>v.id===x.masterId)||{};
  const raw=prompt(`Correct quantity for ${m.name||'this product'} at ${x.location||'this location'}:
@@ -2574,7 +2574,25 @@ Enter the NEW TOTAL quantity. It will replace the old quantity, not add to it.`,
 
 This is a correction and will NOT add the two quantities together.`))return;
  x.quantity=Number(q.toFixed(2));x.updated=new Date().toLocaleString();x.lastAction='Quantity corrected (replace)';
- if(save(INVDB,inv)){renderInventory();renderDashboard();renderMap();refreshMemory();alert('Quantity corrected. The old quantity was replaced.');}
+ if(save(INVDB,inv)){
+  renderInventory();renderDashboard();renderMap();refreshMemory();
+  // Local persistence is not cloud acknowledgment. Never report a completed
+  // correction while this record still has a pending cloud operation.
+  if(!cloudSession()||!recordSyncReady()){
+   alert('Quantity changed on this device only. Cloud save is NOT confirmed. Sign in and sync before relying on this correction.');
+   return;
+  }
+  await recordSyncNow(true);
+  let pending=true;
+  try{pending=recordSyncOutbox().some(op=>op.dataset_key===INVDB&&String(op.record_id)===String(recordSyncId(x)));}
+  catch(err){console.error('Cannot verify inventory correction queue',err);}
+  const cloudError=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
+  if(pending||cloudError){
+   alert('Quantity changed locally, but cloud save is NOT confirmed. Check the Cloud status before continuing.'+(cloudError?'\\n\\n'+cloudError:''));
+  }else{
+   alert('Quantity correction acknowledged by cloud sync. The old quantity was replaced.');
+  }
+ }
 }
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
