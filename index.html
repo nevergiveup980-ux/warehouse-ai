@@ -1552,6 +1552,17 @@ async function verifyCloudDatasets(keys){
 }
 async function flushAndVerifyDatasets(keys){
  const unique=[...new Set(keys)].filter(k=>DATA_KEYS.includes(k));
+ if(recordSyncReady()){
+  if(cloudSyncBusy)throw new Error('Cloud sync is already in progress; save confirmation is pending.');
+  if(!cloudSession())throw new Error('Cloud session is unavailable; save confirmation is pending.');
+  const pendingBefore=recordSyncOutbox().filter(op=>unique.includes(op.dataset_key));
+  if(!pendingBefore.length)throw new Error('No pending record operations to verify; cloud save cannot be confirmed by the legacy verifier.');
+  await recordSyncNow(true);
+  const remaining=recordSyncOutbox().filter(op=>unique.includes(op.dataset_key));
+  const error=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
+  if(remaining.length||error||!pendingBefore.every(op=>recordSyncAcknowledgedOperations.has(op.operation_id)))throw new Error(error||'Record cloud acknowledgement is incomplete; local changes remain pending.');
+  return unique.length;
+ }
  for(const key of unique){clearTimeout(cloudSaveTimers[key]);let value=null;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{}if(value!==null)await cloudPutDataset(key,value)}
  await verifyCloudDatasets(unique);return unique.length;
 }
