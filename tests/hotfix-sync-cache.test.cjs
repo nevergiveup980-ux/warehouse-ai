@@ -14,25 +14,40 @@ function storage(seed={}){
  const m=new Map(Object.entries(seed));
  return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)};
 }
-test('stale generation discards device cache and requires fresh cloud bootstrap',()=>{
- const store=storage({inventory:'[{"id":12}]',bootstrap:'1',cursor:'27',generation:'old'});
- const code=functionBody('recordSyncPrepareGeneration','function recordSyncId(');
- const context={localStorage:store,RECORD_SYNC_GENERATION_KEY:'generation',RECORD_SYNC_GENERATION:'current',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_BOOTSTRAP_KEY:'bootstrap',RECORD_SYNC_CURSOR_KEY:'cursor',DATA_KEYS:['inventory'],cloudApplying:false};
- vm.createContext(context);vm.runInContext(code,context);
+function generationContext(seed){
+ const store=storage(seed);
+ const context={localStorage:store,RECORD_SYNC_GENERATION_KEY:'generation',RECORD_SYNC_GENERATION:'current',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_BOOTSTRAP_KEY:'bootstrap',RECORD_SYNC_CURSOR_KEY:'cursor',DATA_KEYS:['inventory']};
+ vm.createContext(context);
+ vm.runInContext(functionBody('recordSyncPrepareGeneration','function recordSyncId(')+functionBody('recordSyncOutbox','function setRecordSyncOutbox('),context);
+ return {store,context};
+}
+test('stale generation archives device cache and requires fresh cloud bootstrap',()=>{
+ const inventory='[{"id":12}]';
+ const {store,context}=generationContext({inventory,bootstrap:'1',cursor:'27',generation:'old'});
  assert.equal(context.recordSyncPrepareGeneration(),true);
- assert.equal(store.getItem('inventory'),null);
+ assert.equal(store.getItem('inventory'),inventory);
+ assert.equal(JSON.parse(store.getItem('runlu_record_sync_recovery_v1:old')).datasets.inventory,inventory);
  assert.equal(store.getItem('cursor'),null);
  assert.equal(store.getItem('bootstrap'),null);
  assert.equal(store.getItem('generation'),'current');
- assert.equal(context.cloudApplying,false);
 });
-test('stale offline operations cannot override cloud after migration',()=>{
- const store=storage({inventory:'[{"id":12}]',bootstrap:'1',cursor:'27',generation:'old',outbox:'[{"operation_id":"p"}]'});
- const context={localStorage:store,RECORD_SYNC_GENERATION_KEY:'generation',RECORD_SYNC_GENERATION:'current',RECORD_SYNC_OUTBOX_KEY:'outbox',RECORD_SYNC_BOOTSTRAP_KEY:'bootstrap',RECORD_SYNC_CURSOR_KEY:'cursor',DATA_KEYS:['inventory'],cloudApplying:false};
- vm.createContext(context);vm.runInContext(functionBody('recordSyncPrepareGeneration','function recordSyncId('),context);
- assert.equal(context.recordSyncPrepareGeneration(),true);
- assert.equal(store.getItem('inventory'),null);
- assert.equal(store.getItem('outbox'),null);
+test('stale offline operations pause migration and remain intact on retry',()=>{
+ const inventory='[{"id":12}]',outbox='[{"operation_id":"p"}]';
+ const {store,context}=generationContext({inventory,outbox,generation:'old',cursor:'27'});
+ for(let attempt=0;attempt<2;attempt++)assert.throws(()=>context.recordSyncPrepareGeneration(),/require review/);
+ assert.equal(store.getItem('inventory'),inventory);
+ assert.equal(store.getItem('outbox'),outbox);
+ assert.equal(store.getItem('generation'),'old');
+ assert.equal(store.getItem('cursor'),'27');
+ assert.equal(JSON.parse(store.getItem('runlu_record_sync_recovery_v1:old')).offlineOperations,outbox);
+});
+test('failure to archive the previous generation retains the cache and markers',()=>{
+ const {store,context}=generationContext({inventory:'[]',generation:'old',cursor:'27'});
+ store.setItem=()=>{throw new Error('storage full')};
+ assert.throws(()=>context.recordSyncPrepareGeneration(),/storage full/);
+ assert.equal(store.getItem('inventory'),'[]');
+ assert.equal(store.getItem('cursor'),'27');
+ assert.equal(store.getItem('generation'),'old');
 });
 test('bulk device upload is disabled',async()=>{
  const code=source.slice(source.indexOf('async function cloudUploadAll(){'),source.indexOf('async function cloudPutDatasetInitial('));
@@ -44,7 +59,7 @@ test('bulk device upload is disabled',async()=>{
 });
 test('duplicate identities cannot be queued to cloud',()=>{
  const store=storage();
- const code=functionBody('queueRecordDeltaSave','async function recordSyncPush(');
+ const code=functionBody('validateRecordSave','async function recordSyncPush(');
  const context={localStorage:store,CLOUD_LAST_ERROR_KEY:'error',cloudApplying:false,recordSyncReady:()=>true,DATA_KEYS:['inventory'],recordSyncId:(x)=>String(x.id),recordSyncOutbox:()=>[],cloudDeviceId:()=> 'device',crypto:{randomUUID:()=> 'uuid'},recordSyncPayload:x=>x,recordSyncSameAsLatestPending:()=>false,setRecordSyncOutbox:()=>{throw Error('must not queue')}};
  vm.createContext(context);vm.runInContext(code,context);
  assert.throws(()=>context.queueRecordDeltaSave('inventory',[],[{id:1},{id:1}]),/Duplicate record identity/);
@@ -163,12 +178,9 @@ test('cloud download does not overwrite record-sync data using legacy datasets',
  assert.ok(fn.indexOf('return;\n }if(silent')<fn.indexOf('await applyCloudRows('));
 });
 
-test('manual Sync Now uses record operations after cloud bootstrap',()=>{
- const start=source.indexOf('async function cloudSyncNow('),end=source.indexOf('\nasync function cloudAutoRefresh(',start);
- assert.ok(start>=0&&end>start);
- const fn=source.slice(start,end);
- assert.match(fn,/if\(recordSyncReady\(\)\)/);
+test('manual Sync Now fails closed instead of falling back to dataset upload',()=>{
+ const fn=functionBody('syncWarehouseRecords','async function cloudAutoRefresh(');
  assert.match(fn,/await recordSyncNow\(false\)/);
  assert.match(fn,/recordSyncOutbox\(\)\.length/);
- assert.ok(fn.indexOf('return;\n }if(cloudSyncBusy)')<fn.indexOf('await cloudSmartSync(false)'));
+ assert.doesNotMatch(fn,/cloudSmartSync|cloudUploadAll|cloudPutDataset/);
 });

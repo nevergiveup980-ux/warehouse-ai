@@ -63,6 +63,10 @@
     if(dataset==='runlu_settings_v20')return '__document__';
     if(!row||typeof row!=='object')return '';
     if(dataset===INV)return text(row.inventoryId||row.id||row.cloudRecordId);
+    if(dataset==='runlu_carpet_inventory_v52'){
+      const identity=window.RUNLUCarpetCloudIdentity?.recordIdentity(row);
+      if(identity)return identity;
+    }
     return text(row.id||row.cloudRecordId||row.roll||row.operationId);
   }
   function productIncompatible(a,b){
@@ -76,7 +80,13 @@
   function versions(){return read(VERSIONS)||{}}
   function setVersion(dataset,id,v){const map=versions();if(v==null)delete map[versionKey(dataset,id)];else map[versionKey(dataset,id)]=Number(v);write(VERSIONS,map)}
   function getVersion(dataset,id){const v=versions()[versionKey(dataset,id)];return Number.isFinite(Number(v))?Number(v):0}
-  function queue(){const q=read(QUEUE);return Array.isArray(q)?q:[]}
+  function queue(){
+    const raw=localStorage.getItem(QUEUE);
+    if(raw===null)return [];
+    const q=parse(raw);
+    if(!Array.isArray(q))throw new Error('Cloud Master offline queue is unreadable. Sync paused to preserve its contents.');
+    return q;
+  }
   function conflicts(){const x=read(CONFLICTS);return Array.isArray(x)?x:[]}
   function saveConflicts(x){write(CONFLICTS,x);renderPanel()}
   function qid(){return 'Q-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
@@ -163,6 +173,8 @@
   async function flushQueue(s,{allowShadow=false}={}){
     const st=stateCache||await fetchState(s);if(st?.mode!=='active'&&!allowShadow)return {flushed:0,pending:queue().length};
     let q=queue(),flushed=0,cs=conflicts();
+    const originalById=new Map(q.map(op=>[op.id,JSON.stringify(op)]));
+    const updatedById=new Map();
     for(let i=0;i<q.length;i++){
       const m=q[i];if(m.blocked||m.replayHeld)continue;
       if(m.datasetKey===INV&&m.op==='upsert'&&m.source!=='live-save'){
@@ -181,10 +193,15 @@
         }
         if(res?.status!=='ok')throw new Error('Cloud Master mutation was not confirmed.');
         const rec=res.record||{};setVersion(m.datasetKey,m.recordId,rec.version||m.baseVersion+1);
-        cs=cs.filter(c=>c.queueId!==m.id);q[i]=null;flushed++;
+        cs=cs.filter(c=>c.queueId!==m.id);updatedById.set(m.id,null);flushed++;
       }catch(e){m.lastError=e.message||String(e);localStorage.setItem(LAST_ERROR,m.lastError);if(navigator.onLine===false)break}
     }
-    q=q.filter(Boolean);write(QUEUE,q);saveConflicts(cs);renderPanel();return {flushed,pending:q.length};
+    q=queue().flatMap(op=>{
+      if(!updatedById.has(op.id)||originalById.get(op.id)!==JSON.stringify(op))return [op];
+      const updated=updatedById.get(op.id);
+      return updated?[updated]:[];
+    });
+    write(QUEUE,q);saveConflicts(cs);renderPanel();return {flushed,pending:q.length};
   }
 
   function sortDataset(dataset,rows){
@@ -215,13 +232,22 @@
     clearLegacyConflictState();return st;
   }
 
-  async function pullCloud(s){const rows=await fetchRecords(s);applyRemoteLocally(rows);localStorage.setItem(LAST_SYNC,nowIso());localStorage.removeItem(LAST_ERROR);clearLegacyConflictState();renderPanel();return rows}
+  async function pullCloud(s){const rows=await fetchRecords(s);
+    if(queue().length||window.recordSyncOutbox?.().length)throw new Error('Cloud refresh paused because offline operations are pending.');
+    applyRemoteLocally(rows);localStorage.setItem(LAST_SYNC,nowIso());localStorage.removeItem(LAST_ERROR);clearLegacyConflictState();renderPanel();return rows}
   async function syncPass({silent=false}={}){
     syncBusy=true;renderPanel();
     try{
       const s=await ensureSession();if(!s)throw new Error('Cloud sign-in required.');
       if(navigator.onLine===false)throw new Error('Offline — changes are safely queued on this device.');
-      await activateIfNeeded(s);await flushQueue(s);if(conflicts().length)throw new Error('A record-level cloud conflict needs review before that record can sync.');
+      window.recordSyncPrepareGeneration?.();
+      if(window.recordSyncOutbox?.().length){
+        await window.recordSyncNow(true);
+        if(window.recordSyncOutbox().length)throw new Error('Cloud refresh paused because record operations are pending.');
+      }
+      await activateIfNeeded(s);
+      await flushQueue(s);
+      if(conflicts().length)throw new Error('A record-level cloud conflict needs review before that record can sync.');
       await pullCloud(s);if(!silent)alert('Cloud Master synchronized. Supabase is the authoritative warehouse record; this device is now refreshed from cloud.');return true;
     }catch(e){localStorage.setItem(LAST_ERROR,e.message||String(e));if(!silent&&navigator.onLine!==false)alert('Cloud Master sync stopped: '+(e.message||e));renderPanel();return false}
     finally{syncBusy=false;renderPanel()}
@@ -245,6 +271,8 @@
     const original=current;
     const wrapped=function(k,v){
       if(!MANAGED.has(k)||applying)return original.apply(this,arguments);
+      try{window.validateRecordSave?.(k,v,row=>stableId(k,row));queue()}
+      catch(e){alert(e.message);return false}
       const before=read(k),encoded=JSON.stringify(v);
       try{localStorage.setItem(k,encoded)}catch(e){alert('This device could not save the local cache. No cloud overwrite was attempted.');return false}
       diffAndQueue(k,before,v);return true;
@@ -255,7 +283,6 @@
     window.cloudSyncNow=sync;window.cloudSyncNow.__build069=true;window.cloudSyncNow.__build071=true;window.cloudSyncNow.__build072=true;
     window.flushAndVerifyDatasets=async()=>{const ok=await sync({silent:true});if(!ok)throw new Error(localStorage.getItem(LAST_ERROR)||'Cloud Master verification failed.');return true};
     window.cloudDownloadAll=async()=>sync({silent:false});
-    if(typeof window.cloudUploadAll==='function')window.cloudUploadAll=async()=>sync({silent:false});
   }
 
   function conflictSummary(c){
@@ -282,12 +309,13 @@
   function renderPanel(){
     const status=document.getElementById('cloudStatus');if(!status)return false;
     let box=document.getElementById('build072CloudMasterPanel');if(!box){box=document.createElement('div');box.id='build072CloudMasterPanel';status.insertAdjacentElement('afterend',box)}
-    const q=queue(),cs=conflicts(),last=localStorage.getItem(LAST_SYNC)||'',err=localStorage.getItem(LAST_ERROR)||'',sum=read(SUMMARY)||{};
+    const q=read(QUEUE),cs=conflicts(),last=localStorage.getItem(LAST_SYNC)||'',err=localStorage.getItem(LAST_ERROR)||'',sum=read(SUMMARY)||{};
+    const pending=Array.isArray(q)?q.length:localStorage.getItem(QUEUE)!==null?'Unreadable':0;
     const mode=stateCache?.mode||'checking';
     const online=navigator.onLine!==false;
     const conflictHtml=cs.slice(0,8).map(c=>{const x=conflictSummary(c);return `<div style="margin-top:10px;padding:10px;border:1px solid #efc2c7;border-radius:10px;background:#fff7f8"><b>${escapeHtml(label(c.datasetKey))}</b> · ${escapeHtml(c.recordId)}<br><small><b>This device:</b> ${escapeHtml(x.left)}<br><b>Cloud:</b> ${escapeHtml(x.right)}</small><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><button onclick="runluCloudMasterResolve('${escapeAttr(c.queueId)}','cloud')">Use Cloud</button><button class="blue" onclick="runluCloudMasterResolve('${escapeAttr(c.queueId)}','device')">Apply Device</button><button class="red" onclick="runluCloudMasterResolve('${escapeAttr(c.queueId)}','delete')">Delete Duplicate</button></div></div>`}).join('');
     box.style.cssText='margin:14px 0;padding:14px;border:1px solid #9fd3b1;background:#f2fbf5;border-radius:14px;color:#163d27;line-height:1.5';
-    box.innerHTML=`<div style="font-weight:900;font-size:17px">☁️ Cloud Master</div><div><b>${mode==='active'?'ACTIVE — Supabase is the warehouse master record':mode==='paused'?'PAUSED — record review required':'Preparing record-level cloud master'}</b></div><div>This phone/computer is now a cache and offline work station, not a competing master database.</div><div style="margin-top:7px"><b>Network:</b> ${online?'Online':'Offline'} · <b>Offline queue:</b> ${q.length} · <b>Record conflicts:</b> ${cs.length}${sum.totalActive!=null?` · <b>Cloud records:</b> ${sum.totalActive}`:''}</div>${last?`<div><b>Last Cloud Master sync:</b> ${escapeHtml(new Date(last).toLocaleString())}</div>`:''}${err?`<div style="color:#9b2c2c"><b>Last issue:</b> ${escapeHtml(err)}</div>`:''}<button id="build072SyncBtn" class="green" style="margin-top:10px">${syncBusy?'Syncing Cloud Master…':'Sync Cloud Master Now'}</button><div style="margin-top:9px;font-size:13px;color:#496455">Legacy whole-dataset Upload / Download / Keep Device / Keep Cloud actions are retired under Build072.</div>${conflictHtml}`;
+    box.innerHTML=`<div style="font-weight:900;font-size:17px">☁️ Cloud Master</div><div><b>${mode==='active'?'ACTIVE — Supabase is the warehouse master record':mode==='paused'?'PAUSED — record review required':'Preparing record-level cloud master'}</b></div><div>This phone/computer is now a cache and offline work station, not a competing master database.</div><div style="margin-top:7px"><b>Network:</b> ${online?'Online':'Offline'} · <b>Offline queue:</b> ${pending} · <b>Record conflicts:</b> ${cs.length}${sum.totalActive!=null?` · <b>Cloud records:</b> ${sum.totalActive}`:''}</div>${last?`<div><b>Last Cloud Master sync:</b> ${escapeHtml(new Date(last).toLocaleString())}</div>`:''}${err?`<div style="color:#9b2c2c"><b>Last issue:</b> ${escapeHtml(err)}</div>`:''}<button id="build072SyncBtn" class="green" style="margin-top:10px">${syncBusy?'Syncing Cloud Master…':'Sync Cloud Master Now'}</button><div style="margin-top:9px;font-size:13px;color:#496455">Legacy whole-dataset Upload / Download / Keep Device / Keep Cloud actions are retired under Build072.</div>${conflictHtml}`;
     const btn=document.getElementById('build072SyncBtn');if(btn){btn.disabled=syncBusy;btn.onclick=()=>sync({silent:false})}
     retireLegacyButtons();showVersion();return true;
   }

@@ -40,7 +40,7 @@ function extractFunction(name){
 }
 
 const functionNames=[
-  'load','save','normalizeText','normKey','carpetRollKey','cleanManufacturerRoll','findCarpetRoll','findCarpetRollForOperation',
+  'load','save','validateRecordSave','recordSyncId','normalizeText','normKey','carpetRollKey','cleanManufacturerRoll','findCarpetRoll','findCarpetRollForOperation',
   'carpetRecords','cuttingRecords','carpetActualCutLength','carpetCutConsumptionPlan','feetLabel','validateOperationForImpact',
   'updateLinkedOrder','applySingleOperationImpact'
 ];
@@ -74,6 +74,7 @@ function boot(){
     alert:m=>alerts.push(String(m)),queueCloudSave(){},isQuotaError(){return false},pruneLocalApplicationCache(){return{}},aggressiveSafeStorageCleanup(){return{}},renderBackupStatus(){},
     ensureOperationProductLink(){return''},finalizeCustomerOrderInventory(){return{records:0,quantity:0}},fetch:blocked('fetch'),
     XMLHttpRequest:class{constructor(){network++;throw new Error('LAB blocked XMLHttpRequest')}},WebSocket:class{constructor(){network++;throw new Error('LAB blocked WebSocket')}},
+    DATA_KEYS:Object.values(KEYS),CLOUD_LAST_ERROR_KEY:'cloud-error',
     ...KEYS
   };
   box.window=box;

@@ -773,7 +773,7 @@ img,video,canvas,svg{max-width:100%}
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
 <label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
 <label>Cloud login password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password">
-<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="recordSyncNow(false)">Sync Now</button><button onclick="cloudSignOut()">Sign Out</button></div>
+<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="syncWarehouseNow()">Sync Now</button><button onclick="cloudSignOut()">Sign Out</button></div>
 <div id="cloudSyncDetails" class="notice" style="margin-top:10px">Sync details are loading...</div>
 <div id="cloudConflictActions" class="actions hidden" style="margin-top:10px"><button class="purple" onclick="cloudResolveConflictsFromCloud()">Keep Cloud for Conflict Only</button><button class="primary" onclick="cloudResolveConflictsFromDevice()">Keep This Device for Conflict Only</button></div>
 <div class="meta" style="margin-top:9px"><b>Sync Now</b> uses the Cloud Master record protocol: snapshot once, then record-level delta sync. Whole-device upload/download has been retired. Never enter the Supabase dashboard password here unless you intentionally use the same password for the app login.</div>
@@ -1195,21 +1195,6 @@ const WAREHOUSE_TAG_BASE_URL='https://warehouse.runlu.ca/';
 const SCANDICT='runlu_scan_learning_dictionary';
 const SCANTEMPLATES='runlu_scan_supplier_templates_v1';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB,SCANDICT,SCANTEMPLATES];
-const CLEAN_BREAK_KEY='runlu_clean_cloud_cutover_20260926_v1';
-function enforceCleanCloudCutover(){
- if(localStorage.getItem(CLEAN_BREAK_KEY)==='1')return;
- const preserve=new Set(['runlu_cloud_session_v54','runlu_access_role_v620','runlu_access_trusted_v620']);
- const prefixes=['runlu_cloud_dirty_','runlu_cloud_dataset_conflicts_','runlu_cloud_dataset_seen_','runlu_cloud_local_updated_','runlu_cloud_dataset_push_'];
- const exact=new Set([...DATA_KEYS,SNAPDB,PROTECTDB,OPDRAFTDB,'runlu_cloud_sync_enabled_v54','runlu_cloud_last_pull_v54','runlu_cloud_last_push_v54','runlu_cloud_summary_v5544','runlu_cloud_last_error_v5544']);
- const remove=[];
- for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&!preserve.has(k)&&(exact.has(k)||prefixes.some(p=>k.startsWith(p))))remove.push(k)}
- remove.forEach(k=>localStorage.removeItem(k));
- localStorage.setItem('runlu_cloud_sync_enabled_v54','0');
- localStorage.setItem(CLEAN_BREAK_KEY,'1');
- try{sessionStorage.clear()}catch{}
-}
-enforceCleanCloudCutover();
-
 const ACCESS_ROLE_KEY='runlu_access_role_v620', ACCESS_TRUSTED_KEY='runlu_access_trusted_v620';
 // Build049 — Private Administrator Mode. Public / View Only access is retired.
 const ACCESS_ROLES={admin:'Administrator'};
@@ -1402,6 +1387,7 @@ function pruneLocalApplicationCache(force=false){
  return result;
 }
 function save(k,v){
+ try{validateRecordSave(k,v)}catch(err){alert(err.message);return false}
  const encoded=JSON.stringify(v),before=load(k);
  const previousRaw=localStorage.getItem(k);
  const outboxKey='runlu_record_sync_outbox_v1';
@@ -1440,7 +1426,7 @@ const CLOUD_LAST_PULL_KEY='runlu_cloud_last_pull_v54', CLOUD_LAST_PUSH_KEY='runl
 const CLOUD_LOCAL_UPDATED_PREFIX='runlu_cloud_local_updated_v583_', CLOUD_DATASET_PUSH_PREFIX='runlu_cloud_dataset_push_v583_', CLOUD_DATASET_SEEN_PREFIX='runlu_cloud_dataset_seen_v658_', CLOUD_CONFLICT_KEY='runlu_cloud_dataset_conflicts_v659_';
 function cloudSession(){try{return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY)||'null')}catch{return null}}
 function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'Bearer '+token};if(json)h['Content-Type']='application/json';return h}
-async function cloudRequest(path,options={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!localStorage.getItem('runlu_record_sync_outbox_v1')||recordSyncOutbox().length===0)localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
+async function cloudRequest(path,options={}){if(/^\/rest\/v1\/user_datasets(?:[/?#]|$)/.test(path)&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy whole-dataset writes are disabled.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!localStorage.getItem('runlu_record_sync_outbox_v1')||recordSyncOutbox().length===0)localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
 function v8CanonicalRpcHeaders(token){return {...cloudHeaders(token),'Content-Profile':'warehouse_v7','Accept-Profile':'warehouse_v7'}}
 function v8CanonicalRpcRequest(name,body,token){return cloudRequest('/rest/v1/rpc/'+name,{method:'POST',headers:v8CanonicalRpcHeaders(token),body:JSON.stringify(body)})}
 async function v8CheckCarpetReviewGate(){
@@ -1532,7 +1518,9 @@ function cloudRemoteMs(row){return new Date(row?.updated_at||0).getTime()}
 function cloudRemoteChangedSinceSeen(row,key){const remote=cloudRemoteMs(row),seen=cloudSeenMs(key);return !!row&&remote>0&&(!seen||remote>seen+500)}
 async function cloudDatasetMeta(key,s){const rows=await cloudRequest('/rest/v1/user_datasets?select=updated_at,device_id&user_id=eq.'+encodeURIComponent(s.user.id)+'&dataset_key=eq.'+encodeURIComponent(key)+'&limit=1',{headers:cloudHeaders(s.access_token,false)});return Array.isArray(rows)&&rows.length?rows[0]:null}
 function rememberCloudDatasetVersions(rows,force=false,onlyKeys=null){const dirty=new Set(force?[]:cloudDirtyKeys()),only=onlyKeys?new Set(onlyKeys):null;for(const row of rows||[]){if(DATA_KEYS.includes(row.dataset_key)&&(!only||only.has(row.dataset_key))&&!dirty.has(row.dataset_key)&&row.updated_at)localStorage.setItem(CLOUD_DATASET_SEEN_PREFIX+row.dataset_key,row.updated_at)}}
-async function cloudPutDataset(key,value){if(cloudApplying||localStorage.getItem(CLOUD_ENABLED_KEY)!=='1'||!DATA_KEYS.includes(key))return;if(recordSyncReady())throw new Error('Cloud-first record sync is active. Legacy whole-dataset upload is disabled; use record operations instead.');const s=await cloudEnsureSession();if(!s)throw new Error('Cloud session is unavailable.');const meta=await cloudDatasetMeta(key,s),device=cloudDeviceId(),seenMs=cloudSeenMs(key),remoteMs=cloudRemoteMs(meta),localChangedMs=new Date(localStorage.getItem(CLOUD_LOCAL_UPDATED_PREFIX+key)||0).getTime();if(meta&&meta.device_id&&meta.device_id!==device&&localChangedMs>0&&(!seenMs||remoteMs>seenMs+500)){setCloudConflictKeys(cloudConflictKeys().concat(key));throw new Error('Cloud conflict blocked for '+cloudDatasetLabel(key)+': another device changed this dataset after this device last saw it. No data was overwritten.')}const payload=await cloudPreparePayload(value,key,s);await cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:device})});const now=new Date().toISOString();localStorage.setItem(CLOUD_LAST_PUSH_KEY,now);localStorage.setItem(CLOUD_DATASET_PUSH_PREFIX+key,now);localStorage.setItem(CLOUD_DATASET_SEEN_PREFIX+key,now);localStorage.removeItem(CLOUD_LAST_ERROR_KEY);clearCloudDirty(key);clearCloudConflict(key)}
+async function cloudPutDataset(){
+ throw new Error('Legacy whole-dataset upload is disabled. Use Sync Now to synchronize individual records.');
+}
 function queueCloudSave(key,value){
  if(cloudApplying||!DATA_KEYS.includes(key))return;
  markCloudDirty(key);localStorage.setItem(CLOUD_LOCAL_UPDATED_PREFIX+key,new Date().toISOString());
@@ -1571,18 +1559,24 @@ const RECORD_SYNC_OUTBOX_KEY='runlu_record_sync_outbox_v1', RECORD_SYNC_CURSOR_K
 const RECORD_SYNC_BOOTSTRAP_KEY='runlu_record_sync_bootstrapped_v1', RECORD_SYNC_GENERATION_KEY='runlu_record_sync_generation_v1', RECORD_SYNC_GENERATION='20261121-cloud-authority-reset-v4';
 function recordSyncReady(){return localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION&&localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)==='1'}
 function recordSyncPrepareGeneration(){
- if(localStorage.getItem(RECORD_SYNC_GENERATION_KEY)===RECORD_SYNC_GENERATION)return false;
- // The cloud is authoritative: discard stale device records and queued operations
- // when migrating sync generations. Never replay an old device snapshot.
- cloudApplying=true;
- try{
-  for(const k of DATA_KEYS)localStorage.removeItem(k);
-  localStorage.removeItem(RECORD_SYNC_OUTBOX_KEY);
-  localStorage.removeItem(RECORD_SYNC_CURSOR_KEY);
-  localStorage.removeItem(RECORD_SYNC_BOOTSTRAP_KEY);
-  try{setCloudDirtyKeys([]);setCloudConflictKeys([])}catch(e){console.warn('Cloud sync status reset incomplete',e)}
-  localStorage.setItem(RECORD_SYNC_GENERATION_KEY,RECORD_SYNC_GENERATION);
- }finally{cloudApplying=false}
+ const previous=localStorage.getItem(RECORD_SYNC_GENERATION_KEY);
+ if(previous===RECORD_SYNC_GENERATION)return false;
+ // Preserve the original cache before either sync engine can replace its view.
+ const recoveryKey='runlu_record_sync_recovery_v1:'+ (previous??'unversioned');
+ if(localStorage.getItem(recoveryKey)===null){
+  const datasets=Object.fromEntries(DATA_KEYS.map(key=>[key,localStorage.getItem(key)]).filter(([,raw])=>raw!==null));
+  const offlineOperations=localStorage.getItem(RECORD_SYNC_OUTBOX_KEY);
+  const cloudMasterOperations=localStorage.getItem('runlu_cloud_master_offline_queue_v680');
+  if(Object.keys(datasets).length||offlineOperations!==null||cloudMasterOperations!==null){
+   localStorage.setItem(recoveryKey,JSON.stringify({generation:previous,datasets,offlineOperations,cloudMasterOperations}));
+  }
+ }
+ // An old outbox can contain changes based on identities or versions that no longer
+ // match the cloud. Keep it intact and require review before replacing the cache.
+ if(recordSyncOutbox().length)throw new Error('Sync paused: offline operations from a previous sync generation are preserved on this device and require review.');
+ localStorage.removeItem(RECORD_SYNC_BOOTSTRAP_KEY);
+ localStorage.removeItem(RECORD_SYNC_CURSOR_KEY);
+ localStorage.setItem(RECORD_SYNC_GENERATION_KEY,RECORD_SYNC_GENERATION);
  return true;
 }
 function recordSyncId(x,i=0){return String(x?.inventoryId??x?.id??x?.legacyKey??x?.roll??x?.poNumber??('row-'+i))}
@@ -1609,18 +1603,27 @@ function recordSyncSameAsLatestPending(q,key,id,payload,baseVersion,isDelete){
  }
  return false
 }
+function validateRecordSave(key,rows,identity=recordSyncId){
+ if(!DATA_KEYS.includes(key)||!Array.isArray(rows))return;
+ const identities=identity===recordSyncId?[recordSyncId]:[recordSyncId,identity];
+ for(const getId of identities){
+  const seen=new Set();
+  for(let index=0;index<rows.length;index++){
+   const id=getId(rows[index],index);
+   if(!id)continue;
+   if(seen.has(id)){
+    const message='Duplicate record identity '+id+' in '+key+'. Save paused; no records were removed.';
+    localStorage.setItem(CLOUD_LAST_ERROR_KEY,message);
+    throw new Error(message);
+   }
+   seen.add(id);
+  }
+ }
+}
 function queueRecordDeltaSave(key,before,after){
  if(cloudApplying||!recordSyncReady()||!DATA_KEYS.includes(key)||!Array.isArray(after))return;
- const previous=Array.isArray(before)?before:[],seen=new Set();
- for(let i=0;i<after.length;i++){
-  const row=after[i],id=recordSyncId(row,i);
-  if(seen.has(id)){
-   const message='Duplicate record identity '+id+' in '+key+'. Cloud upload paused; no records were removed.';
-   localStorage.setItem(CLOUD_LAST_ERROR_KEY,message);
-   throw new Error(message);
-  }
-  seen.add(id);
- }
+ validateRecordSave(key,after);
+ const previous=Array.isArray(before)?before:[];
  const a=new Map(previous.map((x,i)=>[recordSyncId(x,i),x])),b=new Map(after.map((x,i)=>[recordSyncId(x,i),x])),q=recordSyncOutbox(),device=cloudDeviceId();
  let added=0;
  for(const [id,row] of b){
@@ -1682,7 +1685,9 @@ async function cloudUploadAll(){
  alert('Cloud inventory is the source of truth. Bulk upload from this device is disabled to prevent old records and duplicates from returning. Edit individual records instead.');
  return false;
 }
-async function cloudPutDatasetInitial(key,value,s){const payload=await cloudPreparePayload(value,key,s);return cloudRequest('/rest/v1/user_datasets?on_conflict=user_id,dataset_key',{method:'POST',headers:{...cloudHeaders(s.access_token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:s.user.id,dataset_key:key,payload,device_id:cloudDeviceId()})})}
+async function cloudPutDatasetInitial(){
+ return cloudPutDataset();
+}
 async function cloudFetchRows(){const s=await cloudEnsureSession();if(!s)throw new Error('Sign in first.');const rows=await cloudRequest('/rest/v1/user_datasets?select=dataset_key,payload,updated_at,device_id&order=updated_at.asc',{headers:cloudHeaders(s.access_token,false)});cloudRememberSummary(rows);return rows}
 function protectedInputActive(){return ['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].some(id=>!$(id)?.classList.contains('hidden'))}
 async function applyCloudRows(rows,silent=false,keys=null,clearSelectedDirty=false){const s=await cloudEnsureSession(),selected=new Set((keys||DATA_KEYS).filter(k=>DATA_KEYS.includes(k)));if(!selected.size)return;createLocalSnapshot(false);cloudApplying=true;try{for(const row of rows){if(selected.has(row.dataset_key)){const payload=await cloudHydratePayload(row.payload,s);localStorage.setItem(row.dataset_key,JSON.stringify(payload));if(row.updated_at)localStorage.setItem(CLOUD_DATASET_SEEN_PREFIX+row.dataset_key,row.updated_at)}}if(clearSelectedDirty)setCloudDirtyKeys(cloudDirtyKeys().filter(k=>!selected.has(k)));setCloudConflictKeys(cloudConflictKeys().filter(k=>!selected.has(k)));const newest=rows.reduce((m,r)=>Math.max(m,cloudRemoteMs(r)),0);localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_PULL_KEY,new Date(newest||Date.now()).toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY)}finally{cloudApplying=false}if(!silent){alert('Cloud data downloaded. The app will reload now.');location.reload()}else{renderCloudStatus();const active=document.querySelector('.page:not(.hidden)')?.id||'home';showPage(active)}}
@@ -1701,21 +1706,42 @@ async function flushCloudDirty(keys=null){const targets=(keys||cloudDirtyKeys())
 function cloudPlanDatasetSync(rows){const byKey=new Map(rows.map(r=>[r.dataset_key,r])),dirty=new Set(cloudDirtyKeys()),device=cloudDeviceId(),upload=[],download=[],conflicts=[];for(const key of DATA_KEYS){const row=byKey.get(key);if(dirty.has(key)){if(row&&row.device_id&&row.device_id!==device&&cloudRemoteChangedSinceSeen(row,key))conflicts.push(key);else upload.push(key);continue}if(!row)continue;if(row.device_id===device){if(row.updated_at)localStorage.setItem(CLOUD_DATASET_SEEN_PREFIX+key,row.updated_at);continue}if(cloudRemoteChangedSinceSeen(row,key))download.push(key)}return {upload,download,conflicts}}
 async function cloudSmartSync(silent=false){const rows=await cloudFetchRows();if(!rows.length)return {empty:true,uploaded:0,downloaded:0,conflicts:[]};const first=cloudPlanDatasetSync(rows),conflicts=new Set(first.conflicts);let uploaded=0;for(const key of first.upload){const result=await flushCloudDirty([key]);uploaded+=result.uploaded;result.conflicts.forEach(k=>conflicts.add(k))}const freshRows=await cloudFetchRows(),freshPlan=cloudPlanDatasetSync(freshRows);freshPlan.conflicts.forEach(k=>conflicts.add(k));const conflictSet=new Set(conflicts),downloadKeys=freshPlan.download.filter(k=>!conflictSet.has(k)&&!cloudDirtyKeys().includes(k));if(downloadKeys.length&&!protectedInputActive())await applyCloudRows(freshRows,true,downloadKeys,false);setCloudConflictKeys([...conflictSet].filter(k=>cloudDirtyKeys().includes(k)));rememberCloudDatasetVersions(freshRows,false,freshRows.filter(r=>r.device_id===cloudDeviceId()&&!cloudDirtyKeys().includes(r.dataset_key)).map(r=>r.dataset_key));return {empty:false,uploaded,downloaded:downloadKeys.length,conflicts:[...conflictSet].filter(k=>cloudDirtyKeys().includes(k)),checked:freshRows.length}}
 async function cloudResolveConflictsFromCloud(){const conflicts=cloudConflictKeys();if(!conflicts.length){alert('No dataset conflict needs review.');return}if(!confirm('Keep the CLOUD copy for these conflicting dataset(s)?\n\n'+conflicts.map(cloudDatasetLabel).join('\n')+'\n\nOnly these dataset(s) will be replaced on this device. A local safety snapshot will be created first.'))return;try{cloudSyncBusy=true;renderCloudStatus('Downloading only the conflicting dataset(s)...');const rows=await cloudFetchRows();await applyCloudRows(rows,true,conflicts,true);setCloudConflictKeys([]);renderCloudStatus();alert('Conflict resolved from cloud. Other local datasets were not replaced.')}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus();alert('Conflict resolution failed: '+e.message)}finally{cloudSyncBusy=false}}
-async function cloudResolveConflictsFromDevice(){const conflicts=cloudConflictKeys();if(!conflicts.length){alert('No dataset conflict needs review.');return}if(!confirm('Keep THIS DEVICE for these conflicting dataset(s)?\n\n'+conflicts.map(cloudDatasetLabel).join('\n')+'\n\nOnly these dataset(s) will overwrite their cloud counterparts. Other cloud datasets are untouched.'))return;try{cloudSyncBusy=true;renderCloudStatus('Uploading only the conflicting dataset(s)...');const s=await cloudEnsureSession();if(!s)throw new Error('Sign in first.');for(const key of conflicts){let value=null;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{}if(value!==null)await cloudPutDatasetInitial(key,value,s)}const rows=await cloudFetchRows();rememberCloudDatasetVersions(rows,true,conflicts);setCloudDirtyKeys(cloudDirtyKeys().filter(k=>!conflicts.includes(k)));setCloudConflictKeys([]);localStorage.setItem(CLOUD_LAST_PUSH_KEY,new Date().toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY);renderCloudStatus();alert('Conflict resolved from this device. Other cloud datasets were not overwritten.')}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus();alert('Conflict resolution failed: '+e.message)}finally{cloudSyncBusy=false}}
-async function cloudSyncNow(){if(recordSyncReady()){
-  if(cloudSyncBusy){alert('Cloud sync is already running. Try again when it finishes.');return}
-  if(!cloudSession()){alert('Sign in first.');return}
-  await recordSyncNow(false);
-  const pending=recordSyncOutbox().length,error=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
-  renderCloudStatus();
-  if(pending||error){alert('Record sync is not complete. '+pending+' operation(s) pending.'+(error?'\\n\\n'+error:''));return}
-  alert('Cloud record sync completed. No pending operations.');return;
- }if(cloudSyncBusy){renderCloudStatus('A cloud check is already running. It will time out automatically if the network is not responding.');alert('Cloud sync is already in progress. A stuck cloud request will stop automatically after 12 seconds.');return}const s=await cloudEnsureSession();if(!s){alert('Sign in first.');return}try{cloudSyncBusy=true;updateHeaderCloudPill('syncing');renderCloudStatus('Checking each dataset on this device and in the cloud...');const result=await cloudSmartSync(false);if(result.empty){if(confirm('No cloud copy exists yet. Upload this device now?'))await cloudUploadAll();return}renderCloudStatus();if(result.conflicts.length){alert(`Safe sync completed.\n\nUploaded: ${result.uploaded} dataset(s)\nDownloaded: ${result.downloaded} dataset(s)\nNeeds review: ${result.conflicts.map(cloudDatasetLabel).join(', ')}\n\nOnly the conflicting dataset(s) paused. No other data was blocked or overwritten.`)}else alert(`Sync completed.\n\nUploaded: ${result.uploaded} dataset(s)\nDownloaded: ${result.downloaded} dataset(s)\nCloud data checked: ${result.checked} dataset(s)\nThis device work records: ${load(LOGDB).length}`)}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus();alert('Sync failed: '+e.message)}finally{cloudSyncBusy=false;renderCloudStatus();updateHeaderCloudPill('auto')}}
-async function cloudAutoRefresh(immediate=false){updateHeaderCloudPill('auto');if(!cloudSession()||protectedInputActive())return;await recordSyncNow(true);renderCloudStatus()}
-function startCloudPolling(){if(cloudPollTimer)clearInterval(cloudPollTimer);updateHeaderCloudPill('auto');if(!cloudSession())return;setTimeout(()=>recordSyncNow(true),500);cloudPollTimer=setInterval(()=>recordSyncNow(true),15000)}
+async function cloudResolveConflictsFromDevice(){
+ alert('Legacy whole-dataset upload is disabled. Use Sync Now to synchronize individual records.');
+ return false;
+}
+async function syncWarehouseNow(){
+ if(window.runluCloudMasterSync)return window.runluCloudMasterSync({silent:false});
+ return syncWarehouseRecords();
+}
+async function cloudSyncNow(){return syncWarehouseNow()}
+async function syncWarehouseRecords(){
+ if(cloudSyncBusy){alert('Cloud sync is already running. Try again when it finishes.');return}
+ if(!cloudSession()){alert('Sign in first.');return}
+ await recordSyncNow(false);
+ const pending=recordSyncOutbox().length,error=localStorage.getItem(CLOUD_LAST_ERROR_KEY);
+ renderCloudStatus();
+ if(pending||error){alert(error||'Record sync is not complete. '+pending+' operation(s) pending.');return}
+ alert('Cloud record sync completed. No pending operations.');
+}
+async function cloudAutoRefresh(immediate=false){
+ updateHeaderCloudPill('auto');
+ if(!cloudSession()||protectedInputActive())return;
+ if(window.runluCloudMasterSync)await window.runluCloudMasterSync({silent:true});
+ else await recordSyncNow(true);
+ renderCloudStatus();
+}
+function startCloudPolling(){
+ if(cloudPollTimer)clearInterval(cloudPollTimer);
+ updateHeaderCloudPill('auto');
+ if(!cloudSession())return;
+ setTimeout(()=>cloudAutoRefresh(true),500);
+ cloudPollTimer=setInterval(()=>cloudAutoRefresh(),15000);
+}
 window.addEventListener('online',()=>{updateHeaderCloudPill('syncing');cloudAutoRefresh(true)});
 window.addEventListener('offline',()=>{updateHeaderCloudPill('auto');setTimeout(()=>cloudAutoRefresh(true),300)});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')cloudAutoRefresh(true)});
+
 
 function migrateLegacyCarpetData(showMessage=false){
  if(recordSyncReady()){
@@ -5133,6 +5159,10 @@ function v8InstallCompatibility(){
  return false
 }
 function autoInitializeSeed(){initializeSeedDatabase(false)}
+function hasWarehouseCloudCache(){
+ return !!cloudSession()||[CLOUD_ENABLED_KEY,RECORD_SYNC_GENERATION_KEY,RECORD_SYNC_OUTBOX_KEY,
+  'runlu_cloud_master_last_sync_v680','runlu_cloud_master_offline_queue_v680'].some(key=>localStorage.getItem(key)!==null);
+}
 
 if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
 document.querySelectorAll('#operationEditor input,#operationEditor select,#operationEditor textarea').forEach(el=>{el.addEventListener('input',scheduleOperationDraft);el.addEventListener('change',scheduleOperationDraft)});
@@ -5193,7 +5223,14 @@ document.body.classList.remove('formEntry');
  ['openInventoryFromURL',()=>openInventoryFromURL()],
  ['bindVoiceAssistant',()=>bindVoiceAssistant()],
  ['startCloudPolling',()=>startCloudPolling()]
-].forEach(([name,fn])=>safeStartupStep(name,fn));
+].forEach(([name,fn])=>{
+ const historicalWrites=['migrateV13','migrateToV21','migrateInventoryLifecycle','migrateOperationsV52',
+  'repairMissingCarpetRollsFromReceiving','recoverOrderLibraries','restoreConversationOrders','autoInitializeSeed',
+  'applyV516WarehouseDataset','applyV5515FieldProducts','applyV5522UnderlaymentSpecs','repairCompletedStockTransfers',
+  'dedupeOpenOperationDrafts','reconcileCompletedCustomerOrderInventory','reconcileTransferredCarpetStatuses'];
+ // Cloud-backed startup must render the saved cache without seeding or repairing it.
+ if(!historicalWrites.includes(name)||!hasWarehouseCloudCache())safeStartupStep(name,fn);
+});
 </script>
 <script src="v8-compat.js?r=v8.0.1-cut-preflight-20261005" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>

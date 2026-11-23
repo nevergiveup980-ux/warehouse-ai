@@ -33,7 +33,7 @@ function extractFunction(name){
 }
 
 const functionNames=[
-  'load','save','normalizeText','normKey','loadMasters','loadInventoryRecords','inventoryRecordIdentity','findInventoryRecordByIdentity',
+  'load','save','validateRecordSave','recordSyncId','normalizeText','normKey','loadMasters','loadInventoryRecords','inventoryRecordIdentity','findInventoryRecordByIdentity',
   'ensureOperationProductLink','operationStockQuantity','operationStockUnit','carpetTransferParts','validateOperationForImpact','applyInventoryDelta',
   'applyInventoryTransfer','updateLinkedOrder','applySingleOperationImpact'
 ];
@@ -52,6 +52,7 @@ function boot({patch=true}={}){
     alert:m=>alerts.push(String(m)),queueCloudSave(){},isQuotaError(){return false},pruneLocalApplicationCache(){return{}},aggressiveSafeStorageCleanup(){return{}},renderBackupStatus(){},
     underlaymentSpec(){return null},normalizeInventoryLifecycleRecord:r=>r,finalizeCustomerOrderInventory(){return{records:0,quantity:0}},
     fetch:blocked('fetch'),XMLHttpRequest:class{constructor(){network++;throw new Error('LAB blocked XMLHttpRequest')}},WebSocket:class{constructor(){network++;throw new Error('LAB blocked WebSocket')}},
+    DATA_KEYS:Object.values(K),CLOUD_LAST_ERROR_KEY:'cloud-error',
     ...K
   };
   box.window=box;box.window.addEventListener=()=>{};
