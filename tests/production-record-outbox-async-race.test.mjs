@@ -16,6 +16,7 @@ function harness(initial,respond){
  let calls=0;
  const context={
   recordSyncReady:()=>true,
+  recordSyncAcknowledgedOperations:new Set(),
   recordSyncOutbox:()=>structuredClone(queue),
   setRecordSyncOutbox:q=>{queue=structuredClone(q)},
   cloudEnsureSession:async()=>({access_token:'test'}),
@@ -44,6 +45,8 @@ test('new local save while RPC awaits is not overwritten and is sent in FIFO ord
  assert.equal(await pushing,2);
  assert.deepEqual(h.sent,['A','B']);
  assert.deepEqual(h.read(),[]);
+ assert.equal(h.context.recordSyncAcknowledgedOperations.has('A'),true);
+ assert.equal(h.context.recordSyncAcknowledgedOperations.has('B'),true);
 });
 
 test('queue head mutation during RPC fails closed and preserves newer operations',async()=>{
@@ -64,4 +67,5 @@ test('non-acknowledged RPC keeps the original operation in queue',async()=>{
  assert.equal(await h.context.recordSyncPush(),0);
  assert.deepEqual(h.read(),[op('A')]);
  assert.match(h.errors.get('sync_error'),/operation\(s\) retained/);
+ assert.equal(h.context.recordSyncAcknowledgedOperations.has('A'),false);
 });

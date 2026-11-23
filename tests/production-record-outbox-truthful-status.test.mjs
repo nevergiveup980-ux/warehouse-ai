@@ -20,8 +20,9 @@ test('record sync does not mark completed while pending operations remain',()=>{
  assert.ok(start>=0&&end>start);
  const fn=html.slice(start,end);
  assert.match(fn,/const remainingOutbox=recordSyncOutbox\(\)\.length/);
- assert.match(fn,/if\(!remainingOutbox\)localStorage\.setItem\(CLOUD_LAST_OK_KEY/);
- assert.match(fn,/if\(!remainingOutbox&&!protectedInputActive\(\)\)await recordSyncPull\(\)/);
+ assert.match(fn,/const canPull=!remainingOutbox&&!protectedInputActive\(\)/);
+ assert.match(fn,/if\(canPull\)await recordSyncPull\(\)/);
+ assert.match(fn,/if\(canPull\)\{localStorage\.removeItem\(CLOUD_LAST_ERROR_KEY\);localStorage\.setItem\(CLOUD_LAST_OK_KEY/);
 });
 
 test('server non-acknowledgment retains queue and exposes a bounded diagnostic',()=>{
@@ -59,6 +60,6 @@ test('acknowledged push dequeues from latest persisted outbox, not stale snapsho
  const fn=html.slice(start,end);
  assert.ok(fn.includes('const latestQueue=recordSyncOutbox()'));
  assert.ok(fn.includes('latestQueue[0]?.operation_id!==op.operation_id'));
- assert.ok(fn.includes('latestQueue.shift();setRecordSyncOutbox(latestQueue);q=latestQueue'));
+ assert.ok(fn.includes('latestQueue.shift();setRecordSyncOutbox(latestQueue);recordSyncAcknowledgedOperations.add(op.operation_id);q=latestQueue'));
  assert.ok(!fn.includes('q.shift();setRecordSyncOutbox(q)'));
 });

@@ -116,6 +116,7 @@
     busy=true;
     try{
       const rows=await fetchCloudRows(session);
+      window.recordSyncPrepareGeneration?.();
       const protectedSet=protectedKeys(),groups=groupRemote(rows);
       MANAGED.forEach(dataset=>mergeDataset(dataset,groups.get(dataset),protectedSet));
       rememberRemote(rows);

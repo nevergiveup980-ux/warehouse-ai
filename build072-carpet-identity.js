@@ -33,6 +33,11 @@
     const prior=window.save;if(typeof prior!=='function'||!prior.__build072||prior.__build072CarpetRoll)return false;
     const wrapped=function(k,v){
       if(k!==CARPET)return prior.apply(this,arguments);
+      try{
+        window.validateRecordSave?.(k,v,recordIdentity);
+        const raw=localStorage.getItem(QUEUE);
+        if(raw!==null&&!Array.isArray(parse(raw)))throw new Error('Cloud Master offline queue is unreadable.');
+      }catch(e){alert(e.message);return false}
       const before=read(CARPET),after=Array.isArray(v)?v:[];
       try{localStorage.setItem(CARPET,JSON.stringify(v))}catch(e){alert('Carpet cache could not be saved. No cloud record was changed.');return false}
       const a=new Map(),b=new Map();(Array.isArray(before)?before:[]).forEach(r=>{const id=recordIdentity(r);if(id)a.set(id,r)});after.forEach(r=>{const id=recordIdentity(r);if(id)b.set(id,r)});

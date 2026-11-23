@@ -1,0 +1,35 @@
+name: Warehouse emergency sync regression
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'build072-hotfix.js'
+      - 'build072-carpet-identity.js'
+      - 'release-loader.js'
+      - 'tests/hotfix-sync-cache.test.cjs'
+      - 'tests/hotfix-sync-browser.py'
+      - '.github/workflows/hotfix-sync-regression.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/hotfix-sync-cache.test.cjs
+  chromium:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python tests/hotfix-sync-browser.py
