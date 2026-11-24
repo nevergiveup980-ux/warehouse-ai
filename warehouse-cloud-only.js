@@ -90,7 +90,7 @@
     };
   }
 
-  const systemFields = new Set(['_cloudRecordId', '_cloudVersion', '_cloudUiId', 'legacyPayloadId']);
+  const systemFields = new Set(['_cloudRecordId', '_cloudVersion', '_cloudUiId', '_cloudNewRecordId', 'legacyPayloadId']);
   function commandChanges(dataset, before, after, canonical, newId = () => crypto.randomUUID()) {
     const key = row => row._cloudRecordId || 'payload:' + row.id;
     const originals = new Map(before.map(row => [key(row), row]));
@@ -116,7 +116,7 @@
         if (row[field] === undefined) delete payload[field];
         else payload[field] = row[field];
       }
-      if (edited) changes.push({ dataset, recordId: raw?._cloudRecordId || newId(), version: raw?._cloudVersion || 0, payload });
+      if (edited) changes.push({ dataset, recordId: raw?._cloudRecordId || row._cloudNewRecordId || newId(), version: raw?._cloudVersion || 0, payload });
     }
     for (const [identity, raw] of cloudRows) {
       if (!seen.has(identity)) changes.push({ dataset, recordId: raw._cloudRecordId, version: raw._cloudVersion, delete: true, payload: {} });

@@ -30,6 +30,27 @@ ROWS = [
 ]
 
 
+STOCK_ID = "1792170022853"
+STOCK_ALIAS = "INV-20261016170022-022853"
+PRODUCT = "runlu_product_master_v21"
+RECEIVING = "runlu_receiving_v50"
+EVENTS = "runlu_event_history_v52"
+STOCK_FIXTURE = [
+    {"dataset_key": INVENTORY, "record_id": STOCK_ID, "version": 1,
+     "payload": {"id": int(STOCK_ID), "quantity": 88, "unit": "Box", "location": "CR4",
+                 "poNumber": "181762", "sourceId": "181762", "masterId": "m1"}},
+    {"dataset_key": INVENTORY, "record_id": "different-cloud-id", "version": 1,
+     "payload": {"id": 73, "quantity": 23, "unit": "Box", "location": "CR4",
+                 "poNumber": "other", "masterId": "m1"}},
+    {"dataset_key": PRODUCT, "record_id": "product-one", "version": 1, "payload": {"id": "m1", "name": "Site stock"}},
+    {"dataset_key": PRODUCT, "record_id": "product-two", "version": 1, "payload": {"id": "m2", "name": "Alternate"}},
+    {"dataset_key": RECEIVING, "record_id": "receipt-181762", "version": 1,
+     "payload": {"id": 181762, "quantity": 88, "unit": "Box", "location": "CR4",
+                 "poNumber": "181762", "masterId": "m1", "status": "Received", "inventoryPosted": True,
+                 "inventoryBefore": 0, "inventoryAfter": 88}},
+]
+
+
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(executable_path=os.environ.get("WAREHOUSE_TEST_CHROMIUM") or None)
@@ -96,7 +117,16 @@ def main():
             page = context.new_page()
             page.set_default_timeout(10000)
             messages = []
-            page.on("dialog", lambda dialog: (messages.append(dialog.message), dialog.accept()))
+            prompt_answers = []
+
+            def handle_dialog(dialog):
+                messages.append(dialog.message)
+                if dialog.type == "prompt" and prompt_answers:
+                    dialog.accept(prompt_answers.pop(0))
+                else:
+                    dialog.accept()
+
+            page.on("dialog", handle_dialog)
             page.goto(ORIGIN, wait_until="load")
 
             def open_inventory():
@@ -221,6 +251,76 @@ def main():
             assert live_roll("RC2600A")[0]["measure"] == "CAL"
             page.evaluate("deleteCarpetRecord()")
             assert not live_roll("RC2600A")
+            records.update({(row["dataset_key"], row["record_id"]): row for row in STOCK_FIXTURE})
+            assert page.evaluate("refreshWarehouseCloud()")
+
+            def stock_qty():
+                return records[(INVENTORY, STOCK_ID)]["payload"]["quantity"]
+
+            page.evaluate("alias=>openInventoryDetail(alias)", STOCK_ALIAS)
+            assert "PO 181762" in page.locator("#inventoryRelatedOrders").inner_text()
+            manager = page.locator("#inventoryManagerList")
+            row = manager.locator(".item").filter(has_text="PO 181762").first
+            row.get_by_role("button", name="Edit Record", exact=True).click()
+            assert page.evaluate("editingInventoryRecordId") == STOCK_ID
+            page.evaluate("closeInventoryEdit()")
+
+            prompt_answers.extend(["90"])
+            row.get_by_role("button", name="Edit Quantity", exact=True).click()
+            page.wait_for_function("!warehouseWriteBusy")
+            assert stock_qty() == 90, messages[-3:]
+            event_rows = [r["payload"] for (k, _), r in records.items() if k == EVENTS]
+            assert any(e.get("delta") == 2 and e.get("inventoryRecordId") == STOCK_ID for e in event_rows)
+
+            related = page.locator("#inventoryRelatedOrders details").filter(has_text="Receiving · PO 181762")
+            related.locator("summary").click()
+            related.locator('[name="quantity"]').fill("86")
+            related.locator('[name="notes"]').fill("Verified count")
+            related.get_by_role("button", name="Save Correction").click()
+            page.wait_for_function("!warehouseWriteBusy")
+            assert stock_qty() == 88, messages[-5:]  # +2 count then -2 receipt adjustment
+            prompt_answers.extend(["181762", "Verified count again", "86"])
+            page.evaluate(f"correctRelatedInventoryOrder('{RECEIVING}','receipt-181762')")
+            assert stock_qty() == 88  # Re-saving unchanged quantity must not repost stock.
+
+            page.evaluate("id=>openInventoryDetail(id)", STOCK_ID)
+            row.get_by_role("button", name="Receive Here", exact=True).click()
+            assert page.evaluate("document.getElementById('rcvProduct').dataset.inventoryRecordId") == STOCK_ID
+            page.locator("#rcvQty").fill("5")
+            page.evaluate("saveReceiving()")
+            assert stock_qty() == 93, messages[-4:]
+            assert records[(INVENTORY, "different-cloud-id")]["payload"]["quantity"] == 23
+
+            for button, expected in (("Ship From Here", 90), ("Customer Return", 93)):
+                page.evaluate("id=>openInventoryDetail(id)", STOCK_ID)
+                row.get_by_role("button", name=button).click()
+                assert page.locator("#operationInventoryRecord").input_value() == STOCK_ID
+                page.locator("#operationQty").fill("3")
+                page.evaluate("saveOperation()")
+                assert stock_qty() == expected, messages[-5:]
+            operation("Inventory Transfer", "", 93, inventoryRecordId=STOCK_ID,
+                      productId="m1", location="CR4", unit="Box", toLocation="Store",
+                      transferRoute="Warehouse → Store")
+            assert stock_qty() == 0, messages[-5:]
+            assert records[(INVENTORY, STOCK_ID)]["payload"]["lifecycleStatus"] == "ARCHIVED"
+            operations = "runlu_operations_log_v52"
+            transfer_id = next(k for (dataset,k), r in records.items()
+                               if dataset == operations and r["payload"].get("inventoryRecordId") == STOCK_ID
+                               and r["payload"].get("type") == "Inventory Transfer")
+            prompt_answers.extend(["181762", "Transfer recount", "90"])
+            page.evaluate("([dataset,id])=>correctRelatedInventoryOrder(dataset,id)", [operations, transfer_id])
+            assert stock_qty() == 3, messages[-5:]
+            assert records[(INVENTORY, STOCK_ID)]["payload"]["lifecycleStatus"] == "ACTIVE"
+            page.evaluate("id=>moveInventoryRecord(id)", STOCK_ID)
+            page.evaluate("confirmMoveInventory('m2')")
+            assert records[(INVENTORY, STOCK_ID)]["payload"]["masterId"] == "m2"
+            page.evaluate("id=>archiveInventoryRecord(id)", STOCK_ID)
+            assert records[(INVENTORY, STOCK_ID)]["payload"]["lifecycleStatus"] == "ARCHIVED"
+            page.evaluate("id=>openInventoryDetail(id)", STOCK_ID)
+            assert page.locator("#inventoryManagerList details").first.count()
+            page.evaluate("id=>deleteInventoryRecordSafely(id)", STOCK_ID)
+            assert records[(INVENTORY, STOCK_ID)]["deleted"]
+
             assert page.evaluate("keys=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))", list(seed)) == seed
             assert not rejected, rejected
             context.close()

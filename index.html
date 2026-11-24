@@ -1184,7 +1184,7 @@ img,video,canvas,svg{max-width:100%}
 
 <script>window.RUNLU_CLOUD_ONLY=true</script>
 <script src="qrcode-core.js?runlu-core=1"></script>
-<script src="warehouse-cloud-only.js?r=cloud-only-2"></script>
+<script src="warehouse-cloud-only.js?r=cloud-only-3"></script>
 <script src="v8-compat.js?r=cloud-only-1"></script>
 <script src="tesseract.min.js"></script>
 
@@ -1817,7 +1817,7 @@ function migrateV13(){
  localStorage.setItem('runlu_v13_migrated','yes');
 }
 function showPage(id){
- if(window.RUNLU_CLOUD_ONLY&&['orderEditor','specialOrderEditor','receivingEditor','scan'].includes(id)){
+ if(window.RUNLU_CLOUD_ONLY&&['orderEditor','specialOrderEditor','scan'].includes(id)){
   alert('This form has not been connected to Cloud Only writes.');
   return;
  }
@@ -2452,19 +2452,30 @@ function inventoryProductForMasterId(masterId,masters=loadMasters()){
 }
 function inventoryProductForRecord(record,masters=loadMasters()){return inventoryProductForMasterId(record?.masterId,masters)}
 function inventoryMasterMatches(record,masterId){return inventoryCanonicalProductId(record?.masterId)===inventoryCanonicalProductId(masterId)}
-function inventoryRecordIdentity(r){return String(r?.inventoryId||r?.id||'')}
+function inventoryRecordIdentity(r){return String(r?._cloudRecordId||r?._cloudNewRecordId||r?.inventoryId||r?.id||'')}
+function historicalInventoryAlias(r){
+ const id=String(r?.id??'');
+ if(!/^\d{13}$/.test(id))return '';
+ const date=new Date(Number(id));
+ if(date.getUTCFullYear()<2000||date.getUTCFullYear()>2099)return '';
+ return 'INV-'+date.toISOString().replace(/\D/g,'').slice(0,14)+'-'+id.slice(-6);
+}
 function inventoryRecordJsRef(r){return JSON.stringify(inventoryRecordIdentity(r)).replace(/'/g,'\\u0027').replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026')}
+function inventoryIdentityMatches(records,identity){
+ const key=String(identity??'');
+ if(!key)return [];
+ const rows=records||[];
+ const canonical=rows.filter(r=>(r._cloudRecordId||r._cloudNewRecordId)===key);
+ if(canonical.length)return canonical;
+ const aliases=rows.filter(r=>[r.inventoryId,String(r.id??''),historicalInventoryAlias(r)].includes(key));
+ return aliases;
+}
 function findInventoryRecordByIdentity(records,identity){
- const key=String(identity??'');if(!key)return null;
- const byInventoryId=(records||[]).filter(r=>String(r.inventoryId||'')===key);
- if(byInventoryId.length===1)return byInventoryId[0];
- const byLegacyId=(records||[]).filter(r=>String(r.id)===key);
- return byLegacyId.length===1?byLegacyId[0]:null;
+ const found=inventoryIdentityMatches(records,identity);
+ return found.length===1?found[0]:null;
 }
 function inventoryRecordIdentityMatchCount(records,identity){
- const key=String(identity??'');if(!key)return 0;
- const uid=(records||[]).filter(r=>String(r.inventoryId||'')===key).length;if(uid)return uid;
- return (records||[]).filter(r=>String(r.id)===key).length;
+ return inventoryIdentityMatches(records,identity).length;
 }
 function normalizeInventoryLifecycleRecord(r){
  if(!r)return r;
@@ -2526,7 +2537,7 @@ function inventoryRecordHasBusinessHistory(r){
 }
 function inventoryRecordActionButton(r,context='list'){
  const ref=inventoryRecordJsRef(r),hasHistory=inventoryRecordHasBusinessHistory(r);
- const archive=hasHistory?`<button class="red" onclick='archiveInventoryRecord(${ref},${JSON.stringify('Archived from '+context)})'>Archive Record</button>`:'';
+ const archive=(hasHistory||window.RUNLU_CLOUD_ONLY)&&!isExternalInventoryRecord(r)?`<button class="red" onclick='archiveInventoryRecord(${ref},${JSON.stringify('Archived from '+context)})'>Archive Record</button>`:'';
  return `${archive}<button class="red" onclick='deleteInventoryRecordSafely(${ref})'>Delete Record</button>`;
 }
 async function deleteInventoryRecordSafely(identity){
@@ -2555,7 +2566,9 @@ Delete anyway?`))return;
  }finally{warehouseWriteDraft=null}
 }
 function deleteUnusedInventoryRecord(identity){deleteInventoryRecordSafely(identity)}
-function archiveInventoryRecord(identity,reason='Removed from current inventory'){
+async function archiveInventoryRecord(identity,reason='Removed from current inventory'){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
  const inv=loadInventoryRecords(),r=findInventoryRecordByIdentity(inv,identity);if(!r){alert('Archive blocked: the exact inventory record could not be uniquely identified.');return}
  const count=inventoryRecordIdentityMatchCount(inv,inventoryRecordIdentity(r));if(count!==1){alert('Archive blocked: more than one record matches this identity. No inventory was changed.');return}
  const m=loadMasters().find(x=>String(x.id)===String(r.masterId))||{};
@@ -2566,8 +2579,9 @@ ${Number(r.quantity||0)} ${r.unit||''} at ${r.location||'—'}
 Inventory ID: ${r.inventoryId||r.id||'—'}
 
 It will leave CURRENT inventory but remain available for history and audit.`))return;
- normalizeInventoryLifecycleRecord(r);r.archivedQuantity=Number(r.quantity||0);r.quantity=0;r.lifecycleStatus='ARCHIVED';r.warehouseScope='history';r.archivedAt=new Date().toISOString();r.lastUpdatedAt=r.archivedAt;r.updated=new Date().toLocaleString();r.notes=[r.notes,reason].filter(Boolean).join(' · ');
- if(save(INVDB,inv)){renderInventory();renderProducts();renderDashboard();renderMap();refreshMemory();if(managedProductId)renderInventoryManager();alert('Inventory record archived. History was retained.');}
+ normalizeInventoryLifecycleRecord(r);r.archivedQuantity=Number(r.quantity||0);delete r.transferredByOperationId;r.quantity=0;r.lifecycleStatus='ARCHIVED';r.warehouseScope='history';r.archivedAt=new Date().toISOString();r.lastUpdatedAt=r.archivedAt;r.updated=new Date().toLocaleString();r.notes=[r.notes,reason].filter(Boolean).join(' · ');
+ if(save(INVDB,inv)&&(!window.RUNLU_CLOUD_ONLY||await submitWarehouseWrite())){renderInventory();renderProducts();renderDashboard();renderMap();refreshMemory();if(managedProductId)renderInventoryManager();alert('Inventory record archived. History was retained.');}
+ }finally{warehouseWriteDraft=null}
 }
 function migrateToV21(){
  if(localStorage.getItem('runlu_v21_migrated'))return;
@@ -2809,7 +2823,7 @@ function reconcileCompletedCustomerOrderInventory(showMessage=false){
  if(showMessage&&count)alert(`Completed-order cleanup: ${count} record(s), ${qty} total unit(s), moved out of current inventory.`);
  return count;
 }
-function archiveInventoryRecordAsShipped(id){
+function archiveInventoryRecordAsShipped(id){if(window.RUNLU_CLOUD_ONLY)return archiveInventoryRecord(id,'Archived from staged inventory');
  const inv=loadInventoryRecords(),r=inv.find(x=>Number(x.id)===Number(id));if(!r)return;
  const m=loadMasters().find(x=>String(x.id)===String(r.masterId))||{};
  const q=Number(r.quantity||0),label=`${m.name||'Product'}${m.color?' · '+m.color:''}`;
@@ -2824,7 +2838,7 @@ The record will be kept in history and will not change other inventory locations
  if(save(INVDB,inv)){renderInventory();renderProducts();renderDashboard();renderMap();if(managedProductId)openInventoryManager(managedProductId);alert('Completed-order stock was removed from current inventory and retained in history.');}
 }
 function productCard(x){const inv=localInventoryRecordsForProduct(x.id),qty=inv.reduce((s,r)=>s+Number(r.quantity||0),0);return `<div class="item"><div class="productName">${esc(x.name)}${x.color?' · '+esc(x.color):''}</div><div class="meta">${x.sku?'SKU '+esc(x.sku)+' · ':''}${esc(x.brand||'')} ${esc(x.series||'')}<br>${esc(x.id)} · ${esc(x.category||'Other')} · ${inv.length} inventory record(s) · Total Qty ${qty}</div><div><span class="badge">${esc(x.coverageUnit||'Other')}</span><span class="badge">${esc(x.category||'Other')}</span></div><div class="meta">Size: ${esc(x.length||'-')} × ${esc(x.width||'-')} · Thickness: ${esc(x.thickness||'-')}<br>SF/Box: ${x.sfPerBox||'-'} · Weight/Box: ${x.weightPerBox||'-'} lb<br>Updated: ${esc(x.updated||'-')}${x.notes?'<br>'+esc(x.notes):''}</div>${x.photo?`<img class="thumb" src="${x.photo}">`:''}<div class="inventoryActions"><button onclick="editItem('${x.id}')">Edit Product</button><button class="primary" onclick="openInventoryManager('${x.id}')">Manage Inventory</button><button class="green" onclick="newReceivingForProduct('${x.id}')">Receive</button><button class="purple" onclick="openGeneralTagCenter('${x.id}','','products')">🏷️ Tag</button><button class="red" onclick="removeItem('${x.id}')">Delete</button></div></div>`}
-function inventoryCard(r){const m=inventoryProductForRecord(r),ref=inventoryRecordJsRef(r);const q=Number(r.quantity||0),unit=esc(r.unit||''),unitLabel=q===1?unit:(unit==='Carton'?'Cartons':unit==='Box'?'Boxes':unit==='Pail'?'Pails':unit==='Roll'?'Rolls':unit==='Piece'?'Pieces':unit);return `<div class="item"><div class="inventoryName">${esc(m.name||'Unknown Product')}${m.color?' · '+esc(m.color):''}</div><div class="meta">${m.sku?'SKU '+esc(m.sku)+' · ':''}${esc(m.id||'')}<br>${esc(r.locationType||'Location')} ${esc(r.location||'-')}${r.lotNumber?' · Lot '+esc(r.lotNumber):''}${r.poNumber?' · PO '+esc(r.poNumber):''}</div><div class="qty">${q} ${unitLabel}</div>${totalSF(r,m)?`<div class="coverage">${totalSF(r,m)} SF total</div>`:''}${totalWeight(r,m)?`<div class="meta">${totalWeight(r,m)} lb estimated</div>`:''}<div class="meta">Updated: ${esc(r.updated||'-')}<br>Inventory ID: ${esc(r.inventoryId||'—')}</div><div class="inventoryActions"><button class="green" onclick='newReceivingForRecord(${ref})'>Receive</button><button class="purple" onclick="openGeneralTagCenter('${esc(r.masterId)}','${esc(r.id)}','inventory')">🏷️ Tag</button></div><div class="actions"><button class="primary" onclick='openInventoryRecordEditor(${ref})'>Edit Record</button>${inventoryRecordActionButton(r,'Inventory list')}</div></div>`}
+function inventoryCard(r){const m=inventoryProductForRecord(r),ref=inventoryRecordJsRef(r);const q=Number(r.quantity||0),unit=esc(r.unit||''),unitLabel=q===1?unit:(unit==='Carton'?'Cartons':unit==='Box'?'Boxes':unit==='Pail'?'Pails':unit==='Roll'?'Rolls':unit==='Piece'?'Pieces':unit);return `<div class="item"><div class="inventoryName">${esc(m.name||'Unknown Product')}${m.color?' · '+esc(m.color):''}</div><div class="meta">${m.sku?'SKU '+esc(m.sku)+' · ':''}${esc(m.id||'')}<br>${esc(r.locationType||'Location')} ${esc(r.location||'-')}${r.lotNumber?' · Lot '+esc(r.lotNumber):''}${r.poNumber?' · PO '+esc(r.poNumber):''}</div><div class="qty">${q} ${unitLabel}</div>${totalSF(r,m)?`<div class="coverage">${totalSF(r,m)} SF total</div>`:''}${totalWeight(r,m)?`<div class="meta">${totalWeight(r,m)} lb estimated</div>`:''}<div class="meta">Updated: ${esc(r.updated||'-')}<br>Inventory ID: ${esc(r.inventoryId||historicalInventoryAlias(r)||r._cloudRecordId||'—')}</div><div class="inventoryActions"><button class="green" onclick='newReceivingForRecord(${ref})'>Receive</button><button class="purple" onclick="openGeneralTagCenter('${esc(r.masterId)}','${esc(inventoryRecordIdentity(r))}','inventory')">🏷️ Tag</button></div><div class="actions"><button class="primary" onclick='openInventoryRecordEditor(${ref})'>Edit Record</button>${inventoryRecordActionButton(r,'Inventory list')}</div></div>`}
 function isRollCarpetProduct(product){
  const unit=String(product?.baseUnit||'').trim().toUpperCase();
  const category=String(product?.category||'').trim().toLowerCase();
@@ -2837,32 +2851,181 @@ function renderInventoryManager(){
  const m=inventoryProductForMasterId(managedProductId);if(!m||!m.id){$('inventoryManagerSummary').innerHTML='Product not found.';$('inventoryManagerList').innerHTML='';return}
  const allRows=loadInventoryRecords().filter(r=>inventoryMasterMatches(r,managedProductId)),rows=allRows.filter(isCurrentGeneralInventoryRecord),stagedRows=allRows.filter(r=>!isExternalInventoryRecord(r)&&isCustomerOrderInventoryRecord(r)),externalRows=allRows.filter(isExternalInventoryRecord),total=rows.reduce((s,r)=>s+Number(r.quantity||0),0);
  $('inventoryManagerSummary').innerHTML=`<b>${esc(m.name)}${m.color?' · '+esc(m.color):''}</b><br>${esc(m.id)} · ${rows.length} current general-inventory record(s) · Current total: <b>${total}</b><br><span class="meta">Only ACTIVE GENERAL inventory is included in this total. Reserved, transferred, shipped and archived records are kept separate.</span>`;
- const generalHtml=rows.length?rows.map(r=>{const ref=inventoryRecordJsRef(r);return `<div class="item"><div class="inventoryName">${esc(r.locationType||'Location')} ${esc(r.location||'-')}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">${r.lotNumber?'Lot '+esc(r.lotNumber)+' · ':''}${r.poNumber?'PO '+esc(r.poNumber)+' · ':''}Updated: ${esc(r.updated||'-')}<br>Inventory ID: ${esc(r.inventoryId||'—')}${r.notes?'<br>Notes: '+esc(r.notes):''}</div><div class="actions"><button class="green" onclick='newReceivingForRecord(${ref})'>Receive Here</button><button class="primary" onclick='newShippingForRecord(${ref})'>Ship From Here</button><button onclick='newCustomerReturnForRecord(${ref})'>↩️ Customer Return</button><button onclick='openInventoryRecordEditor(${ref})'>Edit Record</button><button onclick='moveInventoryRecord(${ref})'>Move to Product</button>${inventoryRecordActionButton(r,'Product Inventory')}</div></div>`}).join(''):'<div class="empty">No current general inventory records for this product.</div>';
+ const generalHtml=rows.length?rows.map(r=>{const ref=inventoryRecordJsRef(r);return `<div class="item"><div class="inventoryName">${esc(r.locationType||'Location')} ${esc(r.location||'-')}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">${r.lotNumber?'Lot '+esc(r.lotNumber)+' · ':''}${r.poNumber?'PO '+esc(r.poNumber)+' · ':''}Updated: ${esc(r.updated||'-')}<br>Inventory ID: ${esc(r.inventoryId||historicalInventoryAlias(r)||r._cloudRecordId||'—')}${r.notes?'<br>Notes: '+esc(r.notes):''}</div><div class="actions"><button class="green" onclick='newReceivingForRecord(${ref})'>Receive Here</button><button class="primary" onclick='newShippingForRecord(${ref})'>Ship From Here</button><button onclick='newCustomerReturnForRecord(${ref})'>↩️ Customer Return</button><button onclick='openInventoryRecordEditor(${ref})'>Edit Record</button><button onclick='correctCloudInventoryQuantity(${ref})'>Edit Quantity</button><button onclick='showRelatedInventory(${ref})'>Related Orders</button><button onclick='moveInventoryRecord(${ref})'>Move to Product</button>${inventoryRecordActionButton(r,'Product Inventory')}</div></div>`}).join(''):'<div class="empty">No current general inventory records for this product.</div>';
  const stagedHtml=stagedRows.length?`<div class="notice" style="margin-top:14px"><b>Customer Order / Staged Inventory (${stagedRows.length})</b><br>These goods are physically in the warehouse but are reserved for customer orders and excluded from general inventory.</div>`+stagedRows.map(r=>`<div class="item"><div class="inventoryName">Customer Order · PO ${esc(r.poNumber||'—')}</div><div class="qty">${Number(r.quantity||0)} ${esc(r.unit||'')}</div><div class="meta">${esc(r.locationType||'Location')} ${esc(r.location||'-')} · Reserved / staged</div><div class="inventoryActions"><button class="red" onclick="archiveInventoryRecordAsShipped(${Number(r.id)})">Order Finished · Remove from Current Inventory</button></div></div>`).join(''):'';
- $('inventoryManagerList').innerHTML=generalHtml+stagedHtml+(externalRows.length?`<div class="notice" style="margin-top:12px"><b>${externalRows.length} completed / transferred-out record(s) hidden from current inventory.</b><br>These records remain available in operation and order history.</div>`:'');
+ $('inventoryManagerList').innerHTML=generalHtml+stagedHtml+(externalRows.length?`<div class="notice" style="margin-top:12px"><b>${externalRows.length} completed / transferred-out records</b></div>${externalRows.map(r=>`<details><summary>${esc(r.location)} · ${esc(r.lifecycleStatus||r.inventoryState||'History')}</summary><p>PO ${esc(r.poNumber||'—')} · ${esc(r.archivedQuantity??r.quantity)} ${esc(r.unit)}</p><button onclick='showRelatedInventory(${inventoryRecordJsRef(r)})'>Related Orders</button><button onclick='openInventoryRecordEditor(${inventoryRecordJsRef(r)})'>Edit Record</button>${inventoryRecordActionButton(r,'Inventory history')}</details>`).join('')}`:'')+'<div id="inventoryRelatedOrders"></div>';
 }
+let relatedStockId='';
+function showRelatedInventory(identity){
+ const stock=loadInventoryRecords(),record=findInventoryRecordByIdentity(stock,identity);
+ const box=$('inventoryRelatedOrders');
+ if(!box||!record)return;
+ relatedStockId=inventoryRecordIdentity(record);
+ const po=normKey(record.poNumber);
+ const linked=row=>[row.inventoryRecordId,...(row.items||[]).map(item=>item.inventoryRecordId),
+  ...(row.inventoryEffects||[]).map(effect=>effect.recordId)].some(id=>findInventoryRecordByIdentity([record],id)===record);
+ const byPO=row=>po&&[row.po,row.poNumber,row.linkedOrder,row.soNumber].some(value=>normKey(value)===po);
+ const entries=[[ODB,'Order'],[RCVDB,'Receiving'],[LOGDB,'Work']].flatMap(([key,label])=>load(key)
+  .filter(row=>linked(row)||byPO(row)).map(row=>({key,label,row,direct:linked(row)})));
+ entries.sort((a,b)=>String(b.row.date||'').localeCompare(String(a.row.date||'')));
+ const item=({key,label,row,direct})=>{
+  const ref=inventoryRecordJsRef({_cloudRecordId:row._cloudRecordId});
+  return `<details><summary>${esc(row.type||label)} · PO ${esc(row.poNumber||row.po||'—')} · ${esc(row.status||'—')}</summary>
+   <p>${esc(row.date||'')} · ${esc(row.quantity??'')} ${esc(row.unit||'')} · ${esc(row.location||'')}${row.toLocation?' → '+esc(row.toLocation):''}</p>
+   <p>${direct?'Exact stock link':'PO reference'}${row.notes?' · '+esc(row.notes):''}</p>
+   <form onsubmit='event.preventDefault();correctRelatedInventoryOrder("${key}",${ref},this.elements)'>
+    <input type="hidden" name="version" value="${esc(row._cloudVersion)}">
+    <label>PO / Reference <input name="reference" value="${esc(row.poNumber||row.po||'')}"></label>
+    <label>Order notes <input name="notes" value="${esc(row.notes||'')}"></label>
+    ${historicalInventoryEffects(key,row,stock).length?`<label>Posted quantity <input name="quantity" type="number" min="0" step="any" value="${esc(row.quantity)}" required></label>`:''}
+    <button type="submit">Save Correction</button>
+   </form></details>`;
+ };
+ box.innerHTML=`<div class="card"><h3>Related Orders</h3><p>${esc(record.location||'')} · PO ${esc(record.poNumber||'—')}</p>${entries.length?entries.map(item).join(''):'<p>No linked warehouse records.</p>'}</div>`;
+}
+
+function setCloudStockQuantity(record,quantity){
+ const before=Number(record.quantity||0);
+ record.quantity=Number(quantity.toFixed(2));
+ record.quantityPending=false;
+ record.lastUpdatedAt=new Date().toISOString();
+ record.updated=record.lastUpdatedAt;
+ return Number((record.quantity-before).toFixed(2));
+}
+function appendInventoryCorrection(events,record,before,delta,detail){
+ events.unshift({
+  id:crypto.randomUUID(),time:new Date().toISOString(),type:'Inventory Quantity Correction',
+  inventoryRecordId:inventoryRecordIdentity(record),reference:record.poNumber||inventoryRecordIdentity(record),
+  before,after:record.quantity,delta,result:detail
+ });
+}
+async function correctCloudInventoryQuantity(identity){
+ if(!beginWarehouseWrite())return;
+ try{
+  const rows=loadInventoryRecords(),record=findInventoryRecordByIdentity(rows,identity);
+  if(!record||!isCurrentGeneralInventoryRecord(record)){alert('Select current inventory to correct its on-hand quantity.');return}
+  const before=Number(record.quantity||0);
+  const answer=prompt(`Enter the counted total at ${record.location||'this location'} (${record.unit||'units'}).`,String(before));
+  if(answer===null)return;
+  const qty=Number(answer);
+  if(!answer.trim()||!Number.isFinite(qty)||qty<0){alert('Enter a quantity of zero or more.');return}
+  const delta=setCloudStockQuantity(record,qty);
+  if(!delta)return;
+  const events=load(EVENTDB);
+  appendInventoryCorrection(events,record,before,delta,'Administrator stock count correction');
+  if(save(INVDB,rows)&&save(EVENTDB,events)&&await submitWarehouseWrite()){
+   renderInventoryManager();
+   showRelatedInventory(identity);
+  }
+ }finally{warehouseWriteDraft=null}
+}
+
+function historicalInventoryEffects(key,row,stock){
+ const line=Array.isArray(row.items)&&row.items.length===1?row.items[0]:row;
+ if(Array.isArray(row.items)&&row.items.length>1)return [];
+ const recorded=line.inventoryEffects;
+ if(Array.isArray(recorded)&&recorded.length)return recorded;
+ // Old records may be corrected only when the posted amount and exact stock link can be proven.
+ if(key===RCVDB&&row.inventoryPosted&&Number.isFinite(row.inventoryBefore)&&Number.isFinite(row.inventoryAfter)
+    &&Math.abs(row.inventoryAfter-row.inventoryBefore-Number(row.quantity))<0.005){
+  const direct=findInventoryRecordByIdentity(stock,row.inventoryRecordId);
+  const postedPO=normKey(row.poNumber);
+  const matches=row.inventoryRecordId||!postedPO?[]:stock.filter(r=>
+   normKey(r.poNumber)===postedPO&&normKey(r.sourceId)===postedPO&&
+   inventoryMasterMatches(r,row.masterId)&&normKey(r.location)===normKey(row.location)&&
+   normKey(r.lotNumber)===normKey(row.lotNumber)&&normKey(r.unit)===normKey(row.unit));
+  const target=direct||(matches.length===1?matches[0]:null);
+  return target?[{recordId:inventoryRecordIdentity(target),delta:Number(row.quantity)}]:[];
+ }
+ return [];
+}
+async function correctRelatedInventoryOrder(key,identity,fields){
+ if(![ODB,RCVDB,LOGDB].includes(key)||!beginWarehouseWrite())return;
+ try{
+  const rows=load(key),row=rows.find(x=>x._cloudRecordId===identity);
+  if(!row){alert('This related record could not be verified. Refresh and try again.');return}
+  if(fields&&String(fields.version.value)!==String(row._cloudVersion)){
+   alert('This order changed after it was opened. Reopen Related Orders and try again.');
+   return;
+  }
+  const poField=key===LOGDB?'po':'poNumber';
+  const reference=fields?fields.reference.value:prompt('PO / Reference',row[poField]||'');
+  if(reference===null)return;
+  const note=fields?fields.notes.value:prompt('Order notes',row.notes||'');
+  if(note===null)return;
+  const stock=loadInventoryRecords(),effects=historicalInventoryEffects(key,row,stock),events=load(EVENTDB);
+  if(effects.length){
+   const oldQty=Number(row.quantity);
+   const answer=fields?(fields.quantity?.value??String(oldQty)):prompt('Correct the posted quantity. Only the difference is applied.',String(oldQty));
+   if(answer===null)return;
+   const nextQty=Number(answer);
+   if(!answer.trim()||!Number.isFinite(nextQty)||nextQty<0||!Number.isFinite(oldQty)||oldQty<0){alert('Enter a valid quantity of zero or more.');return}
+   const line=row.items?.length===1?row.items[0]:row;
+   if(nextQty!==oldQty){
+    if(effects.some(e=>Math.abs(Number(e.delta))!==oldQty)){alert('The posted amount uses a conversion. Reconcile this stock change before correcting it.');return}
+    for(const effect of effects){
+     const sign=effect.direction||Math.sign(effect.delta);
+     if(sign!==1&&sign!==-1){alert('The posted movement direction is unknown.');return}
+     const target=stock.find(r=>r._cloudRecordId===effect.recordId);
+     const before=Number(target?.quantity??0),difference=(nextQty-oldQty)*sign,next=before+difference;
+     const exactTransfer=effect.transferArchiveId&&target?.transferredByOperationId===effect.transferArchiveId;
+     if(!target||(!isCurrentGeneralInventoryRecord(target)&&!exactTransfer)||next<0){
+      alert('The affected stock cannot be adjusted safely. No correction was submitted.');
+      return;
+     }
+     if(exactTransfer){
+      target.lifecycleStatus=next>0?'ACTIVE':'ARCHIVED';
+      target.warehouseScope=next>0?'local':'history';
+      target.transferredOut=next===0;
+      target.inventoryState=next>0?'active':'transferred-out';
+     }
+     const delta=setCloudStockQuantity(target,next);
+     appendInventoryCorrection(events,target,before,delta,'Corrected posted order '+(row[poField]||identity));
+    }
+    line.inventoryEffects=effects.map(e=>({...e,direction:e.direction||Math.sign(e.delta),delta:nextQty*(e.direction||Math.sign(e.delta))}));
+    line.quantity=nextQty;
+    if(line.stockQuantity!=null)line.stockQuantity=nextQty;
+    row.quantity=nextQty;
+    if(row.stockQuantity!=null)row.stockQuantity=nextQty;
+    if(!save(INVDB,stock)||!save(EVENTDB,events))return;
+   }
+  }else if(!fields&&key!==ODB&&(row.impactApplied||row.inventoryPosted)){
+   alert('This historical record has no verified stock movement. Only the PO and notes will be saved.');
+  }
+  row[poField]=reference.trim();
+  row.notes=note.trim();
+  if(save(key,rows)&&await submitWarehouseWrite()){
+   renderInventoryManager();
+   showRelatedInventory(relatedStockId);
+  }
+ }finally{warehouseWriteDraft=null}
+}
+
 function generalTagQR(masterId,recordId){try{const qr=qrcode(0,'M'),url=`${WAREHOUSE_TAG_BASE_URL}?${recordId?'inventory='+encodeURIComponent(recordId):'product='+encodeURIComponent(masterId)}`;qr.addData(url);qr.make();return qr.createDataURL(4,2)}catch(error){return''}}
 function updateGeneralTagType(){const type=$('gtType').value;if(type==='Customer Order Tag')$('gtOwnership').value='CUSTOMER ORDER';else if(type==='Non-stock / Special Order Tag'||type==='Return to Supplier Tag')$('gtOwnership').value='NON-STOCK';else if(type==='Return Hold Tag')$('gtOwnership').value='RETURN HOLD';else if(type==='Stock Tag'||type==='Pallet / Skid Tag')$('gtOwnership').value='STOCK';renderGeneralTags()}
 function generalTagProductOptionHTML(products){return products.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.color?' · '+esc(p.color):''}${p.sku?' · '+esc(p.sku):''}</option>`).join('')}
 function openGeneralTagCenter(masterId='',recordId='',returnPage=''){generalTagReturnPage=returnPage||(recordId||masterId?'products':'inventory');const products=loadMasters();if(!products.length){alert('No products are available for tag printing.');return}$('gtProduct').innerHTML=generalTagProductOptionHTML(products);$('gtProductRight').innerHTML=generalTagProductOptionHTML(products);if(masterId&&products.some(p=>String(p.id)===String(masterId)))$('gtProduct').value=masterId;const leftId=$('gtProduct').value,rightDefault=products.find(p=>String(p.id)!==String(leftId))?.id||leftId;$('gtProductRight').value=String(rightDefault);refreshGeneralTagInventory(recordId,false);refreshGeneralTagRightInventory('',false);showPage('generalTagCenter');renderGeneralTags()}
-function generalTagInventoryOptions(masterId,selectedId=''){const rows=loadInventoryRecords().filter(r=>String(r.masterId)===String(masterId)),html='<option value="">Product only / standard tag</option>'+rows.map(r=>`<option value="${esc(r.id)}">${esc(r.location||'Unassigned')} · ${Number(r.quantity||0)} ${esc(r.unit||'')} ${r.lotNumber?'· Lot '+esc(r.lotNumber):''}</option>`).join('');return{rows,html,selectedId:selectedId&&rows.some(r=>String(r.id)===String(selectedId))?selectedId:''}}
+function generalTagInventoryOptions(masterId,selectedId=''){const rows=loadInventoryRecords().filter(r=>String(r.masterId)===String(masterId)),html='<option value="">Product only / standard tag</option>'+rows.map(r=>`<option value="${esc(inventoryRecordIdentity(r))}">${esc(r.location||'Unassigned')} · ${Number(r.quantity||0)} ${esc(r.unit||'')} ${r.lotNumber?'· Lot '+esc(r.lotNumber):''}</option>`).join('');return{rows,html,selectedId:selectedId&&findInventoryRecordByIdentity(rows,selectedId)?inventoryRecordIdentity(findInventoryRecordByIdentity(rows,selectedId)):''}}
 function refreshGeneralTagInventory(selectedId='',doRender=true){const info=generalTagInventoryOptions($('gtProduct').value,selectedId);$('gtInventory').innerHTML=info.html;if(info.selectedId)$('gtInventory').value=info.selectedId;loadGeneralTagRecord(doRender)}
 function refreshGeneralTagRightInventory(selectedId='',doRender=true){const info=generalTagInventoryOptions($('gtProductRight').value,selectedId);$('gtInventoryRight').innerHTML=info.html;if(info.selectedId)$('gtInventoryRight').value=info.selectedId;loadGeneralTagRightRecord(doRender)}
-function loadGeneralTagRecord(doRender=true){const id=$('gtInventory').value,row=loadInventoryRecords().find(r=>String(r.id)===String(id)),product=loadMasters().find(p=>String(p.id)===String($('gtProduct').value));if(row){$('gtQty').value=Number(row.quantity||0);$('gtUnit').value=row.unit||'';$('gtLot').value=row.lotNumber||'';$('gtPO').value=row.poNumber||'';$('gtFrom').value=row.location||'';$('gtNotes').value=row.notes||''}else if(product){$('gtQty').value='';$('gtUnit').value=product.coverageUnit||'';$('gtLot').value='';$('gtPO').value='';$('gtFrom').value='';$('gtNotes').value=''}if(doRender)renderGeneralTags()}
+function loadGeneralTagRecord(doRender=true){const id=$('gtInventory').value,row=findInventoryRecordByIdentity(loadInventoryRecords(),id),product=loadMasters().find(p=>String(p.id)===String($('gtProduct').value));if(row){$('gtQty').value=Number(row.quantity||0);$('gtUnit').value=row.unit||'';$('gtLot').value=row.lotNumber||'';$('gtPO').value=row.poNumber||'';$('gtFrom').value=row.location||'';$('gtNotes').value=row.notes||''}else if(product){$('gtQty').value='';$('gtUnit').value=product.coverageUnit||'';$('gtLot').value='';$('gtPO').value='';$('gtFrom').value='';$('gtNotes').value=''}if(doRender)renderGeneralTags()}
 function loadGeneralTagRightRecord(doRender=true){if(doRender)renderGeneralTags()}
-function generalTagHTML(data){const qr=generalTagQR(data.product.id,data.record?.id),name=normalizeText(data.product.name||'PRODUCT'),series=normalizeText(data.product.series||''),colour=normalizeText(data.product.color||''),seriesLine=series&&normKey(series)!==normKey(name)&&normKey(series)!==normKey(colour)?series:'',colourLine=colour&&normKey(colour)!==normKey(name)?colour:'',facts=[];if(data.product.sku)facts.push(`SKU: <b>${esc(data.product.sku)}</b>`);if(data.qty)facts.push(`QTY: <b>${esc(data.qty)}${data.unit?' '+esc(data.unit):''}</b>`);else if(data.unit)facts.push(`UNIT: <b>${esc(data.unit)}</b>`);if(data.lot)facts.push(`LOT: <b>${esc(data.lot)}</b>`);if(data.from)facts.push(`FROM: <b>${esc(data.from)}</b>`);if(data.to)facts.push(`TO: <b>${esc(data.to)}</b>`);if(data.customer)facts.push(`CUSTOMER: <b>${esc(data.customer)}</b>`);if(data.po)facts.push(`PO / SO / RMA: <b>${esc(data.po)}</b>`);if(data.notes)facts.push(`NOTE: ${esc(data.notes)}`);return `<div class="generalTag"><div class="generalTagProduct">${esc(name)}</div>${seriesLine?`<div class="generalTagSeries">${esc(seriesLine)}</div>`:''}${colourLine?`<div class="generalTagColour">${esc(colourLine)}</div>`:''}<div class="generalTagFacts">${facts.map(x=>`<span class="factRow">${x}</span>`).join('')}</div><div class="generalTagOwnership">${esc(data.type)} · ${esc(data.ownership)}</div>${qr?`<div class="generalTagQR"><img src="${qr}"></div><div class="generalTagScan">SCAN TO VIEW &amp; EDIT</div>`:''}</div>`}
+function generalTagHTML(data){const qr=generalTagQR(data.product.id,inventoryRecordIdentity(data.record)),name=normalizeText(data.product.name||'PRODUCT'),series=normalizeText(data.product.series||''),colour=normalizeText(data.product.color||''),seriesLine=series&&normKey(series)!==normKey(name)&&normKey(series)!==normKey(colour)?series:'',colourLine=colour&&normKey(colour)!==normKey(name)?colour:'',facts=[];if(data.product.sku)facts.push(`SKU: <b>${esc(data.product.sku)}</b>`);if(data.qty)facts.push(`QTY: <b>${esc(data.qty)}${data.unit?' '+esc(data.unit):''}</b>`);else if(data.unit)facts.push(`UNIT: <b>${esc(data.unit)}</b>`);if(data.lot)facts.push(`LOT: <b>${esc(data.lot)}</b>`);if(data.from)facts.push(`FROM: <b>${esc(data.from)}</b>`);if(data.to)facts.push(`TO: <b>${esc(data.to)}</b>`);if(data.customer)facts.push(`CUSTOMER: <b>${esc(data.customer)}</b>`);if(data.po)facts.push(`PO / SO / RMA: <b>${esc(data.po)}</b>`);if(data.notes)facts.push(`NOTE: ${esc(data.notes)}`);return `<div class="generalTag"><div class="generalTagProduct">${esc(name)}</div>${seriesLine?`<div class="generalTagSeries">${esc(seriesLine)}</div>`:''}${colourLine?`<div class="generalTagColour">${esc(colourLine)}</div>`:''}<div class="generalTagFacts">${facts.map(x=>`<span class="factRow">${x}</span>`).join('')}</div><div class="generalTagOwnership">${esc(data.type)} · ${esc(data.ownership)}</div>${qr?`<div class="generalTagQR"><img src="${qr}"></div><div class="generalTagScan">SCAN TO VIEW &amp; EDIT</div>`:''}</div>`}
 function generalTagCommonData(){return{type:$('gtType')?.value||'Stock Tag',layout:$('gtLayout')?.value||'letter',ownership:$('gtOwnership')?.value||'STOCK',customer:$('gtCustomer')?.value.trim()||'',po:$('gtPO')?.value.trim()||'',to:$('gtTo')?.value.trim()||'',notes:$('gtNotes')?.value.trim()||''}}
-function generalTagData(side='left'){const right=side==='right',productId=$(right?'gtProductRight':'gtProduct')?.value,recordId=$(right?'gtInventoryRight':'gtInventory')?.value,product=loadMasters().find(p=>String(p.id)===String(productId))||{},record=loadInventoryRecords().find(r=>String(r.id)===String(recordId)),common=generalTagCommonData();if(!right){const lot=$('gtLot')?.value.trim()||record?.lotNumber||'';return{...common,product,record,qty:$('gtQty')?.value||'',unit:$('gtUnit')?.value||product.coverageUnit||'',from:$('gtFrom')?.value.trim()||record?.location||'',lot,po:common.po||record?.poNumber||''}}return{...common,product,record,qty:record?String(Number(record.quantity||0)||''):'',unit:record?.unit||product.coverageUnit||'',from:record?.location||'',lot:record?.lotNumber||'',po:common.po||record?.poNumber||''}}
+function generalTagData(side='left'){const right=side==='right',productId=$(right?'gtProductRight':'gtProduct')?.value,recordId=$(right?'gtInventoryRight':'gtInventory')?.value,product=loadMasters().find(p=>String(p.id)===String(productId))||{},record=findInventoryRecordByIdentity(loadInventoryRecords(),recordId),common=generalTagCommonData();if(!right){const lot=$('gtLot')?.value.trim()||record?.lotNumber||'';return{...common,product,record,qty:$('gtQty')?.value||'',unit:$('gtUnit')?.value||product.coverageUnit||'',from:$('gtFrom')?.value.trim()||record?.location||'',lot,po:common.po||record?.poNumber||''}}return{...common,product,record,qty:record?String(Number(record.quantity||0)||''):'',unit:record?.unit||product.coverageUnit||'',from:record?.location||'',lot:record?.lotNumber||'',po:common.po||record?.poNumber||''}}
 function renderGeneralTagHistory(){const box=$('generalTagHistory');if(!box)return;const rows=load(TAGPRINTDB).slice(0,10);box.innerHTML=rows.length?rows.map(x=>`<div class="item"><b>${esc(x.product)}</b> · ${esc(x.type)}<div class="meta">${esc(x.time)} · ${x.copies} ${x.layout==='letter'?'sheet(s)':'copy/copies'} · ${esc(x.ownership)}</div></div>`).join(''):'<div class="empty">No product tags printed yet.</div>'}
 function renderGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){$('generalTagPreview').textContent=cloudOnlyStatusText();return}if(!$('generalTagPreview')||!$('gtProduct')?.options.length)return;const left=generalTagData('left'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1)),sheets=[];if(left.layout==='letter'){const right=generalTagData('right');for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet letter">${generalTagHTML(left)}${generalTagHTML(right)}</div>`)}else{for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet single">${generalTagHTML(left)}</div>`)}$('generalTagPreview').innerHTML=sheets.join('');renderGeneralTagHistory()}
-function printGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){alert(cloudOnlyStatusText());return}const left=generalTagData('left'),right=generalTagData('right'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1));if(!left.product.id){alert('Choose a Left Label product first.');return}if(left.layout==='letter'&&!right.product.id){alert('Choose a Right Label product first.');return}const leftName=[left.product.name,left.product.color].filter(Boolean).join(' · '),rightName=[right.product.name,right.product.color].filter(Boolean).join(' · '),productLabel=left.layout==='letter'?`${leftName}  +  ${rightName}`:leftName,history=load(TAGPRINTDB);history.unshift({id:Date.now(),time:new Date().toLocaleString(),product:productLabel,type:left.type,copies,ownership:left.ownership,layout:left.layout,masterId:left.product.id,inventoryId:left.record?.id||'',rightMasterId:right.product.id||'',rightInventoryId:right.record?.id||''});save(TAGPRINTDB,history.slice(0,100));renderGeneralTags();document.body.classList.add('printingGeneralTags');const done=()=>document.body.classList.remove('printingGeneralTags');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
+async function printGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){alert(cloudOnlyStatusText());return}const left=generalTagData('left'),right=generalTagData('right'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1));if(!left.product.id){alert('Choose a Left Label product first.');return}if(left.layout==='letter'&&!right.product.id){alert('Choose a Right Label product first.');return}const leftName=[left.product.name,left.product.color].filter(Boolean).join(' · '),rightName=[right.product.name,right.product.color].filter(Boolean).join(' · '),productLabel=left.layout==='letter'?`${leftName}  +  ${rightName}`:leftName,history=load(TAGPRINTDB);history.unshift({id:Date.now(),time:new Date().toLocaleString(),product:productLabel,type:left.type,copies,ownership:left.ownership,layout:left.layout,masterId:left.product.id,inventoryId:inventoryRecordIdentity(left.record),rightMasterId:right.product.id||'',rightInventoryId:inventoryRecordIdentity(right.record)});if(window.RUNLU_CLOUD_ONLY){
+ if(!beginWarehouseWrite())return;
+ try{if(!save(TAGPRINTDB,history)||!await submitWarehouseWrite())return}finally{warehouseWriteDraft=null}
+ }else save(TAGPRINTDB,history.slice(0,100));renderGeneralTags();document.body.classList.add('printingGeneralTags');const done=()=>document.body.classList.remove('printingGeneralTags');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
 function openInventoryRecordEditor(identity){
  const records=loadInventoryRecords(),record=findInventoryRecordByIdentity(records,identity);if(!record){alert('The exact inventory record could not be uniquely identified. Refresh and try again.');return}
  const product=loadMasters().find(x=>x.id===record.masterId)||{};editingInventoryRecordId=inventoryRecordIdentity(record);warehouseInventoryEditVersion=record._cloudVersion;
  $('inventoryEditContext').innerHTML=`<b>${esc(product.color||product.name||'Inventory record')}</b>${product.color&&product.name?'<br>'+esc(product.name):''}<br>Record at ${esc(record.location||'unassigned location')}<br>Inventory ID: <b>${esc(record.inventoryId||record.id||'—')}</b>`;
  $('editInvLocationType').value=record.locationType||'Rack';
  if(!$('editInvLocationType').value)$('editInvLocationType').value='Other';
- $('editInvLocation').value=record.location||'';$('editInvQuantity').value=Number(record.quantity||0);
+ $('editInvLocation').value=record.location||'';$('editInvQuantity').value=Number(record.quantity||0);$('editInvQuantity').disabled=window.RUNLU_CLOUD_ONLY&&isExternalInventoryRecord(record);
  $('editInvUnit').value=record.unit||'Carton';if(!$('editInvUnit').value)$('editInvUnit').value='Each';
  $('editInvLot').value=record.lotNumber||'';$('editInvPo').value=record.poNumber||'';$('editInvNotes').value=record.notes||'';
  $('inventoryEditModal').classList.remove('hidden');setTimeout(()=>$('editInvLocation').focus(),120);
@@ -2880,6 +3043,12 @@ async function saveInventoryRecordEdits(){
  const editIndex=inv.indexOf(record),next=inv.slice();if(editIndex<0){alert('Edit blocked: inventory record changed before save. No inventory was changed.');return}next[editIndex]={...record};const edited=next[editIndex];
  if(!edited){alert('Edit blocked: a safe inventory edit copy could not be created. No inventory was changed.');return}
  edited.locationType=$('editInvLocationType').value;edited.location=location;edited.quantity=Number(quantity.toFixed(2));edited.unit=$('editInvUnit').value;edited.lotNumber=normalizeText($('editInvLot').value);edited.poNumber=normalizeText($('editInvPo').value);edited.notes=normalizeText($('editInvNotes').value);edited.updated=new Date().toLocaleString();edited.lastUpdatedAt=new Date().toISOString();edited.lastAction='Inventory record edited by Inventory ID';
+ if(window.RUNLU_CLOUD_ONLY&&edited.quantity!==Number(record.quantity||0)){
+  if(!isCurrentGeneralInventoryRecord(record)){alert('Use the linked order correction to adjust posted historical stock.');return}
+  const events=load(EVENTDB);
+  appendInventoryCorrection(events,edited,Number(record.quantity||0),Number((edited.quantity-Number(record.quantity||0)).toFixed(2)),'Inventory record quantity edit');
+  if(!save(EVENTDB,events))return;
+ }
  if(save(INVDB,next)&&(!window.RUNLU_CLOUD_ONLY||await submitWarehouseWrite())){closeInventoryEdit();renderInventoryManager();renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory();alert('Inventory record updated.')}
  }finally{warehouseWriteDraft=null}
 }
@@ -2903,7 +3072,9 @@ function renderProductPicker(){
  });
  $('productPickerList').innerHTML=products.length?products.map(x=>`<button class="pickerItem" onclick="confirmMoveInventory('${esc(x.id)}')"><strong>${esc(x.name||'Unnamed')}${x.color?' · '+esc(x.color):''}</strong><span>${esc([x.brand,x.series,[x.length,x.width,x.thickness].filter(Boolean).join(' × '),x.sku?'SKU '+x.sku:'',x.id].filter(Boolean).join(' · '))}</span></button>`).join(''):`<div class="empty"><b>No destination product found.</b><br><br>The CURRENT PRODUCT shown above is intentionally excluded from this destination list. If the correct different variant does not exist yet, tap <b>+ Create New Variant</b> below.</div>`;
 }
-function createVariantAndMove(){
+async function createVariantAndMove(){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
  const inv=loadInventoryRecords(),record=findInventoryRecordByIdentity(inv,pickerRecordId),masters=loadMasters(),source=masters.find(x=>x.id===pickerSourceMasterId);
  if(!record||!source){alert('The source record could not be found.');return}
  const color=prompt('Enter the destination color / variant name. Example: Barton 1', source.color||'');
@@ -2913,7 +3084,8 @@ function createVariantAndMove(){
  const width=prompt('Width for '+cleanColor+':',source.width||'');if(width===null)return;
  const thickness=prompt('Thickness for '+cleanColor+':',source.thickness||'');if(thickness===null)return;
  const sku=prompt('SKU / Style Number for '+cleanColor+' (leave blank if none):','');if(sku===null)return;
- const draft={...source,id:nextMasterId(),color:cleanColor,length:normalizeText(length),width:normalizeText(width),thickness:normalizeText(thickness),sku:normalizeText(sku),updated:new Date().toLocaleString()};
+ const {_cloudRecordId,_cloudVersion,_cloudUiId,...sourceFields}=source;
+ const draft={...sourceFields,id:window.RUNLU_CLOUD_ONLY?crypto.randomUUID():nextMasterId(),color:cleanColor,length:normalizeText(length),width:normalizeText(width),thickness:normalizeText(thickness),sku:normalizeText(sku),updated:new Date().toLocaleString()};
  const duplicate=masters.find(x=>x.id!==source.id&&productVariantKey(x)===productVariantKey(draft));
  let destination=duplicate;
  if(!destination){masters.unshift(draft);if(!save(PMDB,masters))return;destination=draft}
@@ -2924,9 +3096,12 @@ To: ${productDisplayLabel(destination)||destination.id}?
 
 The quantity will not change.`))return;
  const sourceId=source.id;record.masterId=destination.id;record.updated=new Date().toLocaleString();record.lastAction='Moved from '+source.id+' to '+destination.id;
- if(save(INVDB,inv)){closeProductPicker();alert('New variant created and inventory moved successfully.');openInventoryManager(sourceId);renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory()}
+ if(save(INVDB,inv)&&(!window.RUNLU_CLOUD_ONLY||await submitWarehouseWrite())){closeProductPicker();alert('New variant created and inventory moved successfully.');openInventoryManager(sourceId);renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory()}
+ }finally{warehouseWriteDraft=null}
 }
-function confirmMoveInventory(destinationId){
+async function confirmMoveInventory(destinationId){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
  const inv=loadInventoryRecords(),record=findInventoryRecordByIdentity(inv,pickerRecordId);if(!record){closeProductPicker();return}
  const products=loadMasters(),source=products.find(x=>x.id===record.masterId)||{},destination=products.find(x=>x.id===destinationId);if(!destination)return;
  if(!confirm(`Move ${Number(record.quantity||0)} ${record.unit||''} at ${record.location||'-'}
@@ -2937,7 +3112,8 @@ To: ${productDisplayLabel(destination)||destination.id}?
 The quantity will not change.`))return;
  record.masterId=destination.id;record.updated=new Date().toLocaleString();record.lastAction='Moved from '+(source.id||'unknown')+' to '+destination.id;
  const sourceId=record.masterId;
- if(save(INVDB,inv)){closeProductPicker();alert('Inventory record moved successfully.');openInventoryManager(sourceId);renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory()}
+ if(save(INVDB,inv)&&(!window.RUNLU_CLOUD_ONLY||await submitWarehouseWrite())){closeProductPicker();alert('Inventory record moved successfully.');openInventoryManager(sourceId);renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory()}
+ }finally{warehouseWriteDraft=null}
 }
 function closeProductPicker(){$('productPickerModal').classList.add('hidden');pickerRecordId=null;pickerSourceMasterId=null}
 function pickerBackdrop(e){if(e.target===$('productPickerModal'))closeProductPicker()}
@@ -2950,7 +3126,9 @@ function openInventoryDetail(identity){
  // Read-only diagnostics: never guess among duplicate inventory identities.
  const records=loadInventoryRecords(),key=String(identity??'');
  const matches=records.filter(r=>String(r.inventoryId||'')===key);
- const legacy=matches.length?matches:records.filter(r=>String(r.id)===key);
+ const legacy=typeof inventoryIdentityMatches==='function'
+  ?inventoryIdentityMatches(records,key)
+  :matches.length?matches:records.filter(r=>String(r.id)===key);
  if(legacy.length!==1){
   console.warn('[Inventory] Cannot uniquely open record',{identity:key,matchCount:legacy.length});
   alert(legacy.length?'This inventory record has a duplicate identity. No stock was changed. Please request a record reconciliation.':'Inventory record not found. No stock was changed. Please refresh or request reconciliation.');
@@ -2962,7 +3140,10 @@ function openInventoryDetail(identity){
   alert('Inventory record found, but its Product Master link is missing or invalid. No stock was changed. Please request reconciliation.');
   return;
  }
- try{openInventoryManager(inventoryCanonicalProductId(r.masterId))}
+ try{
+  openInventoryManager(inventoryCanonicalProductId(r.masterId));
+  if(typeof showRelatedInventory==='function')showRelatedInventory(inventoryRecordIdentity(r));
+ }
  catch(error){console.error('[Inventory] Could not open detail',error);alert('Inventory detail could not open. No stock was changed. Please report this error.')}
 }
 function openInventoryProductDetail(masterId){
@@ -3003,8 +3184,8 @@ function renderSearch(){
  const has=x=>normKey(x).includes(q),masters=loadMasters(),inventory=loadInventoryRecords(),carpets=carpetRecords().filter(x=>!['Split to RAM','Split to REM'].includes(x.status)),ops=operationRecords(),orders=load(ODB),special=load(SPODB),cuts=cuttingRecords(),receiving=load(RCVDB);
  const productResults=intent.scope==='all'?masters.filter(x=>has([x.id,x.name,x.brand,x.series,x.color,x.sku,x.category,x.notes,x.length,x.width,x.thickness].join(' '))).map(x=>globalResult(`${x.name||'Unnamed product'}${x.color?' · '+x.color:''}`,[x.sku?'SKU '+x.sku:'',x.brand,x.series,x.category].filter(Boolean).join(' · '),`editItem('${String(x.id).replace(/'/g,'')}')`)):[];
  const matchedInventory=intent.scope==='all'?inventory.map(r=>({r,m:inventoryProductForRecord(r,masters)})).filter(({r,m})=>has([m.id,m.name,m.brand,m.series,m.color,m.sku,m.category,r.locationType,r.location,r.quantity,r.unit,r.lotNumber,r.poNumber,r.notes].join(' '))):[];
- const inventoryResults=matchedInventory.filter(({r})=>isCurrentGeneralInventoryRecord(r)).map(({r,m})=>globalResult(`${m.name||'Unknown product'}${m.color?' · '+m.color:''}`,`${r.quantity||0} ${r.unit||''} · ${r.location||'No location'}${r.lotNumber?' · Lot '+r.lotNumber:''}`,`openInventoryDetail(${Number(r.id)})`));
- const stagedInventoryResults=matchedInventory.filter(({r})=>!isExternalInventoryRecord(r)&&isCustomerOrderInventoryRecord(r)).map(({r,m})=>globalResult(`PO ${r.poNumber||'—'} · ${m.name||'Unknown product'}${m.color?' · '+m.color:''}`,`${r.quantity||0} ${r.unit||''} staged at ${r.location||'No location'} · Reserved for customer order`,`openInventoryDetail(${Number(r.id)})`));
+ const inventoryResults=matchedInventory.filter(({r})=>isCurrentGeneralInventoryRecord(r)).map(({r,m})=>globalResult(`${m.name||'Unknown product'}${m.color?' · '+m.color:''}`,`${r.quantity||0} ${r.unit||''} · ${r.location||'No location'}${r.lotNumber?' · Lot '+r.lotNumber:''}`,`openInventoryDetail(${inventoryRecordJsRef(r)})`));
+ const stagedInventoryResults=matchedInventory.filter(({r})=>!isExternalInventoryRecord(r)&&isCustomerOrderInventoryRecord(r)).map(({r,m})=>globalResult(`PO ${r.poNumber||'—'} · ${m.name||'Unknown product'}${m.color?' · '+m.color:''}`,`${r.quantity||0} ${r.unit||''} staged at ${r.location||'No location'} · Reserved for customer order`,`openInventoryDetail(${inventoryRecordJsRef(r)})`));
  const exactRollQuery=window.WarehouseCloudOnly?.rollQuery(q);
  const directlyMatchedCarpets=exactRollQuery?carpets.filter(x=>carpetSearchMatches(x,q)):carpets.filter(x=>intent.scope==='carpet'?smartCarpetMatch(intent,x):intent.scope==='all'&&has([x.roll,x.sourceRoll,x.manufacturerRoll,x.lot,x.collection,x.colour,x.location,x.po,x.supplier,x.status,x.measure,x.reviewNote].join(' ')));
  const relatedRollKeys=new Set();if(intent.scope==='all'){ops.filter(x=>has([x.po,x.customer,x.supplier,x.product,x.collection,x.colour,x.roll,x.notes,JSON.stringify(x.items||[])].join(' '))).forEach(x=>{[x.roll,...(x.items||[]).map(i=>i.roll)].filter(Boolean).forEach(r=>relatedRollKeys.add(normKey(r)))});cuts.filter(x=>has([x.po,x.customer,x.roll,x.collection,x.colour,x.notes].join(' '))).forEach(x=>x.roll&&relatedRollKeys.add(normKey(x.roll)));carpets.forEach(x=>{if(relatedRollKeys.has(normKey(x.roll))||relatedRollKeys.has(normKey(x.sourceRoll))){relatedRollKeys.add(normKey(x.roll));if(x.sourceRoll)relatedRollKeys.add(normKey(x.sourceRoll))}})}
@@ -3190,12 +3371,12 @@ function cutWorkspaceTask(id){const o=currentWorkspaceOrder(),i=o&&workspaceItem
 function completeWorkspaceOrder(){const rows=load(ODB),o=rows.find(x=>String(x.id)===String(workspaceOrderId));if(!o)return;if(!workspaceItems(o).length||workspaceItems(o).some(i=>i.status!=='Completed')){alert('Complete every task first.');return}if(!confirm('Complete and lock this order?'))return;o.status='Completed';o.currentStep='Completed';o.completedAt=new Date().toISOString();o.completedBy=o.completedBy||o.handledBy||'John';o.dateOut=o.dateOut||todayISO();addWorkspaceEvent(o,'Order completed',`Completed by ${o.completedBy}`);const finalized=finalizeCustomerOrderInventory(o);save(ODB,rows);renderOrderWorkspace();renderOrders();renderInventory();renderProducts();if(finalized.records)alert(`${finalized.records} staged inventory record(s), ${finalized.quantity} total unit(s), were removed from current inventory.`)}
 
 
-function clearReceiving(){receivingPhotoData='';['rcvSupplier','rcvPo','rcvOrder','rcvProduct','rcvLocation','rcvLot','rcvNotes'].forEach(id=>$(id).value='');$('rcvProduct').dataset.masterId='';if($('rcvSource'))$('rcvSource').value='Supplier';$('rcvDate').value=todayISO();$('rcvStatus').value='Waiting for Pickup';$('rcvDriver').value='John';$('rcvPallets').value=1;$('rcvPerPallet').value=55;$('rcvLoose').value=0;$('rcvQty').value=55;$('rcvUnit').value='Carton';$('rcvTruck').value='Company Truck';$('rcvPhoto').value='';updateReceivingCheck()}
+function clearReceiving(){delete $('rcvProduct').dataset.inventoryRecordId;receivingPhotoData='';['rcvSupplier','rcvPo','rcvOrder','rcvProduct','rcvLocation','rcvLot','rcvNotes'].forEach(id=>$(id).value='');$('rcvProduct').dataset.masterId='';if($('rcvSource'))$('rcvSource').value='Supplier';$('rcvDate').value=todayISO();$('rcvStatus').value='Waiting for Pickup';$('rcvDriver').value='John';$('rcvPallets').value=1;$('rcvPerPallet').value=55;$('rcvLoose').value=0;$('rcvQty').value=55;$('rcvUnit').value='Carton';$('rcvTruck').value='Company Truck';$('rcvPhoto').value='';updateReceivingCheck()}
 function newReceiving(){clearReceiving();refreshProducts();showPage('receivingEditor')}
 function scanNewReceiving(){newReceiving();openAIScan({target:'receiving',returnPage:'receivingEditor',label:'Pickup / Receiving'})}
 function newInventoryReceiving(){newReceiving();$('rcvStatus').value='Received';$('rcvLocation').value='Receiving';updateReceivingCheck()}
 function newReceivingForProduct(masterId){newInventoryReceiving();const m=loadMasters().find(x=>String(x.id)===String(masterId));if(m){$('rcvProduct').value=productDisplayLabel(m);$('rcvProduct').dataset.masterId=String(m.id);$('rcvPerPallet').value=m.boxesPerPallet||55;calcReceivingQty();updateReceivingCheck()}}
-function newReceivingForRecord(identity){const rows=loadInventoryRecords(),r=findInventoryRecordByIdentity(rows,identity);if(!r){alert('The exact inventory record was not found.');return}newReceivingForProduct(r.masterId);$('rcvLocation').value=r.location||'Receiving';$('rcvLot').value=r.lotNumber||'';$('rcvUnit').value=r.unit||'Carton';updateReceivingCheck()}
+function newReceivingForRecord(identity){const rows=loadInventoryRecords(),r=findInventoryRecordByIdentity(rows,identity);if(!r){alert('The exact inventory record was not found.');return}newReceivingForProduct(inventoryCanonicalProductId(r.masterId));$('rcvProduct').dataset.inventoryRecordId=inventoryRecordIdentity(r);$('rcvLocation').value=r.location||'Receiving';$('rcvLot').value=r.lotNumber||'';$('rcvUnit').value=r.unit||'Carton';updateReceivingCheck()}
 function prepareProductDrivenShipping(masterId,recordId=''){
  const m=loadMasters().find(x=>String(x.id)===String(masterId));
  if(!m){alert('Product was not found in Product Master.');return}
@@ -3215,8 +3396,8 @@ function prepareProductDrivenShipping(masterId,recordId=''){
  populateOperationInventoryPicker(m.id,recordId);
  operationProductChanged();
  const records=localInventoryRecordsForProduct(m.id);
- let r=recordId?findInventoryRecordByIdentity(loadInventoryRecords().filter(x=>String(x.masterId)===String(m.id)),recordId):null;
- if(!r&&records.length===1)r=records[0];
+ let r=recordId?findInventoryRecordByIdentity(loadInventoryRecords().filter(x=>inventoryMasterMatches(x,m.id)),recordId):null;
+ if(recordId&&!r){alert('Selected inventory record changed. Reopen it before posting.');return}if(!recordId&&records.length===1)r=records[0];
  if(r){
   populateOperationInventoryPicker(m.id,inventoryRecordIdentity(r));
   $('operationInventoryRecord').value=inventoryRecordIdentity(r);
@@ -3229,7 +3410,7 @@ function prepareProductDrivenShipping(masterId,recordId=''){
  scheduleOperationDraft();
 }
 function newShippingForProduct(masterId){prepareProductDrivenShipping(masterId,'')}
-function newShippingForRecord(identity){const rows=loadInventoryRecords(),r=findInventoryRecordByIdentity(rows,identity);if(!r){alert('The exact inventory record was not found.');return}prepareProductDrivenShipping(r.masterId,inventoryRecordIdentity(r))}
+function newShippingForRecord(identity){const rows=loadInventoryRecords(),r=findInventoryRecordByIdentity(rows,identity);if(!r){alert('The exact inventory record was not found.');return}prepareProductDrivenShipping(inventoryCanonicalProductId(r.masterId),inventoryRecordIdentity(r))}
 function prepareProductDrivenCustomerReturn(masterId,recordId=''){
  const m=loadMasters().find(x=>String(x.id)===String(masterId));
  if(!m){alert('Product was not found in Product Master.');return}
@@ -3249,8 +3430,8 @@ function prepareProductDrivenCustomerReturn(masterId,recordId=''){
  populateOperationInventoryPicker(m.id,recordId);
  operationProductChanged();
  const records=localInventoryRecordsForProduct(m.id);
- let r=recordId?findInventoryRecordByIdentity(loadInventoryRecords().filter(x=>String(x.masterId)===String(m.id)),recordId):null;
- if(!r&&records.length===1)r=records[0];
+ let r=recordId?findInventoryRecordByIdentity(loadInventoryRecords().filter(x=>inventoryMasterMatches(x,m.id)),recordId):null;
+ if(recordId&&!r){alert('Selected inventory record changed. Reopen it before posting.');return}if(!recordId&&records.length===1)r=records[0];
  if(r){
   populateOperationInventoryPicker(m.id,inventoryRecordIdentity(r));
   $('operationInventoryRecord').value=inventoryRecordIdentity(r);
@@ -3264,14 +3445,23 @@ function prepareProductDrivenCustomerReturn(masterId,recordId=''){
  updateOperationCalculationPreview();
  scheduleOperationDraft();
 }
-function newCustomerReturnForRecord(identity){const rows=loadInventoryRecords(),r=findInventoryRecordByIdentity(rows,identity);if(!r){alert('The exact inventory record was not found.');return}prepareProductDrivenCustomerReturn(r.masterId,inventoryRecordIdentity(r))}
+function newCustomerReturnForRecord(identity){const rows=loadInventoryRecords(),r=findInventoryRecordByIdentity(rows,identity);if(!r){alert('The exact inventory record was not found.');return}prepareProductDrivenCustomerReturn(inventoryCanonicalProductId(r.masterId),inventoryRecordIdentity(r))}
 function calcReceivingQty(){const total=(Number($('rcvPallets').value)||0)*(Number($('rcvPerPallet').value)||0)+(Number($('rcvLoose').value)||0);$('rcvQty').value=total;updateReceivingCheck()}
 function updateReceivingCheck(){const exactId=$('rcvProduct').dataset.masterId,m=loadMasters().find(x=>String(x.id)===String(exactId))||findMasterByNameOrSku($('rcvProduct').value),qty=Number($('rcvQty').value)||0;if(!m){$('rcvCheck').innerHTML='Choose an existing product by name or SKU. Create new products in Product Master first.';return}$('rcvProduct').dataset.masterId=String(m.id);const expected=Number(m.boxesPerPallet||0),current=loadInventoryRecords().filter(r=>String(r.masterId)===String(m.id)&&isCurrentGeneralInventoryRecord(r)).reduce((sum,r)=>sum+Number(r.quantity||0),0),after=Number((current+qty).toFixed(2));$('rcvCheck').innerHTML=`<b>${esc(m.name)}${m.color?' · '+esc(m.color):''}</b><br>Current warehouse stock: <b>${current} ${esc($('rcvUnit').value)}</b><br>Receive: <b>+${qty}</b> → After complete: <b>${after}</b><br>Product Master boxes/pallet: <b>${expected||'Not recorded'}</b>${expected&&Number($('rcvPerPallet').value)!==expected?'<br><span style="color:var(--orange)">Check: cartons/pallet differs from Product Master.</span>':''}`}
-function saveReceiving(){const exactId=$('rcvProduct').dataset.masterId,m=loadMasters().find(x=>String(x.id)===String(exactId))||findMasterByNameOrSku($('rcvProduct').value),qty=Number($('rcvQty').value),loc=$('rcvLocation').value.trim(),status=$('rcvStatus').value;if(!m){alert('Please select an existing Product Master record.');return}if(!qty||qty<0){alert('Enter a valid receiving quantity.');return}const rec={id:Date.now(),date:$('rcvDate').value||todayISO(),status,source:$('rcvSource')?.value||'Supplier',supplier:$('rcvSupplier').value.trim(),driver:$('rcvDriver').value.trim(),poNumber:$('rcvPo').value.trim(),linkedOrder:$('rcvOrder').value.trim(),masterId:m.id,product:m.name,pallets:Number($('rcvPallets').value)||0,perPallet:Number($('rcvPerPallet').value)||0,loose:Number($('rcvLoose').value)||0,quantity:qty,unit:$('rcvUnit').value,location:loc||'Receiving',lotNumber:$('rcvLot').value.trim(),truck:$('rcvTruck').value.trim(),notes:$('rcvNotes').value.trim(),photo:receivingPhotoData,created:new Date().toLocaleString(),inventoryPosted:false};const rows=load(RCVDB);let before=0,after=0;if(['Received','Put Away','Completed'].includes(status)){const inv=loadInventoryRecords();let x=inv.find(v=>String(v.masterId)===String(m.id)&&!isExternalInventoryRecord(v)&&normKey(v.location)===normKey(rec.location)&&normKey(v.lotNumber)===normKey(rec.lotNumber));if(x){before=Number(x.quantity||0);x.quantity=Number((before+qty).toFixed(2));after=x.quantity;x.unit=rec.unit;x.poNumber=rec.poNumber||x.poNumber;x.updated=new Date().toLocaleString();x.warehouseScope='local';x.inventoryType='GENERAL';x.lifecycleStatus='ACTIVE';x.sourceModule='Receiving';x.sourceId=rec.poNumber||x.sourceId||String(rec.id);x.lastUpdatedAt=new Date().toISOString()}else{before=0;after=qty;inv.unshift({id:Date.now()+1,masterId:m.id,locationType:rec.location==='Receiving'?'Receiving':'Rack',location:rec.location,quantity:qty,unit:rec.unit,lotNumber:rec.lotNumber,poNumber:rec.poNumber,source:rec.source,inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Receiving',sourceId:rec.poNumber||String(rec.id),warehouseScope:'local',createdAt:new Date().toISOString(),lastUpdatedAt:new Date().toISOString(),updated:new Date().toLocaleString()})}if(!save(INVDB,inv)){alert('Inventory could not be saved. Receiving was not completed.');return}rec.inventoryPosted=true;rec.inventoryBefore=before;rec.inventoryAfter=after}rows.unshift(rec);save(RCVDB,rows);autoTaskFromReceiving(rec);alert(rec.inventoryPosted?`${m.name}${m.color?' · '+m.color:''}
+async function saveReceiving(){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{const exactId=$('rcvProduct').dataset.masterId,m=loadMasters().find(x=>String(x.id)===String(exactId))||findMasterByNameOrSku($('rcvProduct').value),qty=Number($('rcvQty').value),loc=$('rcvLocation').value.trim(),status=$('rcvStatus').value;if(!m){alert('Please select an existing Product Master record.');return}if(!Number.isFinite(qty)||qty<=0){alert('Enter a valid receiving quantity.');return}const rec={id:Date.now(),date:$('rcvDate').value||todayISO(),status,source:$('rcvSource')?.value||'Supplier',supplier:$('rcvSupplier').value.trim(),driver:$('rcvDriver').value.trim(),poNumber:$('rcvPo').value.trim(),linkedOrder:$('rcvOrder').value.trim(),masterId:m.id,product:m.name,pallets:Number($('rcvPallets').value)||0,perPallet:Number($('rcvPerPallet').value)||0,loose:Number($('rcvLoose').value)||0,quantity:qty,unit:$('rcvUnit').value,location:loc||'Receiving',lotNumber:$('rcvLot').value.trim(),truck:$('rcvTruck').value.trim(),notes:$('rcvNotes').value.trim(),photo:receivingPhotoData,created:new Date().toLocaleString(),inventoryPosted:false};const rows=load(RCVDB);let before=0,after=0;if(['Received','Put Away','Completed'].includes(status)){const inv=loadInventoryRecords(),target=$('rcvProduct').dataset.inventoryRecordId;const matches=inv.filter(v=>inventoryMasterMatches(v,m.id)&&isCurrentGeneralInventoryRecord(v)&&
+ normKey(v.location)===normKey(rec.location)&&normKey(v.lotNumber)===normKey(rec.lotNumber)&&normKey(v.unit)===normKey(rec.unit));
+ if(!target&&matches.length>1){alert('Open the exact stock record and choose Receive Here.');return}
+ let x=target?findInventoryRecordByIdentity(inv,target):matches[0];if(target&&(!x||!inventoryMasterMatches(x,m.id)||!isCurrentGeneralInventoryRecord(x)||normKey(x.unit)!==normKey(rec.unit)||normKey(x.location)!==normKey(rec.location)||normKey(x.lotNumber)!==normKey(rec.lotNumber))){alert('The selected stock record no longer matches this receiving entry. Reopen it first.');return}if(x){rec.inventoryRecordId=inventoryRecordIdentity(x);before=Number(x.quantity||0);x.quantity=Number((before+qty).toFixed(2));after=x.quantity;x.unit=rec.unit;x.poNumber=rec.poNumber||x.poNumber;x.updated=new Date().toLocaleString();x.warehouseScope='local';x.inventoryType='GENERAL';x.lifecycleStatus='ACTIVE';x.sourceModule='Receiving';x.sourceId=rec.poNumber||x.sourceId||String(rec.id);x.lastUpdatedAt=new Date().toISOString()}else{before=0;after=qty;const newRef=window.RUNLU_CLOUD_ONLY?crypto.randomUUID():'';
+ if(newRef)rec.inventoryRecordId=newRef;
+ inv.unshift({...(newRef?{_cloudNewRecordId:newRef}:{}),id:Date.now()+1,masterId:m.id,locationType:rec.location==='Receiving'?'Receiving':'Rack',location:rec.location,quantity:qty,unit:rec.unit,lotNumber:rec.lotNumber,poNumber:rec.poNumber,source:rec.source,inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Receiving',sourceId:rec.poNumber||String(rec.id),warehouseScope:'local',createdAt:new Date().toISOString(),lastUpdatedAt:new Date().toISOString(),updated:new Date().toLocaleString()})}if(!save(INVDB,inv)){alert('Inventory could not be saved. Receiving was not completed.');return}rec.inventoryPosted=true;rec.inventoryBefore=before;rec.inventoryAfter=after}if(rec.inventoryPosted&&rec.inventoryRecordId)rec.inventoryEffects=[{recordId:rec.inventoryRecordId,delta:qty}];
+ rows.unshift(rec);if(!save(RCVDB,rows))return;autoTaskFromReceiving(rec);if(window.RUNLU_CLOUD_ONLY&&!await submitWarehouseWrite())return;alert(rec.inventoryPosted?`${m.name}${m.color?' · '+m.color:''}
 ${rec.location}
 ${before} → ${after} ${rec.unit}
 
-Inventory updated successfully.`:'Pickup record saved. Inventory has not changed yet.');renderReceivingHistory();renderInventory();renderProducts();if(managedProductId&&String(managedProductId)===String(m.id))renderInventoryManager();showPage(rec.inventoryPosted&&managedProductId?'inventoryManager':'receivingHistory')}
+Inventory updated successfully.`:'Pickup record saved. Inventory has not changed yet.');renderReceivingHistory();renderInventory();renderProducts();if(managedProductId&&String(managedProductId)===String(m.id))renderInventoryManager();showPage(rec.inventoryPosted&&managedProductId?'inventoryManager':'receivingHistory') }finally{warehouseWriteDraft=null}
+}
 function autoTaskFromReceiving(r){const tasks=load(TASKDB);if(r.status==='Waiting for Pickup')tasks.unshift({id:Date.now()+10,date:r.date,type:'Supplier Pickup',party:r.supplier,reference:r.poNumber,product:r.product,quantity:r.quantity,location:r.location,status:'Waiting',assigned:r.driver||'John',notes:'Created from receiving record',created:new Date().toLocaleString()});else if(r.status==='Picked Up')tasks.unshift({id:Date.now()+10,date:r.date,type:'Receiving',party:r.supplier,reference:r.poNumber,product:r.product,quantity:r.quantity,location:'Receiving',status:'Waiting',assigned:r.driver||'John',notes:'Material picked up; receive and verify.',created:new Date().toLocaleString()});else if(r.inventoryPosted&&r.location==='Receiving')tasks.unshift({id:Date.now()+10,date:r.date,type:'Put Away',party:r.supplier,reference:r.poNumber,product:r.product,quantity:r.quantity,location:'Choose final location',status:'Waiting',assigned:r.driver||'John',notes:'Inventory received into Receiving area.',created:new Date().toLocaleString()});save(TASKDB,tasks)}
 function renderReceivingHistory(){const a=load(RCVDB);$('receivingList').innerHTML=a.length?a.map(r=>`<div class="item"><span class="status ${r.inventoryPosted?'done':r.status==='Picked Up'?'progress':'waiting'}">${esc(r.status)}</span><div class="name">${esc(r.product)}</div><div class="qty">${r.quantity} ${esc(r.unit)}</div><div class="meta">${esc(r.date)} · Supplier: ${esc(r.supplier||'-')}<br>${r.pallets} pallet(s) × ${r.perPallet} + ${r.loose} loose<br>PO: ${esc(r.poNumber||'-')} · Location: ${esc(r.location)}${r.linkedOrder?'<br>Linked order: '+esc(r.linkedOrder):''}<br>Driver: ${esc(r.driver||'-')} · Truck: ${esc(r.truck||'-')}${r.notes?'<br>'+esc(r.notes):''}</div>${r.photo?`<img class="thumb" src="${r.photo}">`:''}<div class="actions">${r.inventoryPosted?'<span class="meta">Locked after inventory update</span>':`<button class="red" onclick="deleteReceivingRecord(${r.id})">Delete Record</button>`}</div></div>`).join(''):'<div class="empty">No pickup or receiving records yet.</div>'}
 function deleteReceivingRecord(id){const rows=load(RCVDB),r=rows.find(x=>String(x.id)===String(id));if(!r)return;if(r.inventoryPosted){alert('Delete blocked: this receiving record already increased inventory. Use a correction record instead.');return}if(!confirm(`Delete this pickup / receiving record?\n\nSupplier: ${r.supplier||'—'}\nPO: ${r.poNumber||'—'}\nProduct: ${r.product||'—'}\n\nThis deletion will synchronize to other devices.`))return;createLocalSnapshot(false);if(!save(RCVDB,rows.filter(x=>String(x.id)!==String(r.id))))return;renderReceivingHistory();renderDashboard()}
@@ -3651,16 +3841,44 @@ function validateOperationForImpact(r){
 }
 function applyInventoryDelta(r,delta){
  const inv=loadInventoryRecords(),mid=Number(r.productId)||r.productId,loc=r.location||'Unassigned',stockUnit=operationStockUnit(r)||r.unit;let x=r.inventoryRecordId?findInventoryRecordByIdentity(inv,r.inventoryRecordId):null;
- if(x&&String(x.masterId)!==String(mid))throw new Error('The selected inventory record does not belong to the selected product.');
- if(!x)x=inv.find(v=>String(v.masterId)===String(mid)&&normKey(v.location)===normKey(loc));
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY&&r.inventoryRecordId&&!x)throw new Error('The exact stock record changed. Reopen it before submitting.');
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY&&x&&(!isCurrentGeneralInventoryRecord(x)||normKey(stockUnit)!==normKey(x.unit))){
+  throw new Error('The selected record is outside current stock or its unit changed. Reopen it before submitting.');
+ }
+ if(x&&(typeof inventoryMasterMatches==='function'?!inventoryMasterMatches(x,mid):String(x.masterId)!==String(mid)))throw new Error('The selected inventory record does not belong to the selected product.');
+ if(!x&&typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY){
+  if(delta<0)throw new Error('Choose the exact source stock record.');
+  const matches=inv.filter(v=>inventoryMasterMatches(v,mid)&&isCurrentGeneralInventoryRecord(v)&&
+   normKey(v.location)===normKey(loc)&&normKey(v.lotNumber)===normKey(r.lot)&&normKey(v.unit)===normKey(stockUnit));
+  if(matches.length>1)throw new Error('Choose the exact destination stock record.');
+  x=matches[0];
+ }
+ if(!x&&(typeof window==='undefined'||!window.RUNLU_CLOUD_ONLY))x=inv.find(v=>String(v.masterId)===String(mid)&&normKey(v.location)===normKey(loc));
  if(!x&&delta<0)x=inv.find(v=>String(v.masterId)===String(mid)&&Number(v.quantity||0)>=Math.abs(delta));
  let before=0,after=0;if(x){before=Number(x.quantity||0);const next=Number((before+delta).toFixed(2));if(next<0)throw new Error(`Not enough inventory at ${loc}. Current balance: ${before} ${x.unit||stockUnit||''}.`);x.quantity=next;x.quantityPending=false;x.updated=new Date().toLocaleString();x.poNumber=r.po||x.poNumber;after=next}
- else if(delta>0){const created={id:Date.now()+Math.random(),masterId:mid,locationType:loc==='Receiving'?'Receiving':'Rack',location:loc,quantity:delta,unit:stockUnit||'Box',lotNumber:r.lot||'',poNumber:r.po||'',inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:r.type||'Operation',sourceId:String(r.id||r.po||''),createdAt:new Date().toISOString(),lastUpdatedAt:new Date().toISOString(),updated:new Date().toLocaleString(),transactionCount:1};normalizeInventoryLifecycleRecord(created);inv.unshift(created);}
+ else if(delta>0){const created={...(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY?{_cloudNewRecordId:crypto.randomUUID()}:{}),id:Date.now()+Math.random(),masterId:mid,locationType:loc==='Receiving'?'Receiving':'Rack',location:loc,quantity:delta,unit:stockUnit||'Box',lotNumber:r.lot||'',poNumber:r.po||'',inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:r.type||'Operation',sourceId:String(r.id||r.po||''),createdAt:new Date().toISOString(),lastUpdatedAt:new Date().toISOString(),updated:new Date().toLocaleString(),transactionCount:1};normalizeInventoryLifecycleRecord(created);inv.unshift(created);}
  else throw new Error('No matching inventory record was found.');
  if(!save(INVDB,inv))throw new Error('Inventory could not be saved.');
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY&&x){
+  r.inventoryEffects=[...(r.inventoryEffects||[]),{recordId:inventoryRecordIdentity(x),delta:after-before}];
+ }
  return {before,after,location:loc,unit:stockUnit||x?.unit||''};
 }
-function applyInventoryTransfer(r){const qty=operationStockQuantity(r),route=String(r.transferRoute||'Warehouse → Store'),unit=operationStockUnit(r)||r.unit||'',parts=carpetTransferParts(route);if(normKey(parts.from)==='warehouse'&&normKey(parts.to)!=='warehouse'){const source=applyInventoryDelta(r,-qty),dest=r.toLocation||parts.to||'external destination';if(source.after<=0&&r.inventoryRecordId){const inv=loadInventoryRecords(),x=findInventoryRecordByIdentity(inv,r.inventoryRecordId);if(x){x.lifecycleStatus='ARCHIVED';x.warehouseScope='history';x.transferredOut=true;x.transferDestination=dest;x.inventoryState='transferred-out';x.lastUpdatedAt=new Date().toISOString();x.updated=new Date().toLocaleString();save(INVDB,inv)}}return `${source.location} ${source.before} → ${source.after} ${unit}; transferred out to ${dest}${source.after<=0?' · source record is no longer Active':''}`}if(normKey(parts.to)==='warehouse'){const destination={...r,inventoryRecordId:'',location:(r.toLocation&&normKey(r.toLocation)!=='warehouse')?r.toLocation:'Receiving'};const target=applyInventoryDelta(destination,qty);return `${target.location} ${target.before} → ${target.after} ${unit}; transferred into warehouse`}const source=applyInventoryDelta(r,-qty);return `${source.location} ${source.before} → ${source.after} ${unit}; external transfer recorded`}
+function applyInventoryTransfer(r){const qty=operationStockQuantity(r),route=String(r.transferRoute||'Warehouse → Store'),unit=operationStockUnit(r)||r.unit||'',parts=carpetTransferParts(route);if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY&&normKey(parts.from)==='warehouse'&&normKey(parts.to)==='warehouse'){
+ const sourceRecord=findInventoryRecordByIdentity(loadInventoryRecords(),r.inventoryRecordId);
+ if(!sourceRecord||!r.toLocation||normKey(sourceRecord.location)===normKey(r.toLocation))throw new Error('Choose a different destination rack for this exact stock.');
+ const source=applyInventoryDelta(r,-qty),destination={...r,inventoryRecordId:'',inventoryEffects:[],location:r.toLocation};
+ const target=applyInventoryDelta(destination,qty);
+ r.inventoryEffects.push(...destination.inventoryEffects);
+ return `${source.location} ${source.before} → ${source.after} · ${target.location} ${target.before} → ${target.after} ${unit}`;
+ }
+ if(normKey(parts.from)==='warehouse'&&normKey(parts.to)!=='warehouse'){const source=applyInventoryDelta(r,-qty),dest=r.toLocation||parts.to||'external destination';if(source.after<=0&&r.inventoryRecordId){const inv=loadInventoryRecords(),x=findInventoryRecordByIdentity(inv,r.inventoryRecordId);if(x){x.lifecycleStatus='ARCHIVED';x.warehouseScope='history';x.transferredOut=true;x.transferDestination=dest;x.inventoryState='transferred-out';
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY){
+  x.transferredByOperationId=String(r.id);
+  const effect=r.inventoryEffects?.at(-1);
+  if(effect)effect.transferArchiveId=String(r.id);
+ }
+ x.lastUpdatedAt=new Date().toISOString();x.updated=new Date().toLocaleString();save(INVDB,inv)}}return `${source.location} ${source.before} → ${source.after} ${unit}; transferred out to ${dest}${source.after<=0?' · source record is no longer Active':''}`}if(normKey(parts.to)==='warehouse'){const destination={...r,inventoryRecordId:'',inventoryEffects:[],location:(r.toLocation&&normKey(r.toLocation)!=='warehouse')?r.toLocation:'Receiving'};const target=applyInventoryDelta(destination,qty);if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY)r.inventoryEffects=[...(r.inventoryEffects||[]),...(destination.inventoryEffects||[])];return `${target.location} ${target.before} → ${target.after} ${unit}; transferred into warehouse`}const source=applyInventoryDelta(r,-qty);return `${source.location} ${source.before} → ${source.after} ${unit}; external transfer recorded`}
 function updateLinkedOrder(r,status){
  if(!r.po)return;const orders=load(ODB);const o=orders.find(x=>normKey(x.poNumber||x.soNumber||x.po)===normKey(r.po));if(!o)return;
  o.status=status;o.updatedAt=new Date().toISOString();if(status==='Shipped'){o.dateOut=r.date;o.pickedUpAt=new Date().toISOString();finalizeCustomerOrderInventory(o,'Completed by linked shipping operation')}save(ODB,orders);
@@ -3737,7 +3955,7 @@ function applyOperationImpact(r){
  if(!eligible.length){r.status=derivePartialOrderStatus(items,r.status);r.impactApplied=r.status==='Completed'&&items.every(x=>x.impactApplied||!operationItemIsReceived(x));return true}
  const backup={inv:load(INVDB),carpet:load(CARPETDB),cuts:load(CUTDB),ram:load(RAMDB),orders:load(ODB),events:load(EVENTDB)};const results=[];
  try{
-  for(const entry of eligible){const i=entry.index,item=entry.item,child={...r,...item,id:Number(r.id)+((i+1)/1000),items:[],impactApplied:false,status:'Completed',po:r.po,customer:r.customer,operator:r.operator,type:item.type||r.type};if(!applySingleOperationImpact(child))throw new Error(`Item ${i+1} could not be completed.`);Object.assign(item,{impactApplied:true,impactResult:child.impactResult,appliedAt:child.appliedAt});results.push(child.impactResult)}
+  for(const entry of eligible){const i=entry.index,item=entry.item,child={...r,...item,id:Number(r.id)+((i+1)/1000),items:[],impactApplied:false,status:'Completed',po:r.po,customer:r.customer,operator:r.operator,type:item.type||r.type};if(!applySingleOperationImpact(child))throw new Error(`Item ${i+1} could not be completed.`);Object.assign(item,{impactApplied:true,impactResult:child.impactResult,appliedAt:child.appliedAt,inventoryEffects:child.inventoryEffects});results.push(child.impactResult)}
   r.status=derivePartialOrderStatus(items,r.status);r.impactApplied=r.status==='Completed'&&items.every(x=>x.impactApplied||!operationItemIsReceived(x));r.impactResult=items.filter(x=>x.impactResult).map(x=>x.impactResult).join(' | ');r.appliedAt=new Date().toISOString();return true
  }catch(e){save(INVDB,backup.inv);save(CARPETDB,backup.carpet);save(CUTDB,backup.cuts);save(RAMDB,backup.ram);save(ODB,backup.orders);save(EVENTDB,backup.events);alert('No inventory was changed. '+e.message);return false}
 }
@@ -4139,7 +4357,7 @@ function openCarpetFromURL(){
  if(matches.length===1)openCarpetDetail(matches[0].id);
  else if(matches.length>1){$('carpetFilter').value=roll;setCarpetQuickFilter('ALL');showPage('carpetInventory')}
 }
-function openInventoryFromURL(){const params=new URLSearchParams(location.search),inventoryId=params.get('inventory'),productId=params.get('product');if(inventoryId){const record=findInventoryRecordByIdentity(loadInventoryRecords(),inventoryId);if(record)setTimeout(()=>openInventoryManager(record.masterId),100)}else if(productId&&loadMasters().some(p=>String(p.id)===String(productId)))setTimeout(()=>openInventoryManager(productId),100)}
+function openInventoryFromURL(){const params=new URLSearchParams(location.search),inventoryId=params.get('inventory'),productId=params.get('product');if(inventoryId){const record=findInventoryRecordByIdentity(loadInventoryRecords(),inventoryId);if(record)setTimeout(()=>openInventoryDetail(inventoryRecordIdentity(record)),100)}else if(productId&&loadMasters().some(p=>String(p.id)===String(productId)))setTimeout(()=>openInventoryManager(productId),100)}
 
 function renderDashboard(){
  const products=loadMasters(),inv=loadInventoryRecords().filter(isCurrentGeneralInventoryRecord),orders=load(ODB),special=cleanupSpecialOrders(),receiving=load(RCVDB),ops=operationRecords(),today=todayISO();
@@ -4179,7 +4397,7 @@ function showRack(code){
  const masters=loadMasters(),inv=loadInventoryRecords().filter(x=>isCurrentGeneralInventoryRecord(x)&&mapLocationCode(x.location)===code),use=automaticRackUse(code),carpets=use.carpets,x=warehouseLocations().find(r=>r.code===code)||{code,capacity:0,notes:'Unconfigured location'},status=mapLocationStatus(x,use.used),free=Number(x.capacity)?Number(x.capacity)-use.used:null,groups={};
  inv.forEach(r=>{const m=inventoryProductForRecord(r,masters),key=`G|${m.id||r.masterId}|${m.color||''}`,g=groups[key]??={kind:'Product',name:m.name||'Unknown Product',colour:m.color||'',quantity:0,unit:r.unit||'',records:[]};g.quantity+=Number(r.quantity||0);g.records.push(r)});
  carpets.forEach(r=>{const key=`C|${r.collection}|${r.colour}`,g=groups[key]??={kind:'Carpet',name:r.collection||'Unnamed Carpet',colour:r.colour||'',quantity:0,unit:'Roll',feet:0,records:[]};g.quantity++;g.feet+=Number(r.length||0);g.records.push(r)});
- const products=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<details class="mapProduct"><summary>${esc(g.name)}${g.colour?' · '+esc(g.colour):''} — ${Number(g.quantity.toFixed(2))} ${esc(g.unit)}${g.feet?` · ${feetLabel(g.feet)} total`:''}</summary>${g.kind==='Carpet'?g.records.map(r=>`<button class="mapRoll" onclick="openCarpetDetail(${Number(r.id)})"><b>${esc(r.roll)}</b> · ${feetLabel(r.length)} · ${esc(r.measure||'—')} · ${capacityNumber(carpetCapacityUnits(r))} capacity<br><span class="meta">Lot ${esc(r.lot||'—')} · ${esc(r.status)}</span></button>`).join(''):g.records.map(r=>`<button class="mapRoll" onclick="openInventoryDetail(${Number(r.id)})"><b>${Number(r.quantity||0)} ${esc(r.unit||'')}</b>${r.lotNumber?' · Lot '+esc(r.lotNumber):''}${r.poNumber?' · PO '+esc(r.poNumber):''}</button>`).join('')}</details>`).join('');
+ const products=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<details class="mapProduct"><summary>${esc(g.name)}${g.colour?' · '+esc(g.colour):''} — ${Number(g.quantity.toFixed(2))} ${esc(g.unit)}${g.feet?` · ${feetLabel(g.feet)} total`:''}</summary>${g.kind==='Carpet'?g.records.map(r=>`<button class="mapRoll" onclick="openCarpetDetail(${Number(r.id)})"><b>${esc(r.roll)}</b> · ${feetLabel(r.length)} · ${esc(r.measure||'—')} · ${capacityNumber(carpetCapacityUnits(r))} capacity<br><span class="meta">Lot ${esc(r.lot||'—')} · ${esc(r.status)}</span></button>`).join(''):g.records.map(r=>`<button class="mapRoll" onclick="openInventoryDetail(${inventoryRecordJsRef(r)})"><b>${Number(r.quantity||0)} ${esc(r.unit||'')}</b>${r.lotNumber?' · Lot '+esc(r.lotNumber):''}${r.poNumber?' · PO '+esc(r.poNumber):''}</button>`).join('')}</details>`).join('');
  $('mapDetail').innerHTML=`<div class="dayHeader"><div><h2 style="margin:0">Location ${esc(code)}</h2><span class="mapStatus ${status.key}Loc">${esc(status.label)}</span></div><button onclick="editMapLocation('${esc(code)}')">Edit Capacity</button></div><div class="mapSummary"><div><b>${carpets.length}</b>Actual rolls</div><div><b>${capacityNumber(use.used)}</b>Used capacity</div><div><b>${Number(x.capacity)||'—'}</b>Max capacity</div><div><b>${free===null?'—':capacityNumber(free)}</b>Available</div></div>${Number(x.capacity)?'<div class="notice">Capacity is calculated automatically from active carpet inventory. One FULL or unmeasured roll = 1; measured CAL/TM rolls use length ÷ 120′, with a 0.15 minimum for short pieces.</div>':''}${x.notes?`<div class="notice">${esc(x.notes)}</div>`:''}<h3>Products at this location</h3>${products||'<div class="empty">No linked inventory records at this location.</div>'}`;$('mapDetail').classList.remove('hidden');$('mapDetail').scrollIntoView({behavior:'smooth'})
 }
 function totalSFcalc(x){return x.unit==='Box'&&Number(x.sfPerBox)?Number(x.quantity||0)*Number(x.sfPerBox):0}

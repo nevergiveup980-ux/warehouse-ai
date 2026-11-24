@@ -35,6 +35,14 @@ rows.push({id:'stock-archived',inventoryId:'stock-archived',masterId:masters[0].
 ctx.openInventoryDetail('1792170022853');
 assert.equal(opened.at(-1),masters[0].id);
 assert.equal(rows[0].quantity,88);
+// Phase 2 accepts an old generated alias only when it identifies one canonical row.
+const identityEnd=html.indexOf('function normalizeInventoryLifecycleRecord(',refEnd);
+vm.runInContext(html.slice(refEnd,identityEnd),ctx);
+const canonical={id:1792170022853,_cloudRecordId:'1792170022853',masterId:masters[0].id};
+const collision={id:1792170022853,_cloudRecordId:'cloud-other',masterId:masters[0].id};
+assert.equal(ctx.findInventoryRecordByIdentity([canonical],'INV-20261016170022-022853'),canonical);
+assert.equal(ctx.findInventoryRecordByIdentity([canonical,collision],'INV-20261016170022-022853'),null);
+assert.equal(ctx.findInventoryRecordByIdentity([canonical,collision],'1792170022853'),canonical);
 // List rows navigate by the already-resolved Product Master, not a second
 // inventory lookup (which can differ after cloud synchronization).
 const directStart=html.indexOf('function openInventoryProductDetail(masterId){');

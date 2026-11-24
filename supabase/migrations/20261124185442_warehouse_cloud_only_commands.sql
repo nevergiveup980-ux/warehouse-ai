@@ -96,7 +96,7 @@ begin
     if v_dataset is null or v_dataset not in (
       'runlu_product_master_v21','runlu_inventory_records_v21','runlu_carpet_inventory_v52',
       'runlu_cutting_log_v52','runlu_operations_log_v52','runlu_event_history_v52',
-      'runlu_orders_v20','runlu_remnants_v55','runlu_receiving_v50'
+      'runlu_orders_v20','runlu_remnants_v55','runlu_receiving_v50','runlu_tasks_v50','runlu_tag_print_history_v53'
     ) or nullif(v_record_id,'') is null or v_version is null or v_version < 0
       or jsonb_typeof(v_payload) is distinct from 'object' then
       raise exception 'Invalid warehouse change';
