@@ -47,12 +47,8 @@ class InventoryReadOnlySafety(unittest.TestCase):
         # The function is preserved for later reviewed business migrations,
         # but must not run during browsing or startup.
         matches = list(re.finditer(r"\b" + RECONCILE + r"\s*\(", source))
-        # One definition plus one explicit administrator repair action are allowed.
-        self.assertEqual(2, len(matches), "Unexpected reconciliation caller")
-        self.assertRegex(
-            source,
-            r"\\['reconcileCompletedCustomerOrderInventory',\\s*\\(\\)\\s*=>\\s*reconcileCompletedCustomerOrderInventory\\(true\\)\\]",
-        )
+        self.assertEqual(1, len(matches), "Cloud Only must not call legacy reconciliation")
+        self.assertTrue(source[matches[0].start() - len("function "):matches[0].start()] == "function ")
 
 if __name__ == "__main__":
     unittest.main()
