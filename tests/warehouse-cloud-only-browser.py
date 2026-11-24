@@ -37,6 +37,10 @@ def main():
             context = browser.new_context(service_workers="block", **options)
             rejected = []
             fail = False
+            drop_confirmation = False
+            receipts = {}
+            posts = []
+            records = {(row["dataset_key"], row["record_id"]): dict(row) for row in ROWS}
 
             def intercept(route):
                 request = route.request
@@ -50,7 +54,29 @@ def main():
                         if fail:
                             return route.fulfill(status=503, json={"message": "synthetic outage"})
                         offset = int(parse_qs(url.query)["offset"][0])
-                        return route.fulfill(json=ROWS[offset:offset + 2])
+                        live = [row for _, row in sorted(records.items()) if not row.get("deleted")]
+                        return route.fulfill(json=live[offset:offset + 2])
+                    if request.method == "POST" and url.path == "/rest/v1/rpc/warehouse_cloud_commit":
+                        body = request.post_data_json
+                        request_id = body["p_request_id"]
+                        posts.append(request_id)
+                        if request_id in receipts:
+                            assert body == receipts[request_id]
+                            return route.fulfill(json={"status": "confirmed", "replayed": True})
+                        staged = dict(records)
+                        for change in body["p_changes"]:
+                            key = (change["dataset"], change["recordId"])
+                            previous = staged.get(key)
+                            if change["version"] != (previous["version"] if previous else 0):
+                                return route.fulfill(status=409, json={"message": "stale version"})
+                            staged[key] = {"dataset_key": key[0], "record_id": key[1],
+                                           "version": change["version"] + 1,
+                                           "payload": change["payload"], "deleted": change.get("delete", False)}
+                        records.update(staged)
+                        receipts[request_id] = body
+                        if drop_confirmation:
+                            return route.abort()
+                        return route.fulfill(json={"status": "confirmed"})
                     rejected.append((request.method, url.path))
                 return route.abort()
 
@@ -69,7 +95,8 @@ def main():
             }}""")
             page = context.new_page()
             page.set_default_timeout(10000)
-            page.on("dialog", lambda dialog: dialog.dismiss())
+            messages = []
+            page.on("dialog", lambda dialog: (messages.append(dialog.message), dialog.accept()))
             page.goto(ORIGIN, wait_until="load")
 
             def open_inventory():
@@ -117,10 +144,88 @@ def main():
             assert "Cloud unavailable" in page.locator("#carpetTotalBanner").inner_text()
             assert "RC9999" not in page.locator("#carpetInventoryList").inner_text()
             assert page.evaluate("keys=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))", list(seed)) == seed
+            fail = False
+            assert page.evaluate("refreshWarehouseCloud()")
+
+            def live_roll(roll):
+                return [row["payload"] for (dataset, _), row in records.items()
+                        if dataset == CARPET and not row.get("deleted") and row["payload"].get("roll") == roll]
+
+            def operation(kind, roll, qty, **fields):
+                page.evaluate("""args => {
+                    newOperation('',true);
+                    document.getElementById('operationType').value=args.kind;
+                    document.getElementById('operationLineType').value=args.kind;
+                    document.getElementById('operationStatus').value='Completed';
+                    document.getElementById('operationInventoryMode').value='Stock';
+                    operationItemsDraft=[{type:args.kind, roll:args.roll, quantity:args.qty,
+                       itemStatus:'Received', inventoryMode:'Stock', unit:'Foot',
+                       collection:'Test carpet', location:'4B', ...args.fields}];
+                }""", {"kind": kind, "roll": roll, "qty": qty, "fields": fields})
+                page.evaluate("saveOperation()")
+
+            page.evaluate("""() => {
+                clearForm();
+                showPage('editor');
+                document.getElementById('name').value='New cloud product';
+                document.getElementById('location').value='4B';
+                document.getElementById('quantity').value='21';
+            }""")
+            page.evaluate("saveProduct()")
+            assert page.evaluate("loadInventoryRecords().some(r=>r.quantity===21)")
+            page.evaluate("""() => {
+                openInventoryRecordEditor(inventoryRecordIdentity(loadInventoryRecords().find(r=>r.quantity===21)));
+                document.getElementById('editInvQuantity').value='22';
+            }""")
+            page.evaluate("saveInventoryRecordEdits()")
+            assert page.evaluate("loadInventoryRecords().some(r=>r.quantity===22)")
+            page.evaluate("deleteInventoryRecordSafely(inventoryRecordIdentity(loadInventoryRecords().find(r=>r.quantity===22)))")
+            assert not page.evaluate("loadInventoryRecords().some(r=>r.quantity===22)")
+
+            operation("Carpet Receiving", "RC2600", 50)
+            assert live_roll("RC2600") and live_roll("RC2600")[0]["length"] == 50, messages[-5:]
+            page.evaluate("""() => {
+              const id=carpetRecords().find(r=>r.roll==='RC2600').id;
+              editCarpetRecord(id);
+              document.getElementById('ceLocation').value='5A';
+              document.getElementById('ceMeasure').value='TM';
+            }""")
+            page.evaluate("saveCarpetEdit()")
+            assert live_roll("RC2600")[0]["location"] == "5A"
+            assert live_roll("RC2600")[0]["measure"] == "TM"
+
+            drop_confirmation = True
+            operation("Carpet Cutting", "RC2600", 10, numberOfCuts=1)
+            assert live_roll("RC2600")[0]["length"] == 39.75, (live_roll("RC2600"), messages[-5:])
+            assert page.evaluate("!!warehousePendingCommand")
+            assert page.evaluate("carpetRecords().find(r=>r.roll==='RC2600').length") == 50
+            drop_confirmation = False
+            assert page.evaluate("sendWarehouseCommand()")
+            assert posts[-1] == posts[-2]
+            assert page.evaluate("carpetRecords().find(r=>r.roll==='RC2600').length") == 39.75
+
+            operation("Inventory Transfer", "RC2600", 39.75, toLocation="Store",
+                      transferRoute="Warehouse → Store", transferWholeRoll=True, transferMode="Whole Roll")
+            assert live_roll("RC2600")[0]["status"] == "At Store", (live_roll("RC2600"), messages[-4:])
+            operation("Installer Return", "RC2600", 10)
+            assert live_roll("RC2600A")[0]["length"] == 10
+
+            page.evaluate("""() => {
+              editCarpetRecord(carpetRecords().find(r=>r.roll==='RC2600A').id);
+              document.getElementById('ceStatus').value='Used Up';
+              document.getElementById('ceMeasure').value='CAL';
+              setCarpetEditLength('current',0);
+            }""")
+            page.evaluate("saveCarpetEdit()")
+            assert live_roll("RC2600A")[0]["status"] == "Used Up"
+            assert live_roll("RC2600A")[0]["measure"] == "CAL"
+            page.evaluate("deleteCarpetRecord()")
+            assert not live_roll("RC2600A")
+            assert page.evaluate("keys=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))", list(seed)) == seed
             assert not rejected, rejected
             context.close()
         browser.close()
-    print("PASS: desktop and iPhone viewport filters, current roll mapping, duplicate label guard, reload, offline and unchanged legacy storage")
+    print("PASS: desktop/iPhone inventory and carpet workflows, cloud acknowledgement, retry, read filters and untouched legacy storage")
 
 
 if __name__ == "__main__":

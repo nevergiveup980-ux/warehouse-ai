@@ -770,6 +770,7 @@ img,video,canvas,svg{max-width:100%}
   <div id="aiUsageLedgerList" class="notice" style="margin-top:10px">No cloud-AI usage recorded on this device yet.</div>
 </div>
 <div class="settingRow"><div class="name">Cloud Sync</div><div class="meta">Sign in to keep this device's warehouse data synchronized with the Runlu Supabase project. Local storage remains active for offline work.</div>
+<button id="warehouseRetryCommand" type="button" hidden onclick="retryWarehouseCommand()">Retry unconfirmed cloud request</button>
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
 <label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
 <label>Cloud login password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password">
@@ -1183,7 +1184,7 @@ img,video,canvas,svg{max-width:100%}
 
 <script>window.RUNLU_CLOUD_ONLY=true</script>
 <script src="qrcode-core.js?runlu-core=1"></script>
-<script src="warehouse-cloud-only.js?r=cloud-only-1"></script>
+<script src="warehouse-cloud-only.js?r=cloud-only-2"></script>
 <script src="v8-compat.js?r=cloud-only-1"></script>
 <script src="tesseract.min.js"></script>
 
@@ -1198,6 +1199,8 @@ const WAREHOUSE_TAG_BASE_URL='https://warehouse.runlu.ca/';
 const SCANDICT='runlu_scan_learning_dictionary';
 const SCANTEMPLATES='runlu_scan_supplier_templates_v1';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB,SCANDICT,SCANTEMPLATES];
+let warehouseWriteDraft=null,warehousePendingCommand=null,warehouseWriteBusy=false;
+let warehouseCarpetEditVersion=null,warehouseInventoryEditVersion=null,warehouseProductEditVersion=null;
 const cloudOnlyKeys=DATA_KEYS.filter(key=>![SCANDICT,SCANTEMPLATES].includes(key));
 const cloudOnlySnapshot=window.WarehouseCloudOnly?.createSnapshot({
  keys:cloudOnlyKeys,documentKey:SETTINGS,
@@ -1364,7 +1367,7 @@ const accessObserver=new MutationObserver(()=>{});
 
 const AISCANCTX='runlu_ai_scan_context_v5523';
 const $=id=>document.getElementById(id);
-function load(k){if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k))return cloudOnlySnapshot?.read(k)||[];try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
+function load(k){if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k))return warehouseWriteDraft?.datasets.has(k)?structuredClone(warehouseWriteDraft.datasets.get(k).after):cloudOnlySnapshot?.read(k)||[];try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
 function loadObj(k){if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k))return cloudOnlySnapshot?.read(k)||{};try{return JSON.parse(localStorage.getItem(k))||{}}catch{return{}}}
 const STORAGE_MAINTENANCE_KEY='runlu_storage_maintenance_v603';
 const LOCAL_SNAPSHOT_LIMIT=2;
@@ -1403,8 +1406,13 @@ function pruneLocalApplicationCache(force=false){
 }
 function save(k,v){
  if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k)){
-  alert('This Cloud Only build can read warehouse records. Changes through legacy forms are paused.');
-  return false;
+  if(!warehouseWriteDraft){alert('Use a cloud-enabled warehouse form for this change.');return false}
+  if(!warehouseWriteDraft.datasets.has(k)){
+   const before=k===CARPETDB?carpetRecords():k===LOGDB?operationRecords():k===INVDB?loadInventoryRecords():cloudOnlySnapshot.read(k);
+   warehouseWriteDraft.datasets.set(k,{before,canonical:cloudOnlySnapshot.read(k)});
+  }
+  warehouseWriteDraft.datasets.get(k).after=structuredClone(v);
+  return true;
  }
  try{validateRecordSave(k,v)}catch(err){alert(err.message);return false}
  const encoded=JSON.stringify(v),before=load(k);
@@ -1446,8 +1454,8 @@ const CLOUD_LOCAL_UPDATED_PREFIX='runlu_cloud_local_updated_v583_', CLOUD_DATASE
 function cloudSession(){try{return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY)||'null')}catch{return null}}
 function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'Bearer '+token};if(json)h['Content-Type']='application/json';return h}
 async function cloudRequest(path,options={}){
- if(window.RUNLU_CLOUD_ONLY&&!path.startsWith('/auth/v1/')&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy cloud writes are disabled in Cloud Only mode.');
-if(/^\/rest\/v1\/user_datasets(?:[/?#]|$)/.test(path)&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy whole-dataset writes are disabled.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!localStorage.getItem('runlu_record_sync_outbox_v1')||recordSyncOutbox().length===0)localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
+ if(window.RUNLU_CLOUD_ONLY&&path!=='/rest/v1/rpc/warehouse_cloud_commit'&&!path.startsWith('/auth/v1/')&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy cloud writes are disabled in Cloud Only mode.');
+if(/^\/rest\/v1\/user_datasets(?:[/?#]|$)/.test(path)&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy whole-dataset writes are disabled.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw Object.assign(new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')')),{httpStatus:res.status});if(window.RUNLU_CLOUD_ONLY)return data;localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!localStorage.getItem('runlu_record_sync_outbox_v1')||recordSyncOutbox().length===0)localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
 function v8CanonicalRpcHeaders(token){return {...cloudHeaders(token),'Content-Profile':'warehouse_v7','Accept-Profile':'warehouse_v7'}}
 function v8CanonicalRpcRequest(name,body,token){return cloudRequest('/rest/v1/rpc/'+name,{method:'POST',headers:v8CanonicalRpcHeaders(token),body:JSON.stringify(body)})}
 async function v8CheckCarpetReviewGate(){
@@ -1809,8 +1817,8 @@ function migrateV13(){
  localStorage.setItem('runlu_v13_migrated','yes');
 }
 function showPage(id){
- if(window.RUNLU_CLOUD_ONLY&&['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].includes(id)){
-  alert('This Cloud Only build is read-only. Legacy forms are paused.');
+ if(window.RUNLU_CLOUD_ONLY&&['orderEditor','specialOrderEditor','receivingEditor','scan'].includes(id)){
+  alert('This form has not been connected to Cloud Only writes.');
   return;
  }
 
@@ -2427,8 +2435,13 @@ function normKey(v){return normalizeText(v).toLocaleLowerCase()}
 function carpetRollKey(v){return normalizeText(v).toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^RC(?=\d)/,'').replace(/^0+(?=\d)/,'')}
 function cleanManufacturerRoll(value){const v=String(value||'').trim().toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9-]/g,'').slice(0,20);return v==='0000'?'':v}
 function normalizeManufacturerRollInput(input){if(!input)return '';const clean=cleanManufacturerRoll(input.value);if(input.value!==clean)input.value=clean;return clean}
-function findCarpetRoll(records,value){const key=carpetRollKey(value);if(!key)return null;return (records||[]).find(x=>[x.roll,x.manufacturerRoll,x.sourceRoll,x.parentRoll].some(v=>carpetRollKey(v)===key))||null}
-function findCarpetRollForOperation(records,carpetRecordId,rollValue){const rows=records||[];if(carpetRecordId!==undefined&&carpetRecordId!==null&&String(carpetRecordId)!==''){const byId=rows.find(x=>String(x.id)===String(carpetRecordId));if(byId)return byId}const key=carpetRollKey(rollValue);if(!key)return null;const exact=rows.find(x=>carpetRollKey(x.roll)===key);if(exact)return exact;return findCarpetRoll(rows,rollValue)}
+function findCarpetRoll(records,value){
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY){
+  const matches=(records||[]).filter(row=>WarehouseCloudOnly.matchesRoll(row,value));
+  return matches.length===1?matches[0]:null;
+ }
+ const key=carpetRollKey(value);if(!key)return null;return (records||[]).find(x=>[x.roll,x.manufacturerRoll,x.sourceRoll,x.parentRoll].some(v=>carpetRollKey(v)===key))||null}
+function findCarpetRollForOperation(records,carpetRecordId,rollValue){const rows=records||[];if(carpetRecordId!==undefined&&carpetRecordId!==null&&String(carpetRecordId)!==''){const byId=rows.find(x=>x._cloudRecordId===String(carpetRecordId))||rows.find(x=>String(x.id)===String(carpetRecordId));if(byId)return byId;if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY)return null}if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY)return findCarpetRoll(rows,rollValue);const key=carpetRollKey(rollValue);if(!key)return null;const exact=rows.find(x=>carpetRollKey(x.roll)===key);if(exact)return exact;return findCarpetRoll(rows,rollValue)}
 function uniqueValues(values){const seen=new Set(),out=[];values.forEach(v=>{v=normalizeText(v);const k=normKey(v);if(v&&!seen.has(k)){seen.add(k);out.push(v)}});return out.sort((a,b)=>a.localeCompare(b))}
 function loadMasters(){return load(PMDB)}
 function loadInventoryRecords(){const rows=load(INVDB);return window.RUNLU_V8_ADAPT_INVENTORY?rows.map(RUNLU_V8_ADAPT_INVENTORY):rows}
@@ -2516,7 +2529,10 @@ function inventoryRecordActionButton(r,context='list'){
  const archive=hasHistory?`<button class="red" onclick='archiveInventoryRecord(${ref},${JSON.stringify('Archived from '+context)})'>Archive Record</button>`:'';
  return `${archive}<button class="red" onclick='deleteInventoryRecordSafely(${ref})'>Delete Record</button>`;
 }
-function deleteInventoryRecordSafely(identity){
+async function deleteInventoryRecordSafely(identity){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite(true))return;
+ try{
+
  const inv=loadInventoryRecords(),r=findInventoryRecordByIdentity(inv,identity);if(!r){alert('Delete blocked: the exact inventory record could not be uniquely identified. Refresh and try again.');return}
  const count=inventoryRecordIdentityMatchCount(inv,inventoryRecordIdentity(r));if(count!==1){alert('Delete blocked: more than one record matches this identity. No inventory was changed.');return}
  const m=loadMasters().find(x=>String(x.id)===String(r.masterId))||{},hasHistory=inventoryRecordHasBusinessHistory(r);
@@ -2535,7 +2551,8 @@ Deleting it will remove ONLY the current inventory record. Existing operation / 
 Delete anyway?`))return;
  const events=load(EVENTDB);events.unshift({id:Date.now()+Math.random(),time:new Date().toISOString(),type:'Inventory Record Deleted',reference:r.inventoryId||String(r.id),result:`Deleted erroneous inventory record: ${m.name||'Product'}${m.color?' · '+m.color:''} · ${Number(r.quantity||0)} ${r.unit||''} · ${r.location||'—'}${r.lotNumber?' · Lot '+r.lotNumber:''}`,inventoryId:r.inventoryId||'',legacyId:r.id,masterId:r.masterId,deletedSnapshot:{...r}});
  if(!save(EVENTDB,events))return;
- if(save(INVDB,inv.filter(x=>x!==r))){renderInventory();renderProducts();renderDashboard();renderMap();refreshMemory();if(managedProductId)renderInventoryManager();alert('Inventory record deleted. An audit entry was kept in Event History.');}
+ if(save(INVDB,inv.filter(x=>x!==r))&&(!window.RUNLU_CLOUD_ONLY||await submitWarehouseWrite())){renderInventory();renderProducts();renderDashboard();renderMap();refreshMemory();if(managedProductId)renderInventoryManager();alert('Inventory record deleted. An audit entry was kept in Event History.');}
+ }finally{warehouseWriteDraft=null}
 }
 function deleteUnusedInventoryRecord(identity){deleteInventoryRecordSafely(identity)}
 function archiveInventoryRecord(identity,reason='Removed from current inventory'){
@@ -2602,13 +2619,20 @@ function newProduct(){clearForm();showPage('editor')}
 function scanNewProduct(){newProduct();openAIScan({target:'product',returnPage:'editor',label:'Product Master'})}
 function num(id){const v=parseFloat($(id).value);return Number.isFinite(v)?v:0}
 async function saveProduct(){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
+
  const name=normalizeText($('name').value),location=normalizeText($('location').value),sku=normalizeText($('sku').value);
  if(!name){alert('Please enter Product Name.');return}
  const masters=loadMasters();
  const draft={name,brand:normalizeText($('brand').value),series:normalizeText($('series').value),color:normalizeText($('color').value),sku,length:normalizeText($('length').value),width:normalizeText($('width').value),thickness:normalizeText($('thickness').value)};
  let old=editId?masters.find(x=>x.id===editId):masters.find(x=>productVariantKey(x)===productVariantKey(draft));
- const masterId=old?.id||nextMasterId();
- const rec={id:masterId,...draft,category:$('category').value,coverageUnit:$('coverageUnit').value,productWeight:normalizeText($('productWeight').value),piecesPerBox:num('piecesPerBox'),sfPerBox:num('sfPerBox'),weightPerBox:num('weightPerBox'),boxesPerPallet:num('boxesPerPallet'),sfPerPallet:num('sfPerPallet'),weightPerPallet:num('weightPerPallet'),photo:photoData||old?.photo||'',notes:normalizeText($('notes').value),updated:new Date().toLocaleString()};
+ if(window.RUNLU_CLOUD_ONLY&&editId&&(!old||old._cloudVersion!==warehouseProductEditVersion)){
+  alert('This product changed after opening the editor. Reopen it before saving.');
+  return;
+ }
+ const masterId=old?.id||(window.RUNLU_CLOUD_ONLY?crypto.randomUUID():nextMasterId());
+ const rec={...(window.RUNLU_CLOUD_ONLY&&old?old:{}),id:masterId,...draft,category:$('category').value,coverageUnit:$('coverageUnit').value,productWeight:normalizeText($('productWeight').value),piecesPerBox:num('piecesPerBox'),sfPerBox:num('sfPerBox'),weightPerBox:num('weightPerBox'),boxesPerPallet:num('boxesPerPallet'),sfPerPallet:num('sfPerPallet'),weightPerPallet:num('weightPerPallet'),photo:photoData||old?.photo||'',notes:normalizeText($('notes').value),updated:new Date().toLocaleString()};
  const mi=masters.findIndex(x=>x.id===masterId);if(mi>=0)masters[mi]=rec;else masters.unshift(rec);
  if(!save(PMDB,masters))return;
  if(location){
@@ -2645,6 +2669,7 @@ For an accidental duplicate, choose Cancel and edit the existing record instead.
    const ir={id:Date.now(),masterId,locationType:$('locationType').value,location,quantity:qty,unit,pailSize,lotNumber:lot,poNumber:normalizeText($('inventoryPo').value),inventoryType:'GENERAL',lifecycleStatus:'ACTIVE',sourceModule:'Inventory',sourceId:'',createdAt:now.toISOString(),lastUpdatedAt:now.toISOString(),updated:now.toLocaleString(),transactionCount:0};normalizeInventoryLifecycleRecord(ir);inv.unshift(ir);if(!save(INVDB,inv))return;
   }
  }
+ if(window.RUNLU_CLOUD_ONLY){if(await submitWarehouseWrite()){clearForm();showPage('products')}return}
  const savedKeys=location?[PMDB,INVDB]:[PMDB];
  let cloudMessage='Saved locally. Cloud sync is not currently confirmed.';
  if(localStorage.getItem(CLOUD_ENABLED_KEY)==='1'&&cloudSession()){
@@ -2654,8 +2679,9 @@ For an accidental duplicate, choose Cancel and edit the existing record instead.
   alert('Saved on this phone only. Cloud sync is not active, so app update/reload will be blocked until the data is synchronized.');
  }
  alert((location?'Product Master and Inventory Record saved.':'Product Master saved.')+'\n\n'+cloudMessage);clearForm();showPage('products');
+ }finally{warehouseWriteDraft=null}
 }
-function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;editId=id;photoData=x.photo||'';masterTextFields.forEach(k=>$(k).value=x[k]??'');['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category||'Other';$('coverageUnit').value=x.coverageUnit||'Other';['location','quantity','lotNumber','inventoryPo'].forEach(k=>$(k).value='');$('locationType').value='Rack';$('unit').value='Box';if($('productPailSize'))$('productPailSize').value='1 gal';updateProductPailSize();showPage('editor')}
+function editItem(id){const x=loadMasters().find(v=>v.id===id);if(!x)return;editId=id;warehouseProductEditVersion=x._cloudVersion;photoData=x.photo||'';masterTextFields.forEach(k=>$(k).value=x[k]??'');['piecesPerBox','sfPerBox','weightPerBox','boxesPerPallet','sfPerPallet','weightPerPallet','notes'].forEach(k=>$(k).value=x[k]??'');$('category').value=x.category||'Other';$('coverageUnit').value=x.coverageUnit||'Other';['location','quantity','lotNumber','inventoryPo'].forEach(k=>$(k).value='');$('locationType').value='Rack';$('unit').value='Box';if($('productPailSize'))$('productPailSize').value='1 gal';updateProductPailSize();showPage('editor')}
 function removeItem(id){const x=loadMasters().find(v=>v.id===id);if(!x||!confirm('Delete '+x.name+' and all of its inventory records?'))return;save(PMDB,loadMasters().filter(v=>v.id!==id));save(INVDB,loadInventoryRecords().filter(v=>v.masterId!==id));renderProducts();renderInventory();refreshMemory()}
 async function removeInventory(id){
  const inv=loadInventoryRecords(),x=inv.find(v=>v.id===id);
@@ -2832,7 +2858,7 @@ function renderGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.stat
 function printGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){alert(cloudOnlyStatusText());return}const left=generalTagData('left'),right=generalTagData('right'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1));if(!left.product.id){alert('Choose a Left Label product first.');return}if(left.layout==='letter'&&!right.product.id){alert('Choose a Right Label product first.');return}const leftName=[left.product.name,left.product.color].filter(Boolean).join(' · '),rightName=[right.product.name,right.product.color].filter(Boolean).join(' · '),productLabel=left.layout==='letter'?`${leftName}  +  ${rightName}`:leftName,history=load(TAGPRINTDB);history.unshift({id:Date.now(),time:new Date().toLocaleString(),product:productLabel,type:left.type,copies,ownership:left.ownership,layout:left.layout,masterId:left.product.id,inventoryId:left.record?.id||'',rightMasterId:right.product.id||'',rightInventoryId:right.record?.id||''});save(TAGPRINTDB,history.slice(0,100));renderGeneralTags();document.body.classList.add('printingGeneralTags');const done=()=>document.body.classList.remove('printingGeneralTags');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
 function openInventoryRecordEditor(identity){
  const records=loadInventoryRecords(),record=findInventoryRecordByIdentity(records,identity);if(!record){alert('The exact inventory record could not be uniquely identified. Refresh and try again.');return}
- const product=loadMasters().find(x=>x.id===record.masterId)||{};editingInventoryRecordId=inventoryRecordIdentity(record);
+ const product=loadMasters().find(x=>x.id===record.masterId)||{};editingInventoryRecordId=inventoryRecordIdentity(record);warehouseInventoryEditVersion=record._cloudVersion;
  $('inventoryEditContext').innerHTML=`<b>${esc(product.color||product.name||'Inventory record')}</b>${product.color&&product.name?'<br>'+esc(product.name):''}<br>Record at ${esc(record.location||'unassigned location')}<br>Inventory ID: <b>${esc(record.inventoryId||record.id||'—')}</b>`;
  $('editInvLocationType').value=record.locationType||'Rack';
  if(!$('editInvLocationType').value)$('editInvLocationType').value='Other';
@@ -2843,14 +2869,19 @@ function openInventoryRecordEditor(identity){
 }
 function closeInventoryEdit(){$('inventoryEditModal').classList.add('hidden');editingInventoryRecordId=null}
 function inventoryEditBackdrop(e){if(e.target===$('inventoryEditModal'))closeInventoryEdit()}
-function saveInventoryRecordEdits(){
+async function saveInventoryRecordEdits(){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
+
  const inv=loadInventoryRecords(),matchCount=inventoryRecordIdentityMatchCount(inv,editingInventoryRecordId),record=findInventoryRecordByIdentity(inv,editingInventoryRecordId);if(matchCount!==1||!record){alert('Edit blocked: the exact inventory record could not be uniquely isolated. No inventory was changed.');closeInventoryEdit();return}
+ if(window.RUNLU_CLOUD_ONLY&&record._cloudVersion!==warehouseInventoryEditVersion){alert('This record changed after opening the editor. Reopen it before saving.');return}
  const location=normalizeText($('editInvLocation').value),quantity=Number($('editInvQuantity').value);
  if(!location){alert('Please enter a location.');return}if(!Number.isFinite(quantity)||quantity<0){alert('Please enter a valid quantity of 0 or more.');return}
  const editIndex=inv.indexOf(record),next=inv.slice();if(editIndex<0){alert('Edit blocked: inventory record changed before save. No inventory was changed.');return}next[editIndex]={...record};const edited=next[editIndex];
  if(!edited){alert('Edit blocked: a safe inventory edit copy could not be created. No inventory was changed.');return}
  edited.locationType=$('editInvLocationType').value;edited.location=location;edited.quantity=Number(quantity.toFixed(2));edited.unit=$('editInvUnit').value;edited.lotNumber=normalizeText($('editInvLot').value);edited.poNumber=normalizeText($('editInvPo').value);edited.notes=normalizeText($('editInvNotes').value);edited.updated=new Date().toLocaleString();edited.lastUpdatedAt=new Date().toISOString();edited.lastAction='Inventory record edited by Inventory ID';
- if(save(INVDB,next)){closeInventoryEdit();renderInventoryManager();renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory();alert('Inventory record updated.')}
+ if(save(INVDB,next)&&(!window.RUNLU_CLOUD_ONLY||await submitWarehouseWrite())){closeInventoryEdit();renderInventoryManager();renderProducts();renderInventory();renderDashboard();renderMap();refreshMemory();alert('Inventory record updated.')}
+ }finally{warehouseWriteDraft=null}
 }
 function deleteManagedInventoryRecord(identity){deleteInventoryRecordSafely(identity)}
 let pickerRecordId=null,pickerSourceMasterId=null;
@@ -3285,7 +3316,7 @@ function operationProductLabel(p){return [p.name,p.color,p.sku].filter(Boolean).
 function carpetRecords(){
  if(window.RUNLU_CLOUD_ONLY)return load(CARPETDB).map(row=>({
   ...(window.RUNLU_V8_ADAPT_CARPET?.(row)||row),
-  roll:row.roll||row.rollNumber||'',id:row._cloudUiId,
+  roll:row.roll||row.rollNumber||'',id:row._cloudUiId??row.id,
   canonicalId:row._cloudRecordId,legacyPayloadId:row.id,manufacturerRoll:cleanManufacturerRoll(row.manufacturerRoll),
  }));
  return load(CARPETDB).map(x=>{const length=Number(x.length)||0,manufacturerRoll=cleanManufacturerRoll(x.manufacturerRoll);return {...x,id:Number(x.id)||Date.now(),manufacturerRoll,length,status:x.status||(length>0?(length<3?'Used Up':'Active'):'Check')}})}
@@ -3600,8 +3631,8 @@ function editOperationItem(i){const x=operationItemsDraft.splice(i,1)[0];if(!x)r
 function removeOperationItem(i){operationItemsDraft.splice(i,1);renderOperationItems();saveOperationDraftNow()}
 function deleteOperationDraft(){if(!confirm('Delete this unfinished order and all items? No inventory will be changed.'))return;localStorage.removeItem(OPDRAFTDB);operationItemsDraft=[];operationEditId=null;operationContinuationId=null;operationDraftDirty=false;showPage('operations')}
 function operationDraftPayload(){return {savedAt:new Date().toISOString(),date:$('operationDate').value,time:$('operationTime').value,status:$('operationStatus').value,type:$('operationType').value,inventoryMode:$('operationInventoryMode').value,operator:$('operationOperator').value,sales:$('operationSales').value,source:$('operationSource').value,po:$('operationPO').value,customer:$('operationCustomer').value,current:operationItemFromForm(false),items:operationItemsDraft}}
-function saveOperationDraftNow(){if(!$('operationEditor')||$('operationEditor').classList.contains('hidden'))return;const el=$('operationDraftState');try{localStorage.setItem(OPDRAFTDB,JSON.stringify(operationDraftPayload()));operationDraftDirty=true;if(el)el.textContent='✓ Draft saved automatically '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(err){console.error('Operation draft save failed',err);operationDraftDirty=true;if(el)el.textContent=isQuotaError(err)?'⚠ Draft NOT saved: device storage full. Keep this screen open; do not clear app data.':'⚠ Draft NOT saved on this device. Keep this screen open.';}}
-function scheduleOperationDraft(){clearTimeout(operationDraftTimer);const el=$('operationDraftState');if(el)el.textContent='Saving draft…';operationDraftTimer=setTimeout(saveOperationDraftNow,250)}
+function saveOperationDraftNow(){if(window.RUNLU_CLOUD_ONLY)return;if(!$('operationEditor')||$('operationEditor').classList.contains('hidden'))return;const el=$('operationDraftState');try{localStorage.setItem(OPDRAFTDB,JSON.stringify(operationDraftPayload()));operationDraftDirty=true;if(el)el.textContent='✓ Draft saved automatically '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(err){console.error('Operation draft save failed',err);operationDraftDirty=true;if(el)el.textContent=isQuotaError(err)?'⚠ Draft NOT saved: device storage full. Keep this screen open; do not clear app data.':'⚠ Draft NOT saved on this device. Keep this screen open.';}}
+function scheduleOperationDraft(){if(window.RUNLU_CLOUD_ONLY){operationDraftDirty=true;return}clearTimeout(operationDraftTimer);const el=$('operationDraftState');if(el)el.textContent='Saving draft…';operationDraftTimer=setTimeout(saveOperationDraftNow,250)}
 function restoreOperationDraft(d){$('operationDate').value=d.date||todayISO();$('operationTime').value=d.time||new Date().toTimeString().slice(0,5);$('operationStatus').value=d.status||'Waiting';$('operationType').value=d.type||'Inventory Inspection';$('operationInventoryMode').value=d.inventoryMode||'Record Only';$('operationOperator').value=d.operator||'John';$('operationSales').value=d.sales||'';$('operationSource').value=d.source||'Manual';$('operationPO').value=d.po||'';$('operationCustomer').value=d.customer||'';operationItemsDraft=Array.isArray(d.items)?d.items:[];const x=d.current||{};$('operationLineType').value=x.type||d.type||'Other';if($('operationLineInventoryMode'))$('operationLineInventoryMode').value=x.inventoryMode||d.inventoryMode||'Record Only';$('operationCuts').value=x.numberOfCuts||1;$('operationSupplier').value=x.supplier||'';$('operationItemStatus').value=x.itemStatus||'Waiting';$('operationInventoryRecord').value=x.inventoryRecordId||'';$('operationProduct').value=x.product||'';$('operationProduct').dataset.productId=x.productId||'';$('operationCollection').value=x.collection||'';$('operationColour').value=x.colour||'';$('operationLot').value=x.lot||'';$('operationRoll').value=x.roll||'';if(x.carpetRecordId){$('operationRoll').dataset.carpetRecordId=String(x.carpetRecordId);if($('operationCarpetRollPicker'))$('operationCarpetRollPicker').value=String(x.carpetRecordId)}else if($('operationRoll'))delete $('operationRoll').dataset.carpetRecordId;$('operationWidth').value=x.width||'';$('operationUnit').value=x.unit||'Box';setOperationLengthInputs(x.quantity,x.unit||'Box');if($('operationUnderlaymentRolls'))$('operationUnderlaymentRolls').value=x.underlaymentSpec||underlaymentSpec(x)?(x.stockQuantity??x.quantity??''):'';$('operationLocation').value=x.location||'';$('operationToLocation').value=x.toLocation||'';$('operationNotes').value=x.notes||'';updateOperationForm();renderOperationItems();operationProductChanged();detectExistingOperationPO()}
 function newOperation(date='',skipDraftPrompt=false){operationEditId=null;operationContinuationId=null;operationItemsDraft=[];$('operationEditorTitle').textContent='New Operation';$('operationDate').value=date||todayISO();$('operationTime').value=new Date().toTimeString().slice(0,5);$('operationStatus').value='Waiting';$('operationType').value='Inventory Inspection';$('operationInventoryMode').value='Record Only';$('operationOperator').value='John';$('operationSource').value='Manual';['operationPO','operationCustomer','operationSales','operationSupplier','operationProduct','operationCollection','operationColour','operationLot','operationRoll','operationManufacturerRoll','operationWidth','operationQty','operationInches','operationLocation','operationToLocation','operationNotes'].forEach(id=>$(id).value='');$('operationInventoryRecord').value='';if($('operationCarpetTransfer'))$('operationCarpetTransfer').value='';if($('operationTransferWholeRoll'))$('operationTransferWholeRoll').checked=false;if($('operationCarpetTransferMode'))$('operationCarpetTransferMode').value='Existing / Whole Roll';if($('operationTransferPieces'))$('operationTransferPieces').value='';$('operationQty').disabled=false;$('operationInches').disabled=false;$('operationItemStatus').value='Waiting';$('operationUnit').value='Box';$('operationLineType').value='Other';if($('operationLineInventoryMode'))$('operationLineInventoryMode').value='Record Only';$('operationCuts').value='1';$('operationProduct').dataset.productId='';if($('operationRoll'))delete $('operationRoll').dataset.carpetRecordId;refreshOperationMemory();updateOperationForm();operationProductChanged();renderOperationItems();showPage('operationEditor');operationDraftDirty=false;detectExistingOperationPO();let draft=null;try{draft=JSON.parse(localStorage.getItem(OPDRAFTDB)||'null')}catch{}if(!skipDraftPrompt&&draft&&confirm('An unfinished order draft was found. Continue where you stopped?'))restoreOperationDraft(draft);else if(!skipDraftPrompt&&draft)localStorage.removeItem(OPDRAFTDB)}
 function newCarpetOperation(){newOperation('',true);$('operationType').value='Carpet Receiving';$('operationInventoryMode').value='Stock';$('operationStatus').value='Completed';$('operationLineType').value='Carpet Receiving';if($('operationLineInventoryMode'))$('operationLineInventoryMode').value='Stock';$('operationUnit').value='Foot';operationLineTypeChanged();$('operationRoll')?.focus();scheduleOperationDraft()}
@@ -3665,7 +3696,7 @@ function applySingleOperationImpact(r){
    const now=new Date().toISOString(),received={id:Date.now()+Math.random(),roll:r.roll,manufacturerRoll:r.manufacturerRoll||'',lot:r.lot||'',collection:r.collection||r.product,colour:r.colour,length:r.quantity,originalLength:r.quantity,width:r.width||'',location:r.location||'Receiving',measure:'FULL',status:r.quantity<3?'Used Up':'Active',tmRequired:false,warehouseScope:'warehouse',transferredOut:false,po:r.po,supplier:r.supplier||'',sqYd:Number(r.sqYd||0),weightLb:Number(r.weightLb||0),sourceOperationId:r.id,createdAt:now,updatedAt:now};
    a.unshift(received);if(!save(CARPETDB,a))throw new Error(`Roll ${r.roll} could not be saved to Carpet Inventory.`);const verified=load(CARPETDB).some(x=>normKey(x.roll)===normKey(r.roll)&&String(x.sourceOperationId||'')===String(r.id));if(!verified)throw new Error(`Roll ${r.roll} failed the post-save inventory verification. The operation was not linked.`);result=`Carpet roll received and verified: ${r.quantity} ft; measure FULL`;}
   else if(r.type==='Carpet Cutting'){
-   const requested=Number(r.requestedQuantity??r.quantity??0),planned=carpetActualCutLength({...r,type:'Carpet Cutting'}),a=carpetRecords(),roll=findCarpetRollForOperation(a,r.carpetRecordId,r.roll);if(!roll)throw new Error(`Roll ${r.roll||'—'} was not found in Carpet Inventory. Select the roll directly from Carpet Inventory and try again.`);if(r.carpetRecordId&&String(roll.id)!==String(r.carpetRecordId))throw new Error('The selected carpet inventory record changed. Re-open the roll from Carpet Inventory before completing.');if(roll.length<planned)throw new Error(`Not enough carpet remaining. Requested ${feetLabel(requested)} plus 3″ cutting allowance requires ${feetLabel(planned)}. Current balance: ${feetLabel(roll.length)}.`);const before=Number(roll.length||0),plan=carpetCutConsumptionPlan({...r,type:'Carpet Cutting'},before),actual=plan.consumed;roll.length=plan.remaining;roll.measure='CAL';roll.status=plan.useFullRoll||roll.length<3?'Used Up':'Active';roll.tmRequired=!plan.useFullRoll&&roll.length<=50&&roll.length>=3;roll.updatedAt=new Date().toISOString();save(CARPETDB,a);const cuts=cuttingRecords();cuts.unshift({id:Date.now()+Math.random(),operationId:r.id,carpetRecordId:roll.id,date:r.date,time:r.time,roll:roll.roll||r.roll,collection:r.collection||roll.collection,colour:r.colour||roll.colour,po:r.po,customer:r.customer||'',cutLength:requested,requestedCutLength:requested,plannedCutLength:planned,actualCutLength:actual,numberOfCuts:r.numberOfCuts||1,allowanceInches:r.allowanceInches||3,beforeLength:before,remainingLength:roll.length,fullRollConsumed:plan.useFullRoll,operator:r.operator,notes:r.notes,createdAt:new Date().toISOString()});save(CUTDB,cuts);updateLinkedOrder(r,'Ready');r.requestedQuantity=requested;r.plannedStockQuantity=planned;r.actualStockQuantity=actual;r.allowanceInches=(r.numberOfCuts||1)*3;r.fullRollConsumed=plan.useFullRoll;result=plan.useFullRoll?`FULL ROLL FINISH · Roll ${r.roll}: requested ${feetLabel(requested)} + ${r.numberOfCuts||1} cut(s) × 3″ = ${feetLabel(planned)} planned; short tail consumed with full roll; ${feetLabel(before)} → 0; status Used Up`:`Roll ${r.roll}: requested ${feetLabel(requested)} + ${r.numberOfCuts||1} cut(s) × 3″ = ${feetLabel(planned)} actual; ${feetLabel(before)} → ${feetLabel(roll.length)}; measure CAL${roll.tmRequired?'; TRUE MEASURE REQUIRED':''}`;}
+   const requested=Number(r.requestedQuantity??r.quantity??0),planned=carpetActualCutLength({...r,type:'Carpet Cutting'}),a=carpetRecords(),roll=findCarpetRollForOperation(a,r.carpetRecordId,r.roll);if(!roll)throw new Error(`Roll ${r.roll||'—'} was not found in Carpet Inventory. Select the roll directly from Carpet Inventory and try again.`);if(r.carpetRecordId&&String(roll.id)!==String(r.carpetRecordId)&&roll._cloudRecordId!==String(r.carpetRecordId))throw new Error('The selected carpet inventory record changed. Re-open the roll from Carpet Inventory before completing.');if(roll.length<planned)throw new Error(`Not enough carpet remaining. Requested ${feetLabel(requested)} plus 3″ cutting allowance requires ${feetLabel(planned)}. Current balance: ${feetLabel(roll.length)}.`);const before=Number(roll.length||0),plan=carpetCutConsumptionPlan({...r,type:'Carpet Cutting'},before),actual=plan.consumed;roll.length=plan.remaining;roll.measure='CAL';roll.status=plan.useFullRoll||roll.length<3?'Used Up':'Active';roll.tmRequired=!plan.useFullRoll&&roll.length<=50&&roll.length>=3;roll.updatedAt=new Date().toISOString();save(CARPETDB,a);const cuts=cuttingRecords();cuts.unshift({id:Date.now()+Math.random(),operationId:r.id,carpetRecordId:roll.id,date:r.date,time:r.time,roll:roll.roll||r.roll,collection:r.collection||roll.collection,colour:r.colour||roll.colour,po:r.po,customer:r.customer||'',cutLength:requested,requestedCutLength:requested,plannedCutLength:planned,actualCutLength:actual,numberOfCuts:r.numberOfCuts||1,allowanceInches:r.allowanceInches||3,beforeLength:before,remainingLength:roll.length,fullRollConsumed:plan.useFullRoll,operator:r.operator,notes:r.notes,createdAt:new Date().toISOString()});save(CUTDB,cuts);updateLinkedOrder(r,'Ready');r.requestedQuantity=requested;r.plannedStockQuantity=planned;r.actualStockQuantity=actual;r.allowanceInches=(r.numberOfCuts||1)*3;r.fullRollConsumed=plan.useFullRoll;result=plan.useFullRoll?`FULL ROLL FINISH · Roll ${r.roll}: requested ${feetLabel(requested)} + ${r.numberOfCuts||1} cut(s) × 3″ = ${feetLabel(planned)} planned; short tail consumed with full roll; ${feetLabel(before)} → 0; status Used Up`:`Roll ${r.roll}: requested ${feetLabel(requested)} + ${r.numberOfCuts||1} cut(s) × 3″ = ${feetLabel(planned)} actual; ${feetLabel(before)} → ${feetLabel(roll.length)}; measure CAL${roll.tmRequired?'; TRUE MEASURE REQUIRED':''}`;}
   else if(['Cut Piece Return','Installer Return'].includes(r.type)){
    const a=carpetRecords(),source=findCarpetRoll(a,r.roll);if(!source)throw new Error('Original source roll not found in Carpet Inventory.');const childRoll=nextCarpetChildRoll(source.roll,a),now=new Date().toISOString();
    const installerReturn=r.type==='Installer Return',child={id:Date.now()+Math.random(),roll:childRoll,sourceRoll:source.roll,parentRoll:source.roll,manufacturerRoll:source.manufacturerRoll||'',lot:r.lot||source.lot||'',collection:r.collection||r.product||source.collection,colour:r.colour||source.colour,length:r.quantity,originalLength:r.quantity,width:r.width||source.width||'12',location:r.location||source.location||(installerReturn?'Installer Returns':'Returned Cut Pieces'),measure:'TM',status:r.quantity<3?'Used Up':'Active',tmRequired:false,po:r.po||'',customer:r.customer||'',supplier:r.supplier||source.supplier||'',returnReason:r.notes||(installerReturn?'Installer leftover returned':'Order size changed'),relationType:installerReturn?'INSTALLER RETURN':'CUT PIECE RETURN',sourceOperationId:r.id,createdAt:now,updatedAt:now};
@@ -3675,6 +3706,11 @@ function applySingleOperationImpact(r){
    result=`${installerReturn?'Installer leftover':'Cut piece'} returned as ${childRoll}: ${r.quantity} ft · source ${source.roll} unchanged at ${source.length} ft · measure TM${matching?' · original cut linked':' · no matching cut log found'}`;}
   else if(r.type==='REM / Remnant Transfer'){
    const a=carpetRecords(),roll=findCarpetRoll(a,r.roll);if(!roll)throw new Error('Source roll not found in Carpet Inventory.');if(roll.length<r.quantity)throw new Error(`Not enough carpet remaining. Current balance: ${roll.length} ft.`);const before=roll.length;roll.length=Number((roll.length-r.quantity).toFixed(2));const ram=load(RAMDB),same=ram.filter(x=>normKey(x.sourceRoll)===normKey(roll.roll)).length+1,ramNo=`REM-${String(roll.roll).replace(/^RC/i,'')}-${String(same).padStart(2,'0')}`;ram.unshift({id:Date.now()+Math.random(),ramNo,sourceRoll:roll.roll,collection:roll.collection,colour:roll.colour,lot:roll.lot,width:r.width||roll.width,length:r.quantity,location:r.location||'Store',status:'REM – AT STORE',po:r.po,createdAt:new Date().toISOString()});save(RAMDB,ram);if(roll.length<3){roll.status='Split to REM';roll.location='REM Archive';roll.tmRequired=false}else{roll.status='Active';roll.tmRequired=roll.length<=50}roll.updatedAt=new Date().toISOString();save(CARPETDB,a);result=`${ramNo} created: ${r.quantity} ft; source ${r.roll} ${before} → ${roll.length} ft`;}
+  if(window.RUNLU_CLOUD_ONLY&&warehouseWriteDraft&&r.type==='Carpet Cutting'){
+   const changed=findCarpetRollForOperation(carpetRecords(),r.carpetRecordId,r.roll);
+   if(!changed?._cloudRecordId)throw new Error('Canonical cut identity is missing.');
+   warehouseWriteDraft.cuts.add(changed._cloudRecordId);
+  }
   const events=load(EVENTDB);events.unshift({id:Date.now()+Math.random(),operationId:r.id,time:new Date().toISOString(),type:r.type,reference:r.po||r.roll||r.product,result});save(EVENTDB,events);r.impactApplied=true;r.impactResult=result;r.appliedAt=new Date().toISOString();return true;
  }catch(e){alert('Linked update stopped: '+e.message);return false}
 }
@@ -3823,7 +3859,7 @@ function repairCompletedStockTransfers(showMessage=false){
  return {repaired,unresolved};
 }
 async function saveOperation(){
- if(window.__v8OperationSaving)return;window.__v8OperationSaving=true;
+ if(window.__v8OperationSaving||(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite()))return;window.__v8OperationSaving=true;
  try{
  // Build051: persist Number of Cuts/Pieces on the top-level work record so completion uses the operator-entered cut count instead of defaulting back to 1.
  const date=$('operationDate').value||todayISO(),type=$('operationType').value,productText=$('operationProduct').value.trim(),customer=$('operationCustomer').value.trim(),supplier=$('operationSupplier').value.trim(),parsedQuantity=operationQuantityInput(),current=operationItemFromForm(true);if(current&&!Number.isFinite(parsedQuantity)){alert(`Enter a valid quantity. Carpet lengths can use 51'6" or 51.5.`);return}const items=operationItemsDraft.map(x=>({...x}));if(current)items.push(current);const batch=items.length>1||operationItemsDraft.length>0;const requestedStatus=$('operationStatus').value;if(requestedStatus==='Completed')completeOpenOperationItems(items);const first=items[0]||current||{};const derivedStatus=derivePartialOrderStatus(items,requestedStatus);const record={date,time:$('operationTime').value,status:derivedStatus,type,source:$('operationSource').value,operator:$('operationOperator').value.trim()||'John',sales:$('operationSales').value.trim(),po:$('operationPO').value.trim(),customer,supplier:first.supplier||supplier,itemStatus:first.itemStatus||$('operationItemStatus').value||'Waiting',name:isSupplierOperationType(type)?(first.supplier||supplier):customer,inventoryMode:first.inventoryMode||$('operationInventoryMode').value||'Record Only',productId:first.productId||'',inventoryRecordId:first.inventoryRecordId||'',carpetRecordId:first.carpetRecordId||'',product:first.product||productText,collection:first.collection||'',colour:first.colour||'',lot:first.lot||'',roll:first.roll||'',width:first.width||'',quantity:first.quantity||0,unit:first.unit||$('operationUnit').value,location:first.location||'',toLocation:first.toLocation||'',notes:first.notes||'',numberOfCuts:first.numberOfCuts||1,requestedQuantity:first.requestedQuantity,actualStockQuantity:first.actualStockQuantity,allowanceInches:first.allowanceInches,underlaymentSpec:first.underlaymentSpec,requestedSY:first.requestedSY,stockQuantity:first.stockQuantity,stockUnit:first.stockUnit,fullRollCoveredSY:first.fullRollCoveredSY,returnedMaterialSY:first.returnedMaterialSY,remainderSY:first.remainderSY,halfRollThresholdSY:first.halfRollThresholdSY,roundingDecision:first.roundingDecision,actualCoveredSY:first.actualCoveredSY,totalWeightLb:first.totalWeightLb,items:batch?items:[]};
@@ -3838,7 +3874,7 @@ async function saveOperation(){
  else{const candidate={id:Date.now(),...record,createdAt:now},duplicate=a.find(v=>!v.impactApplied&&v.status!=='Completed'&&v.status!=='Cancelled'&&openOperationFingerprint(v)===openOperationFingerprint(candidate));if(duplicate){x=duplicate;Object.assign(x,record,{updatedAt:now})}else{x=candidate;a.unshift(x)}}
  if(!operationContinuationId&&['Partial','Completed'].includes(record.status)){
   if(record.status==='Completed'&&!confirmOperationCompletion(x))return;
-  if(record.status==='Completed'&&x.type==='Carpet Cutting'&&x.inventoryMode==='Stock'&&window.RUNLU_V8_BUILD_CUT_COMMAND){
+  if(!window.RUNLU_CLOUD_ONLY&&record.status==='Completed'&&x.type==='Carpet Cutting'&&x.inventoryMode==='Stock'&&window.RUNLU_V8_BUILD_CUT_COMMAND){
    const rolls=carpetRecords(),roll=findCarpetRollForOperation(rolls,x.carpetRecordId,x.roll);
    if(!roll){alert('Canonical carpet roll not found. Re-sync before completing.');return}
    try{
@@ -3850,11 +3886,15 @@ async function saveOperation(){
     try{await recordSyncPull()}catch(e){console.warn('[V8] Cut committed; inventory refresh pending',e);}
    }catch(e){alert('Cut was not completed. '+e.message);return}
   }else if(!applyOperationImpact(x))return
- }if(!save(LOGDB,a)){alert('WORK ORDER NOT SAVED. Inventory processing may already have occurred. Do NOT submit this order again or manually add stock. Preserve this device data and ask for reconciliation before retrying.');return}if(x.v8CanonicalCut)localStorage.removeItem(V8_PENDING_CUT_KEY);const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
- }finally{window.__v8OperationSaving=false}
+ }if(!save(LOGDB,a)){alert('WORK ORDER NOT SAVED. Inventory processing may already have occurred. Do NOT submit this order again or manually add stock. Preserve this device data and ask for reconciliation before retrying.');return}if(window.RUNLU_CLOUD_ONLY&&!await submitWarehouseWrite())return;if(x.v8CanonicalCut&&!window.RUNLU_CLOUD_ONLY)localStorage.removeItem(V8_PENDING_CUT_KEY);const tmAlert=String(x.impactResult||'').includes('TRUE MEASURE REQUIRED');activeOperationsDate=date;operationEditId=null;operationContinuationId=null;operationItemsDraft=[];operationDraftDirty=false;if(!window.RUNLU_CLOUD_ONLY)localStorage.removeItem(OPDRAFTDB);refreshOperationMemory();renderDashboard();showPage('operationsDay');if(tmAlert)alert('LOW STOCK: One or more carpet rolls are 50 ft or less. TRUE MEASURE is required.');
+ }finally{warehouseWriteDraft=null;window.__v8OperationSaving=false}
 }
 function cancelOperationEdit(){const hasDraft=operationDraftDirty||operationItemsDraft.length||operationItemFromForm(true);if(hasDraft){const leave=confirm('Save this unfinished order as a draft and leave the input screen?\n\nPress Cancel to continue entering.');if(!leave)return;saveOperationDraftNow()}operationEditId=null;operationContinuationId=null;if(activeOperationsDate)showPage('operationsDay');else showPage('operations')}
-function setOperationStatus(id,status){const a=operationRecords(),x=a.find(r=>r.id===Number(id));if(!x)return;if(x.impactApplied&&status!=='Completed'){alert('This linked operation is locked after completion.');return}if(status==='Completed'&&x.status!=='Completed'){const preview={...x,items:Array.isArray(x.items)?x.items.map(item=>({...item})):x.items};completeOpenOperationItems(preview.items);if(!confirmOperationCompletion(preview))return}x.status=status;x.updatedAt=new Date().toISOString();if(status==='Completed'){x.itemStatus='Completed';completeOpenOperationItems(x.items);x.completedAt=new Date().toISOString();if(!applyOperationImpact(x))return}else if(status==='Partial'){if(!applyOperationImpact(x))return}save(LOGDB,a);renderOperationsDay();renderDashboard()}
+async function setOperationStatus(id,status){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
+const a=operationRecords(),x=a.find(r=>r.id===Number(id));if(!x)return;if(x.impactApplied&&status!=='Completed'){alert('This linked operation is locked after completion.');return}if(status==='Completed'&&x.status!=='Completed'){const preview={...x,items:Array.isArray(x.items)?x.items.map(item=>({...item})):x.items};completeOpenOperationItems(preview.items);if(!confirmOperationCompletion(preview))return}x.status=status;x.updatedAt=new Date().toISOString();if(status==='Completed'){x.itemStatus='Completed';completeOpenOperationItems(x.items);x.completedAt=new Date().toISOString();if(!applyOperationImpact(x))return}else if(status==='Partial'){if(!applyOperationImpact(x))return}if(!save(LOGDB,a)||window.RUNLU_CLOUD_ONLY&&!await submitWarehouseWrite())return;renderOperationsDay();renderDashboard() }finally{warehouseWriteDraft=null}
+}
 function deleteOperation(id){const x=operationRecords().find(r=>r.id===Number(id));if(x?.impactApplied){alert('This linked operation cannot be deleted because it already changed inventory. Use a correction or reversal record instead.');return}if(!x||!confirm(`Delete this work record?\n\n${x.type}\n${x.collection||x.product||x.roll||x.po||''}\n\nThis action cannot be undone.`))return;save(LOGDB,operationRecords().filter(r=>r.id!==Number(id)));renderOperationsDay();renderDashboard()}
 let carpetQuickFilter='ACTIVE',carpetRackFilter='',carpetViewMode=localStorage.getItem('runlu_carpet_view')||((window.matchMedia&&window.matchMedia('(max-width: 760px)').matches)?'card':'list'),carpetSortMode=localStorage.getItem('runlu_carpet_sort')||'roll';
 function carpetDuplicateKeys(rows=carpetRecords()){
@@ -3924,16 +3964,109 @@ function decimalFeetParts(value){const n=Math.max(0,Number(value)||0),feet=Math.
 function carpetEditLengthValue(kind){const prefix=kind==='original'?'ceOriginal':'ceLength',feet=Math.max(0,Math.floor(Number($(prefix+'Feet').value)||0)),inches=Math.floor(Number($(prefix+'Inches').value)||0);if(inches<0||inches>11)return NaN;return Number((feet+inches/12).toFixed(4))}
 function syncCarpetEditLength(kind){const prefix=kind==='original'?'ceOriginal':'ceLength',value=carpetEditLengthValue(kind),preview=$(prefix+'Preview');if(!Number.isFinite(value)){preview.textContent='Inches must be between 0 and 11.';preview.classList.add('error');$(prefix).value='';return false}$(prefix).value=String(value);preview.textContent=`Warehouse format: ${feetLabel(value)} · Calculation: ${value.toFixed(4)} ft`;preview.classList.remove('error');return true}
 function setCarpetEditLength(kind,value){const prefix=kind==='original'?'ceOriginal':'ceLength',parts=decimalFeetParts(value);$(prefix+'Feet').value=parts.feet;$(prefix+'Inches').value=parts.inches;syncCarpetEditLength(kind)}
-function editCarpetRecord(id){const x=carpetById(id);if(!x)return;activeCarpetId=Number(x.id);$('ceRoll').value=String(x.roll||'').toUpperCase();$('ceMfr').value=x.manufacturerRoll||'';$('ceCollection').value=x.collection||'';$('ceColour').value=x.colour||'';setCarpetEditLength('current',x.length||0);setCarpetEditLength('original',x.originalLength||0);$('ceWidth').value=x.width||'';$('ceLocation').value=x.location||'';$('ceLot').value=x.lot||'';$('ceMeasure').value=x.measure||'';$('ceStatus').value=['Active','Pending','Used Up','Check'].includes(x.status)?x.status:'Active';$('ceNote').value=x.reviewNote||'';showPage('carpetEditor')}
-function saveCarpetEdit(){const a=carpetRecords(),x=a.find(r=>Number(r.id)===Number(activeCarpetId));if(!x)return;if(!syncCarpetEditLength('current')||!syncCarpetEditLength('original')){alert('Please enter inches from 0 to 11.');return}const roll=$('ceRoll').value.trim().toUpperCase(),oldRoll=x.roll,oldLength=x.length,newLength=carpetEditLengthValue('current'),newOriginal=carpetEditLengthValue('original');if(!roll){alert('Roll number is required.');return}if(a.some(r=>Number(r.id)!==Number(x.id)&&normKey(r.roll)===normKey(roll))){alert('This operational roll number already exists.');return}let measure=$('ceMeasure').value;if(x.tmRequired&&newLength!==oldLength)measure='TM';const manufacturerRoll=cleanManufacturerRoll($('ceMfr').value);if(manufacturerRoll&&a.some(r=>Number(r.id)!==Number(x.id)&&normKey(r.manufacturerRoll)===normKey(manufacturerRoll))){alert('This manufacturer roll number already exists.');return}Object.assign(x,{roll,manufacturerRoll,collection:$('ceCollection').value.trim(),colour:$('ceColour').value.trim(),length:newLength,originalLength:newOriginal,width:$('ceWidth').value.trim(),location:$('ceLocation').value.trim(),lot:$('ceLot').value.trim(),measure,status:$('ceStatus').value,tmRequired:newLength<=50&&newLength>=3&&measure!=='TM',reviewNote:$('ceNote').value.trim(),updatedAt:new Date().toISOString()});if(normKey(oldRoll)!==normKey(roll)){const cuts=cuttingRecords();cuts.forEach(c=>{if(normKey(c.roll)===normKey(oldRoll))c.roll=roll});save(CUTDB,cuts);const ops=operationRecords();ops.forEach(o=>{if(normKey(o.roll)===normKey(oldRoll))o.roll=roll});save(LOGDB,ops)}save(CARPETDB,a);renderCarpetInventory();if(measure==='TM'&&x.length<=50)alert('TRUE MEASURE saved. Measure status changed from CAL to TM.');openCarpetDetail(x.id)}
-function deleteCarpetRecord(){const x=carpetById(activeCarpetId);if(!x||!confirm(`Delete carpet roll ${x.roll}? Its historical cutting log will be retained.`))return;save(CARPETDB,carpetRecords().filter(r=>Number(r.id)!==Number(activeCarpetId)));activeCarpetId=null;showPage('carpetInventory')}
+function editCarpetRecord(id){const x=carpetById(id);if(!x)return;warehouseCarpetEditVersion=x._cloudVersion;activeCarpetId=Number(x.id);$('ceRoll').value=String(x.roll||'').toUpperCase();$('ceMfr').value=x.manufacturerRoll||'';$('ceCollection').value=x.collection||'';$('ceColour').value=x.colour||'';setCarpetEditLength('current',x.length||0);setCarpetEditLength('original',x.originalLength||0);$('ceWidth').value=x.width||'';$('ceLocation').value=x.location||'';$('ceLot').value=x.lot||'';$('ceMeasure').value=x.measure||'';$('ceStatus').value=['Active','Pending','Used Up','Check'].includes(x.status)?x.status:'Active';$('ceNote').value=x.reviewNote||'';showPage('carpetEditor')}
+async function saveCarpetEdit(){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite())return;
+ try{
+const a=carpetRecords(),x=a.find(r=>Number(r.id)===Number(activeCarpetId));if(!x)return;if(window.RUNLU_CLOUD_ONLY&&x._cloudVersion!==warehouseCarpetEditVersion){alert('This roll changed after opening the editor. Reopen it before saving.');return}if(!syncCarpetEditLength('current')||!syncCarpetEditLength('original')){alert('Please enter inches from 0 to 11.');return}const roll=$('ceRoll').value.trim().toUpperCase(),oldRoll=x.roll,oldLength=x.length,newLength=carpetEditLengthValue('current'),newOriginal=carpetEditLengthValue('original');if(!roll){alert('Roll number is required.');return}if(normKey(oldRoll)!==normKey(roll)&&a.some(r=>Number(r.id)!==Number(x.id)&&normKey(r.roll)===normKey(roll))){alert('This operational roll number already exists.');return}let measure=$('ceMeasure').value;if(x.tmRequired&&newLength!==oldLength)measure='TM';const manufacturerRoll=cleanManufacturerRoll($('ceMfr').value);if(manufacturerRoll&&manufacturerRoll!==x.manufacturerRoll&&a.some(r=>Number(r.id)!==Number(x.id)&&normKey(r.manufacturerRoll)===normKey(manufacturerRoll))){alert('This manufacturer roll number already exists.');return}Object.assign(x,{roll,manufacturerRoll,collection:$('ceCollection').value.trim(),colour:$('ceColour').value.trim(),length:newLength,originalLength:newOriginal,width:$('ceWidth').value.trim(),location:$('ceLocation').value.trim(),lot:$('ceLot').value.trim(),measure,status:$('ceStatus').value,tmRequired:newLength<=50&&newLength>=3&&measure!=='TM',reviewNote:$('ceNote').value.trim(),updatedAt:new Date().toISOString()});if(!window.RUNLU_CLOUD_ONLY&&normKey(oldRoll)!==normKey(roll)){const cuts=cuttingRecords();cuts.forEach(c=>{if(normKey(c.roll)===normKey(oldRoll))c.roll=roll});save(CUTDB,cuts);const ops=operationRecords();ops.forEach(o=>{if(normKey(o.roll)===normKey(oldRoll))o.roll=roll});save(LOGDB,ops)}if(!save(CARPETDB,a)||window.RUNLU_CLOUD_ONLY&&!await submitWarehouseWrite())return;renderCarpetInventory();if(measure==='TM'&&x.length<=50)alert('TRUE MEASURE saved. Measure status changed from CAL to TM.');openCarpetDetail(x.id) }finally{warehouseWriteDraft=null}
+}
+async function deleteCarpetRecord(){
+ if(window.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite(true))return;
+ try{
+const x=carpetById(activeCarpetId);if(!x||!confirm(`Delete carpet roll ${x.roll}? Its historical cutting log will be retained.`))return;if(!save(CARPETDB,carpetRecords().filter(r=>Number(r.id)!==Number(activeCarpetId)))||window.RUNLU_CLOUD_ONLY&&!await submitWarehouseWrite())return;activeCarpetId=null;showPage('carpetInventory') }finally{warehouseWriteDraft=null}
+}
 function startCarpetCut(roll,carpetRecordId=''){activeCutCarpetRecordId=carpetRecordId||'';showCarpetOrderPicker(roll)}
 function startCutPieceReturn(roll){activeOperationsDate='';newOperation();$('operationType').value='Cut Piece Return';$('operationInventoryMode').value='Stock';updateOperationForm();$('operationRoll').value=roll;$('operationUnit').value='Foot';const source=carpetRecords().find(x=>normKey(x.roll)===normKey(roll));if(source){$('operationCollection').value=source.collection||'';$('operationColour').value=source.colour||'';$('operationLot').value=source.lot||'';$('operationWidth').value=source.width||'12';$('operationLocation').value=source.location||''}}
 function isCarpetLabelEligible(x){if(!x)return false;const status=String(x.status||'').toUpperCase();if(status==='PENDING')return x.warehouseScope!=='external'&&x.transferredOut!==true&&!carpetExternalDestination(x.location);return isCarpetWarehouseActive(x)}
+function beginWarehouseWrite(allowDelete=false){
+ if(!cloudOnlySnapshot?.hasData||!accessIsAdmin()){
+  alert('Sign in and wait for the live warehouse snapshot before saving.');
+  return false;
+ }
+ if(warehouseWriteBusy||warehousePendingCommand||warehouseWriteDraft){
+  alert('A cloud write is pending. Confirm it before submitting another change.');
+  return false;
+ }
+ warehouseWriteDraft={datasets:new Map(),cuts:new Set(),allowDelete};
+ return true;
+}
+
+async function submitWarehouseWrite(){
+ const draft=warehouseWriteDraft;
+ warehouseWriteDraft=null;
+ try{
+  const changes=[...draft.datasets].flatMap(([dataset,rows])=>WarehouseCloudOnly.commandChanges(dataset,rows.before,rows.after,rows.canonical));
+  const rolls=carpetRecords();
+  for(const change of changes){
+   if(change.dataset===CARPETDB&&draft.cuts.has(change.recordId))change.cut=true;
+   if([CUTDB,LOGDB].includes(change.dataset)){
+    for(const row of [change.payload,...(change.payload.items||[])]){
+     if(row.carpetRecordId){
+      const record=findCarpetRollForOperation(rolls,row.carpetRecordId,row.roll);
+      if(record)row.carpetRecordId=record._cloudRecordId;
+     }
+    }
+   }
+  }
+  if(changes.some(x=>x.delete)&&!draft.allowDelete)throw new Error('This action attempted to remove a record without explicit deletion.');
+  if(!changes.length)return true;
+  warehousePendingCommand={account:cloudSession()?.user?.id,request:{p_request_id:crypto.randomUUID(),p_changes:changes}};
+ }catch(error){
+  alert('Operation not submitted. '+error.message);
+  return false;
+ }
+ return sendWarehouseCommand();
+}
+
+async function sendWarehouseCommand(){
+ if(warehouseWriteBusy||!warehousePendingCommand)return false;
+ warehouseWriteBusy=true;
+ const retry=$('warehouseRetryCommand');
+ if(retry)retry.hidden=true;
+ try{
+  const session=await cloudEnsureSession();
+  if(!session?.access_token||session.user?.id!==warehousePendingCommand.account){
+   alert('Operation not confirmed. Sign in with the original warehouse account before retrying.');
+   return false;
+  }
+  const result=await cloudRequest('/rest/v1/rpc/warehouse_cloud_commit',{
+   method:'POST',headers:cloudHeaders(session.access_token),body:JSON.stringify(warehousePendingCommand.request)
+  });
+  if(result?.status!=='confirmed')throw new Error('A cloud confirmation was not received.');
+  warehousePendingCommand=null;
+  if(cloudOnlyRefresh)await cloudOnlyRefresh;
+  if(!await refreshWarehouseCloud()){
+   alert('Cloud confirmed the save, but inventory could not refresh. Refresh Cloud before working with these records.');
+  }
+  return true;
+ }catch(error){
+  if(error.httpStatus>=400&&error.httpStatus<500&&![408,429].includes(error.httpStatus)){
+   warehousePendingCommand=null;
+   alert('Cloud rejected the operation. '+error.message);
+   if(error.httpStatus===409)await refreshWarehouseCloud();
+  }else{
+   alert('Operation not confirmed. Keep this tab open and use Retry unconfirmed cloud request in Settings. '+error.message);
+  }
+  return false;
+ }finally{
+  warehouseWriteBusy=false;
+  if(retry)retry.hidden=!warehousePendingCommand;
+ }
+}
+
+async function retryWarehouseCommand(){
+ if(await sendWarehouseCommand()){
+  clearForm();
+  operationItemsDraft=[];
+  operationDraftDirty=false;
+  showPage('home');
+  alert('Cloud confirmed the previous request.');
+ }
+}
 function cloudOnlyStatusText(){
  if(!cloudOnlySnapshot)return 'Cloud reader did not load.';
  if(cloudOnlySnapshot.status==='error')return 'Cloud unavailable: '+cloudOnlySnapshot.issue;
- if(cloudOnlySnapshot.status==='ready')return 'Cloud Live · Supabase · Read-only';
+ if(cloudOnlySnapshot.status==='ready')return 'Cloud Live · Supabase';
  return cloudSession()?'Loading warehouse records from Supabase…':'Sign in to read live warehouse data.';
 }
 let cloudOnlyRefresh=null,cloudOnlyDeepLinkHandled=false;

@@ -10,6 +10,8 @@ on:
       - 'warehouse-cloud-only.js'
       - 'tests/warehouse-cloud-only-browser.py'
       - 'tests/warehouse-cloud-only.test.cjs'
+      - 'tests/warehouse-cloud-write-*'
+      - 'supabase/migrations/*warehouse_cloud_only_commands.sql'
       - '.github/workflows/hotfix-sync-regression.yml'
   workflow_dispatch:
 jobs:
@@ -35,3 +37,10 @@ jobs:
       - run: python -m pip install playwright==1.62.0
       - run: python -m playwright install --with-deps chromium
       - run: python tests/warehouse-cloud-only-browser.py
+  cloud-command-postgres:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/warehouse-cloud-write-db.sh

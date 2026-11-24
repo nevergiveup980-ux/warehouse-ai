@@ -85,9 +85,44 @@
       clear,
       read: key => structuredClone(datasets?.get(key) ?? (key === documentKey ? {} : [])),
       get status() { return status; },
+      get hasData() { return datasets !== null; },
       get issue() { return issue; },
     };
   }
 
-  root.WarehouseCloudOnly = { createSnapshot, rollKey, rollQuery, matchesRoll };
+  const systemFields = new Set(['_cloudRecordId', '_cloudVersion', '_cloudUiId', 'legacyPayloadId']);
+  function commandChanges(dataset, before, after, canonical, newId = () => crypto.randomUUID()) {
+    const key = row => row._cloudRecordId || 'payload:' + row.id;
+    const originals = new Map(before.map(row => [key(row), row]));
+    const cloudRows = new Map(canonical.map(row => [key(row), row]));
+    const changes = [];
+    const seen = new Set();
+    for (const row of after) {
+      const identity = key(row);
+      if (seen.has(identity)) throw new Error('A record was selected more than once.');
+      seen.add(identity);
+      const prior = originals.get(identity);
+      const raw = cloudRows.get(identity);
+      if (row._cloudRecordId && !raw) throw new Error('The record is no longer available.');
+      const payload = {};
+      for (const [field, value] of Object.entries(raw || {})) {
+        if (!systemFields.has(field)) payload[field] = value;
+      }
+      let edited = !prior;
+      for (const field of new Set([...Object.keys(row), ...Object.keys(prior || {})])) {
+        if (systemFields.has(field) || (raw && (field === 'id' || field === 'canonicalId'))) continue;
+        if (JSON.stringify(row[field]) === JSON.stringify(prior?.[field])) continue;
+        edited = true;
+        if (row[field] === undefined) delete payload[field];
+        else payload[field] = row[field];
+      }
+      if (edited) changes.push({ dataset, recordId: raw?._cloudRecordId || newId(), version: raw?._cloudVersion || 0, payload });
+    }
+    for (const [identity, raw] of cloudRows) {
+      if (!seen.has(identity)) changes.push({ dataset, recordId: raw._cloudRecordId, version: raw._cloudVersion, delete: true, payload: {} });
+    }
+    return changes;
+  }
+
+  root.WarehouseCloudOnly = { createSnapshot, rollKey, rollQuery, matchesRoll, commandChanges };
 })(globalThis);

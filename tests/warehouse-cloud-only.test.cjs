@@ -41,3 +41,11 @@ test('a repeated canonical identity fails closed', async () => {
   assert.equal(await reader.refresh({}), false);
   assert.match(reader.issue, /Repeated cloud record identity/);
 });
+
+test('command diff updates canonical identity and only the fields the form changed', () => {
+  const raw = {id: 'legacy', roll: 'RC1', locationId: 'cloud-location', _cloudRecordId: 'canonical', _cloudVersion: 3, _cloudUiId: 4};
+  const view = {...raw, id: 4, location: '4B'};
+  assert.deepEqual(global.WarehouseCloudOnly.commandChanges('carpet',[view],[{...view,location:'5A'}],[raw]), [
+    {dataset:'carpet',recordId:'canonical',version:3,payload:{id:'legacy',roll:'RC1',locationId:'cloud-location',location:'5A'}}
+  ]);
+});
