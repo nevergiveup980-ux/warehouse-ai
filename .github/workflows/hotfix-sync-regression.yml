@@ -7,7 +7,9 @@ on:
       - 'build072-carpet-identity.js'
       - 'release-loader.js'
       - 'tests/hotfix-sync-cache.test.cjs'
-      - 'tests/hotfix-sync-browser.py'
+      - 'warehouse-cloud-only.js'
+      - 'tests/warehouse-cloud-only-browser.py'
+      - 'tests/warehouse-cloud-only.test.cjs'
       - '.github/workflows/hotfix-sync-regression.yml'
   workflow_dispatch:
 jobs:
@@ -20,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/hotfix-sync-cache.test.cjs
+      - run: node --test tests/hotfix-sync-cache.test.cjs tests/warehouse-cloud-only.test.cjs
   chromium:
     runs-on: ubuntu-latest
     permissions:
@@ -32,4 +34,4 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install playwright==1.62.0
       - run: python -m playwright install --with-deps chromium
-      - run: python tests/hotfix-sync-browser.py
+      - run: python tests/warehouse-cloud-only-browser.py

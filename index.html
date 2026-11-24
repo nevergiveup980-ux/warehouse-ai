@@ -403,7 +403,7 @@ img,video,canvas,svg{max-width:100%}
   <div id="carpetStats" class="carpetStats"></div><div id="carpetTotalBanner" class="notice" style="margin-top:10px;font-size:15px;font-weight:850"></div>
   <div class="carpetInventoryToolbar"><input id="carpetFilter" placeholder="Search roll #, product, colour, MFG roll or rack..." oninput="renderCarpetInventory()"><div id="carpetViewSwitch" class="carpetViewSwitch"><button data-view="list" onclick="setCarpetView('list')">☰ List</button><button data-view="card" onclick="setCarpetView('card')">▦ Card</button><button data-view="map" onclick="setCarpetView('map')">🗺 Map</button></div><select id="carpetSort" class="carpetSort" onchange="setCarpetSort(this.value)"><option value="roll">Sort: Roll #</option><option value="rack">Sort: Rack</option><option value="product">Sort: Product</option><option value="lengthAsc">Sort: Shortest</option><option value="lengthDesc">Sort: Longest</option><option value="attention">Sort: Needs Attention</option></select></div><div id="carpetViewHint" class="viewHint"></div>
   <div class="carpetFilterGroup"><div class="carpetFilterLabel">Data Quality &amp; Review</div><div id="carpetQualityFilters" class="carpetQualityFilters"><button data-filter="NEEDTM" onclick="setCarpetQuickFilter('NEEDTM')">Need TM</button><button data-filter="REVIEW" onclick="setCarpetQuickFilter('REVIEW')">Needs Review</button><button data-filter="DUPLICATE" onclick="setCarpetQuickFilter('DUPLICATE')">Possible Duplicates</button><button data-filter="MISSINGMFG" onclick="setCarpetQuickFilter('MISSINGMFG')">Missing MFG Roll</button><button data-filter="INCOMPLETE" onclick="setCarpetQuickFilter('INCOMPLETE')">Incomplete Records</button></div></div>
-  <div class="carpetFilterGroup"><div class="carpetFilterLabel">Roll Status</div><div id="carpetStatusFilters" class="carpetQuickFilters"><button data-filter="ACTIVE" onclick="setCarpetQuickFilter('ACTIVE')">Active</button><button data-filter="USEDUP" onclick="setCarpetQuickFilter('USEDUP')">Used Up</button><button data-filter="TRANSFERRED" onclick="setCarpetQuickFilter('TRANSFERRED')">Transferred Out</button><button data-filter="ALL" onclick="setCarpetQuickFilter('ALL')">All Rolls</button></div></div>
+  <div class="carpetFilterGroup"><div class="carpetFilterLabel">Roll Status</div><div id="carpetStatusFilters" class="carpetQuickFilters"><button data-filter="ACTIVE" onclick="setCarpetQuickFilter('ACTIVE')">Active</button><button data-filter="USEDUP" onclick="setCarpetQuickFilter('USEDUP')">Used Up</button><button data-filter="TRANSFERRED" onclick="setCarpetQuickFilter('TRANSFERRED')">Transferred Out</button><button type="button" data-filter="ALL" onclick="setCarpetQuickFilter('ALL')">All Rolls</button></div></div>
   <div class="carpetFilterGroup"><div class="carpetFilterLabel">Measure &amp; Length</div><div id="carpetQuickFilters" class="carpetQuickFilters"><button data-filter="FULL" onclick="setCarpetQuickFilter('FULL')">FULL</button><button data-filter="CAL" onclick="setCarpetQuickFilter('CAL')">CAL</button><button data-filter="TM" onclick="setCarpetQuickFilter('TM')">TM</button><button data-filter="UNDER15" onclick="setCarpetQuickFilter('UNDER15')">Under 15′</button><button data-filter="UNDER30" onclick="setCarpetQuickFilter('UNDER30')">Under 30′</button><button data-filter="UNDER50" onclick="setCarpetQuickFilter('UNDER50')">Under 50′</button></div></div>
   <div class="carpetFilterGroup"><div class="carpetFilterLabel">Rack Location</div><div id="carpetRackFilters" class="rackFilters"></div></div><div id="carpetCount" class="listCount"></div></div>
   <div id="carpetInventoryList" class="carpetInventoryCanvas"></div>
@@ -423,7 +423,7 @@ img,video,canvas,svg{max-width:100%}
 
 <section id="carpetLabelMaker" class="page hidden">
  <div class="card"><button class="back" onclick="showPage('carpetInventory')">‹ Carpet Inventory</button><div class="dayHeader"><div><div class="meta" style="letter-spacing:.16em;font-weight:800">RUNLU QR LABEL MAKER</div><h2>Double-Sided Carpet Tags</h2></div><div class="actions"><button class="green" onclick="loadCarpetLabelsFromCloud()">Refresh Cloud Labels</button><button class="green" onclick="downloadCarpetLabelsWord()">Download Word</button><button class="primary" onclick="printCarpetLabels()">Browser Print</button></div></div>
- <div id="carpetCloudLabelStatus" class="notice" role="status">Label list uses local inventory until the cloud list is loaded. Select Refresh Cloud Labels for the latest rolls.</div>
+ <div id="carpetCloudLabelStatus" class="notice" role="status">Waiting for live warehouse records from Supabase.</div>
  <div class="labelControls"><div><label>Left Label</label><select id="labelLeft" onchange="renderCarpetLabels()"></select></div><div><label>Right Label</label><select id="labelRight" onchange="renderCarpetLabels()"></select></div></div><div class="notice" style="margin-top:12px">Print landscape, double-sided, flip on short edge. The back labels are automatically reversed for alignment.</div></div>
  <div id="carpetLabelPreview" class="labelPreview"></div>
 </section>
@@ -773,7 +773,7 @@ img,video,canvas,svg{max-width:100%}
 <div id="cloudStatus" class="notice" style="margin-top:10px">Cloud status is loading...</div>
 <label>Cloud login email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="warehouse@example.com">
 <label>Cloud login password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password">
-<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="syncWarehouseNow()">Sync Now</button><button onclick="cloudSignOut()">Sign Out</button></div>
+<div class="actions"><button class="green" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create App Login</button><button class="primary" onclick="syncWarehouseNow()">Refresh Cloud</button><button onclick="cloudSignOut()">Sign Out</button></div>
 <div id="cloudSyncDetails" class="notice" style="margin-top:10px">Sync details are loading...</div>
 <div id="cloudConflictActions" class="actions hidden" style="margin-top:10px"><button class="purple" onclick="cloudResolveConflictsFromCloud()">Keep Cloud for Conflict Only</button><button class="primary" onclick="cloudResolveConflictsFromDevice()">Keep This Device for Conflict Only</button></div>
 <div class="meta" style="margin-top:9px"><b>Sync Now</b> uses the Cloud Master record protocol: snapshot once, then record-level delta sync. Whole-device upload/download has been retired. Never enter the Supabase dashboard password here unless you intentionally use the same password for the app login.</div>
@@ -1181,9 +1181,12 @@ img,video,canvas,svg{max-width:100%}
 })();
 </script>
 
-<script src="qrcode.js"></script>
+<script>window.RUNLU_CLOUD_ONLY=true</script>
+<script src="qrcode-core.js?runlu-core=1"></script>
+<script src="warehouse-cloud-only.js?r=cloud-only-1"></script>
+<script src="v8-compat.js?r=cloud-only-1"></script>
 <script src="tesseract.min.js"></script>
-<script src="carpet_seed.js"></script>
+
 <script>
 // Build061 — Cloud Status Recovery: always close the Checking state after cloud work completes.
 const APP_VERSION='6.6.0', APP_BUILD='061', DB='runlu_inventory_v20', PMDB='runlu_product_master_v21', INVDB='runlu_inventory_records_v21', ODB='runlu_orders_v20', SETTINGS='runlu_settings_v20', COUNTDB='runlu_count_sessions_v30', RCVDB='runlu_receiving_v50', TASKDB='runlu_tasks_v50', SPODB='runlu_special_orders_v51', SNAPDB='runlu_local_snapshots_v515', PROTECTDB='runlu_data_protection_v515', LOGDB='runlu_operations_log_v52', HEALTHDB='runlu_health_history_v518', CARPETDB='runlu_carpet_inventory_v52', CUTDB='runlu_cutting_log_v52', EVENTDB='runlu_event_history_v52', TAGPRINTDB='runlu_tag_print_history_v53', RAMDB='runlu_remnants_v55', OPDRAFTDB='runlu_operation_draft_v55', LOCATIONDB='runlu_location_master_v5518';
@@ -1195,6 +1198,18 @@ const WAREHOUSE_TAG_BASE_URL='https://warehouse.runlu.ca/';
 const SCANDICT='runlu_scan_learning_dictionary';
 const SCANTEMPLATES='runlu_scan_supplier_templates_v1';
 const DATA_KEYS=[DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,LOGDB,CARPETDB,CUTDB,EVENTDB,TAGPRINTDB,RAMDB,SETTINGS,COUNTDB,SCANDICT,SCANTEMPLATES];
+const cloudOnlyKeys=DATA_KEYS.filter(key=>![SCANDICT,SCANTEMPLATES].includes(key));
+const cloudOnlySnapshot=window.WarehouseCloudOnly?.createSnapshot({
+ keys:cloudOnlyKeys,documentKey:SETTINGS,
+ fetchPage(account,offset){
+  const query=new URLSearchParams({
+   user_id:'eq.'+account.user.id,dataset_key:'in.('+cloudOnlyKeys.join(',')+')',
+   deleted_at:'is.null',select:'dataset_key,record_id,payload,version',
+   order:'dataset_key.asc,record_id.asc',limit:'250',offset:String(offset)
+  });
+  return cloudRequest('/rest/v1/warehouse_records?'+query,{headers:cloudHeaders(account.access_token,false),cache:'no-store'});
+ }
+});
 const ACCESS_ROLE_KEY='runlu_access_role_v620', ACCESS_TRUSTED_KEY='runlu_access_trusted_v620';
 // Build049 — Private Administrator Mode. Public / View Only access is retired.
 const ACCESS_ROLES={admin:'Administrator'};
@@ -1301,7 +1316,7 @@ function accessContinueSaved(){
  try{showPage('home')}catch(e){console.error('Enter Warehouse recovery:',e);accessOpenHomeFallback()}
  return false;
 }
-function accessUseAnotherAccount(){try{localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);localStorage.removeItem(ACCESS_ROLE_KEY)}catch{}$('accessSavedSession').classList.add('hidden');accessBuildLoginForm();if($('accessHeading'))$('accessHeading').textContent='Sign in to RUNLU';if($('accessSubtitle'))$('accessSubtitle').textContent='Choose another warehouse account.';if($('accessPassword'))$('accessPassword').value='';if($('accessLoginError'))$('accessLoginError').classList.add('hidden')}
+function accessUseAnotherAccount(){cloudOnlySnapshot?.clear();try{localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);localStorage.removeItem(ACCESS_ROLE_KEY)}catch{}$('accessSavedSession').classList.add('hidden');accessBuildLoginForm();if($('accessHeading'))$('accessHeading').textContent='Sign in to RUNLU';if($('accessSubtitle'))$('accessSubtitle').textContent='Choose another warehouse account.';if($('accessPassword'))$('accessPassword').value='';if($('accessLoginError'))$('accessLoginError').classList.add('hidden')}
 async function accessSignIn(){
  const email=normalizeText($('accessEmail').value),password=$('accessPassword').value,
        err=$('accessLoginError'),btn=$('accessSignInBtn');
@@ -1349,8 +1364,8 @@ const accessObserver=new MutationObserver(()=>{});
 
 const AISCANCTX='runlu_ai_scan_context_v5523';
 const $=id=>document.getElementById(id);
-function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
-function loadObj(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch{return{}}}
+function load(k){if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k))return cloudOnlySnapshot?.read(k)||[];try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}}
+function loadObj(k){if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k))return cloudOnlySnapshot?.read(k)||{};try{return JSON.parse(localStorage.getItem(k))||{}}catch{return{}}}
 const STORAGE_MAINTENANCE_KEY='runlu_storage_maintenance_v603';
 const LOCAL_SNAPSHOT_LIMIT=2;
 function isQuotaError(err){return !!(err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||err.code===22||err.code===1014))}
@@ -1387,6 +1402,10 @@ function pruneLocalApplicationCache(force=false){
  return result;
 }
 function save(k,v){
+ if(window.RUNLU_CLOUD_ONLY&&cloudOnlyKeys.includes(k)){
+  alert('This Cloud Only build can read warehouse records. Changes through legacy forms are paused.');
+  return false;
+ }
  try{validateRecordSave(k,v)}catch(err){alert(err.message);return false}
  const encoded=JSON.stringify(v),before=load(k);
  const previousRaw=localStorage.getItem(k);
@@ -1426,7 +1445,9 @@ const CLOUD_LAST_PULL_KEY='runlu_cloud_last_pull_v54', CLOUD_LAST_PUSH_KEY='runl
 const CLOUD_LOCAL_UPDATED_PREFIX='runlu_cloud_local_updated_v583_', CLOUD_DATASET_PUSH_PREFIX='runlu_cloud_dataset_push_v583_', CLOUD_DATASET_SEEN_PREFIX='runlu_cloud_dataset_seen_v658_', CLOUD_CONFLICT_KEY='runlu_cloud_dataset_conflicts_v659_';
 function cloudSession(){try{return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY)||'null')}catch{return null}}
 function cloudHeaders(token,json=true){const h={apikey:CLOUD_KEY,Authorization:'Bearer '+token};if(json)h['Content-Type']='application/json';return h}
-async function cloudRequest(path,options={}){if(/^\/rest\/v1\/user_datasets(?:[/?#]|$)/.test(path)&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy whole-dataset writes are disabled.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!localStorage.getItem('runlu_record_sync_outbox_v1')||recordSyncOutbox().length===0)localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
+async function cloudRequest(path,options={}){
+ if(window.RUNLU_CLOUD_ONLY&&!path.startsWith('/auth/v1/')&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy cloud writes are disabled in Cloud Only mode.');
+if(/^\/rest\/v1\/user_datasets(?:[/?#]|$)/.test(path)&&String(options.method||'GET').toUpperCase()!=='GET')throw new Error('Legacy whole-dataset writes are disabled.');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch(CLOUD_URL+path,{...options,signal:controller.signal});let data=null;try{data=await res.json()}catch{}if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||('Cloud request failed ('+res.status+')'));localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());if(!localStorage.getItem('runlu_record_sync_outbox_v1')||recordSyncOutbox().length===0)localStorage.removeItem(CLOUD_LAST_ERROR_KEY);return data}catch(err){if(err?.name==='AbortError')throw new Error("Cloud request timed out after 12 seconds. Check this computer's internet connection and try again.");throw err}finally{clearTimeout(timer)}}
 function v8CanonicalRpcHeaders(token){return {...cloudHeaders(token),'Content-Profile':'warehouse_v7','Accept-Profile':'warehouse_v7'}}
 function v8CanonicalRpcRequest(name,body,token){return cloudRequest('/rest/v1/rpc/'+name,{method:'POST',headers:v8CanonicalRpcHeaders(token),body:JSON.stringify(body)})}
 async function v8CheckCarpetReviewGate(){
@@ -1486,7 +1507,7 @@ async function v8CommitCutOperation(x,roll){
 }
 
 function dataURLToBlob(dataURL){const parts=dataURL.split(','),mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'image/jpeg',bytes=atob(parts[1]||''),arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime})}
-async function cloudStorePhoto(dataURL,path,s){const blob=dataURLToBlob(dataURL),res=await fetch(CLOUD_URL+'/storage/v1/object/runlu-files/'+path,{method:'POST',headers:{apikey:CLOUD_KEY,Authorization:'Bearer '+s.access_token,'Content-Type':blob.type,'x-upsert':'true'},body:blob});if(!res.ok)throw new Error('Photo upload failed ('+res.status+')');return {__cloud_file:path,__mime:blob.type}}
+async function cloudStorePhoto(dataURL,path,s){if(window.RUNLU_CLOUD_ONLY)throw new Error('Legacy photo uploads are disabled.');const blob=dataURLToBlob(dataURL),res=await fetch(CLOUD_URL+'/storage/v1/object/runlu-files/'+path,{method:'POST',headers:{apikey:CLOUD_KEY,Authorization:'Bearer '+s.access_token,'Content-Type':blob.type,'x-upsert':'true'},body:blob});if(!res.ok)throw new Error('Photo upload failed ('+res.status+')');return {__cloud_file:path,__mime:blob.type}}
 async function cloudPreparePayload(value,key,s,path=[]){if(typeof value==='string'&&value.startsWith('data:image/')&&value.length>500){const safe=(path.join('-')||'photo').replace(/[^a-z0-9_-]/gi,'_'),file=`${s.user.id}/${encodeURIComponent(key)}/${safe}.jpg`;return cloudStorePhoto(value,file,s)}if(Array.isArray(value)){const out=[];for(let i=0;i<value.length;i++)out.push(await cloudPreparePayload(value[i],key,s,path.concat(String(value[i]?.id||i))));return out}if(value&&typeof value==='object'){const out={};for(const [k,v] of Object.entries(value))out[k]=await cloudPreparePayload(v,key,s,path.concat(k));return out}return value}
 async function cloudLoadPhoto(ref,s){const res=await fetch(CLOUD_URL+'/storage/v1/object/authenticated/runlu-files/'+ref.__cloud_file,{headers:cloudHeaders(s.access_token,false)});if(!res.ok)return '';const blob=await res.blob();return new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>resolve('');reader.readAsDataURL(blob)})}
 async function cloudHydratePayload(value,s){if(Array.isArray(value)){const out=[];for(const v of value)out.push(await cloudHydratePayload(v,s));return out}if(value&&typeof value==='object'){if(value.__cloud_file)return cloudLoadPhoto(value,s);const out={};for(const [k,v] of Object.entries(value))out[k]=await cloudHydratePayload(v,s);return out}return value}
@@ -1497,13 +1518,26 @@ function markCloudDirty(key){if(!DATA_KEYS.includes(key))return;setCloudDirtyKey
 function clearCloudDirty(key){setCloudDirtyKeys(cloudDirtyKeys().filter(k=>k!==key))}
 function cloudTimeText(key){const raw=localStorage.getItem(key);if(!raw)return 'Never';const d=new Date(raw);return Number.isNaN(d.getTime())?'Never':d.toLocaleString()}
 function cloudLocalSummary(){return {datasets:DATA_KEYS.filter(k=>localStorage.getItem(k)!==null).length,workRecords:load(LOGDB).length,orders:load(ODB).length,inventory:loadInventoryRecords().length,carpetRolls:carpetRecords().length}}
-function updateHeaderCloudPill(state='auto'){const el=$('headerCloudPill');if(!el)return;const signed=!!cloudSession(),enabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='1',dirty=cloudDirtyKeys().length,conflicts=cloudConflictKeys().length,error=localStorage.getItem(CLOUD_LAST_ERROR_KEY)||'',lastOk=new Date(localStorage.getItem(CLOUD_LAST_OK_KEY)||0).getTime(),recentOk=lastOk>0&&(Date.now()-lastOk)<120000;if(state==='syncing'||cloudSyncBusy){el.className='cloudPill syncing';el.textContent='Checking…';return}if(!signed){el.className='cloudPill offline';el.textContent='Cloud off';return}if(!enabled){el.className='cloudPill syncing';el.textContent='Setup sync';return}if(conflicts){el.className='cloudPill offline';el.textContent=`${conflicts} conflict${conflicts===1?'':'s'}`;return}let outboxCount=0;try{outboxCount=recordSyncOutbox().length}catch{el.className='cloudPill offline';el.textContent='Queue issue';return}if(outboxCount){el.className='cloudPill syncing';el.textContent=`${outboxCount} unsynced`;return}if(dirty){el.className='cloudPill syncing';el.textContent=`${dirty} pending`;return}if(error){el.className='cloudPill offline';el.textContent='Cloud issue';return}if(recentOk){el.className='cloudPill online';el.textContent='Cloud ✓';return}el.className='cloudPill syncing';el.textContent=navigator.onLine===false?'Network ?':'Cloud ready'}
+function updateHeaderCloudPill(state='auto'){
+ if(window.RUNLU_CLOUD_ONLY){
+  const pill=$('headerCloudPill');
+  if(pill)pill.textContent=cloudOnlySnapshot?.status==='ready'?'Cloud Live':cloudOnlySnapshot?.status==='loading'?'Cloud Loading':cloudOnlySnapshot?.status==='error'?'Cloud Unavailable':'Cloud Sign-in Required';
+  return;
+ }
+const el=$('headerCloudPill');if(!el)return;const signed=!!cloudSession(),enabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='1',dirty=cloudDirtyKeys().length,conflicts=cloudConflictKeys().length,error=localStorage.getItem(CLOUD_LAST_ERROR_KEY)||'',lastOk=new Date(localStorage.getItem(CLOUD_LAST_OK_KEY)||0).getTime(),recentOk=lastOk>0&&(Date.now()-lastOk)<120000;if(state==='syncing'||cloudSyncBusy){el.className='cloudPill syncing';el.textContent='Checking…';return}if(!signed){el.className='cloudPill offline';el.textContent='Cloud off';return}if(!enabled){el.className='cloudPill syncing';el.textContent='Setup sync';return}if(conflicts){el.className='cloudPill offline';el.textContent=`${conflicts} conflict${conflicts===1?'':'s'}`;return}let outboxCount=0;try{outboxCount=recordSyncOutbox().length}catch{el.className='cloudPill offline';el.textContent='Queue issue';return}if(outboxCount){el.className='cloudPill syncing';el.textContent=`${outboxCount} unsynced`;return}if(dirty){el.className='cloudPill syncing';el.textContent=`${dirty} pending`;return}if(error){el.className='cloudPill offline';el.textContent='Cloud issue';return}if(recentOk){el.className='cloudPill online';el.textContent='Cloud ✓';return}el.className='cloudPill syncing';el.textContent=navigator.onLine===false?'Network ?':'Cloud ready'}
 function cloudRememberSummary(rows){const log=rows.find(r=>r.dataset_key===LOGDB)?.payload,orders=rows.find(r=>r.dataset_key===ODB)?.payload,inv=rows.find(r=>r.dataset_key===INVDB)?.payload,carpets=rows.find(r=>r.dataset_key===CARPETDB)?.payload;const summary={checkedAt:new Date().toISOString(),datasets:rows.length,workRecords:Array.isArray(log)?log.length:null,orders:Array.isArray(orders)?orders.length:null,inventory:Array.isArray(inv)?inv.length:null,carpetRolls:Array.isArray(carpets)?carpets.length:null};localStorage.setItem(CLOUD_SUMMARY_KEY,JSON.stringify(summary));return summary}
-function renderCloudStatus(message=''){updateHeaderCloudPill(message?'syncing':'auto');const el=$('cloudStatus');if(!el)return;const s=cloudSession(),enabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='1',dirty=cloudDirtyKeys(),conflicts=cloudConflictKeys();const error=localStorage.getItem(CLOUD_LAST_ERROR_KEY)||'';el.innerHTML=message?esc(message):(s?`Signed in as <b>${esc(s.user?.email||'cloud user')}</b> · Automatic sync: <b>${enabled?'On':'Waiting for initial upload/download'}</b>${dirty.length?` · <b>${dirty.length} pending change(s)</b>`:''}${conflicts.length?`<br><span style="color:#9a5800"><b>Needs review:</b> ${conflicts.map(k=>esc(cloudDatasetLabel(k))).join(', ')}</span>`:''}${error?`<br><span style="color:#b42318">Last sync issue: ${esc(error)}</span>`:''}`:'Not signed in. Local/offline data is still available on this device.');if($('cloudEmail')&&!$('cloudEmail').value&&s?.user?.email)$('cloudEmail').value=s.user.email;const details=$('cloudSyncDetails');if(details){let remote={};try{remote=JSON.parse(localStorage.getItem(CLOUD_SUMMARY_KEY)||'{}')}catch{}const local=cloudLocalSummary();details.innerHTML=`<b>This device:</b> ${local.workRecords} work record(s) · ${local.orders} order(s) · ${local.inventory} product inventory record(s) · ${local.carpetRolls} carpet roll(s)<br><b>Last successful upload:</b> ${esc(cloudTimeText(CLOUD_LAST_PUSH_KEY))}<br><b>Last successful download:</b> ${esc(cloudTimeText(CLOUD_LAST_PULL_KEY))}<br><b>Last cloud check:</b> ${esc(remote.checkedAt?new Date(remote.checkedAt).toLocaleString():'Never')}<br><b>Last successful live request:</b> ${esc(cloudTimeText(CLOUD_LAST_OK_KEY))}${remote.workRecords!=null?`<br><b>Cloud copy at last check:</b> ${remote.workRecords} work record(s) · ${remote.orders??'—'} order(s) · ${remote.inventory??'—'} product inventory record(s) · ${remote.carpetRolls??'—'} carpet roll(s)`:''}${conflicts.length?`<br><b>Conflict-only review:</b> ${conflicts.map(k=>esc(cloudDatasetLabel(k))).join(', ')}`:''}`};const actions=$('cloudConflictActions');if(actions)actions.classList.toggle('hidden',!conflicts.length)}
+function renderCloudStatus(message=''){
+ if(window.RUNLU_CLOUD_ONLY){
+  updateHeaderCloudPill();
+  const status=$('cloudStatus');
+  if(status)status.textContent=cloudOnlyStatusText();
+  return;
+ }
+updateHeaderCloudPill(message?'syncing':'auto');const el=$('cloudStatus');if(!el)return;const s=cloudSession(),enabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='1',dirty=cloudDirtyKeys(),conflicts=cloudConflictKeys();const error=localStorage.getItem(CLOUD_LAST_ERROR_KEY)||'';el.innerHTML=message?esc(message):(s?`Signed in as <b>${esc(s.user?.email||'cloud user')}</b> · Automatic sync: <b>${enabled?'On':'Waiting for initial upload/download'}</b>${dirty.length?` · <b>${dirty.length} pending change(s)</b>`:''}${conflicts.length?`<br><span style="color:#9a5800"><b>Needs review:</b> ${conflicts.map(k=>esc(cloudDatasetLabel(k))).join(', ')}</span>`:''}${error?`<br><span style="color:#b42318">Last sync issue: ${esc(error)}</span>`:''}`:'Not signed in. Local/offline data is still available on this device.');if($('cloudEmail')&&!$('cloudEmail').value&&s?.user?.email)$('cloudEmail').value=s.user.email;const details=$('cloudSyncDetails');if(details){let remote={};try{remote=JSON.parse(localStorage.getItem(CLOUD_SUMMARY_KEY)||'{}')}catch{}const local=cloudLocalSummary();details.innerHTML=`<b>This device:</b> ${local.workRecords} work record(s) · ${local.orders} order(s) · ${local.inventory} product inventory record(s) · ${local.carpetRolls} carpet roll(s)<br><b>Last successful upload:</b> ${esc(cloudTimeText(CLOUD_LAST_PUSH_KEY))}<br><b>Last successful download:</b> ${esc(cloudTimeText(CLOUD_LAST_PULL_KEY))}<br><b>Last cloud check:</b> ${esc(remote.checkedAt?new Date(remote.checkedAt).toLocaleString():'Never')}<br><b>Last successful live request:</b> ${esc(cloudTimeText(CLOUD_LAST_OK_KEY))}${remote.workRecords!=null?`<br><b>Cloud copy at last check:</b> ${remote.workRecords} work record(s) · ${remote.orders??'—'} order(s) · ${remote.inventory??'—'} product inventory record(s) · ${remote.carpetRolls??'—'} carpet roll(s)`:''}${conflicts.length?`<br><b>Conflict-only review:</b> ${conflicts.map(k=>esc(cloudDatasetLabel(k))).join(', ')}`:''}`};const actions=$('cloudConflictActions');if(actions)actions.classList.toggle('hidden',!conflicts.length)}
 async function cloudSignUp(){const email=normalizeText($('cloudEmail').value),password=$('cloudPassword').value;if(!email||password.length<8){alert('Enter an email and a password of at least 8 characters.');return}try{const data=await cloudRequest('/auth/v1/signup',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({email,password})});if(data.access_token){localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));renderCloudStatus();alert('App login created. Choose Upload This Device to make this device the initial cloud copy.')}else alert('App login created. Check the email inbox, confirm the address, then return and tap Sign In.')}catch(e){alert(e.message)}}
 async function cloudSignIn(){const email=normalizeText($('cloudEmail').value),password=$('cloudPassword').value;if(!email||!password){alert('Enter the cloud login email and password.');return}try{const data=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',headers:cloudHeaders(CLOUD_KEY),body:JSON.stringify({email,password})});localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(data));$('cloudPassword').value='';renderCloudStatus();startCloudPolling();setTimeout(()=>cloudAutoRefresh(true),300);alert('Cloud sign-in succeeded. Sync Now will check this device and the cloud safely.')}catch(e){alert(e.message)}}
 async function cloudChangePassword(){const next=$('cloudNewPassword').value,confirmation=$('cloudConfirmPassword').value;if(!cloudSession()){alert('This device is not signed in. Change the password from a device that already shows Signed in.');return}if(next.length<8){alert('The new App password must contain at least 8 characters.');return}if(next!==confirmation){alert('The two new password entries do not match. Please enter them again.');return}if(!confirm('Change the Warehouse App login password?\n\nGmail, GitHub, Supabase Dashboard and warehouse data will not be changed.'))return;try{const s=await cloudEnsureSession();if(!s)throw new Error('The saved login session has expired. Use password recovery before changing the password.');await cloudRequest('/auth/v1/user',{method:'PUT',headers:cloudHeaders(s.access_token),body:JSON.stringify({password:next})});$('cloudNewPassword').value='';$('cloudConfirmPassword').value='';alert('App password changed successfully. Use the new password when signing in on the office computer.')}catch(e){alert('Password change failed: '+e.message)}}
-function cloudSignOut(){localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);if(cloudPollTimer)clearInterval(cloudPollTimer);renderCloudStatus();alert('Signed out. Local data remains on this device.')}
+function cloudSignOut(){cloudOnlySnapshot?.clear();localStorage.removeItem(CLOUD_SESSION_KEY);localStorage.removeItem(CLOUD_ENABLED_KEY);if(cloudPollTimer)clearInterval(cloudPollTimer);renderCloudStatus();alert('Signed out. Local data remains on this device.')}
 function datasetIdentitySignature(value){
  if(Array.isArray(value))return JSON.stringify(value.map((x,i)=>String(x?.id??x?.roll??x?.legacyKey??x?.poNumber??i)).sort());
  if(value&&typeof value==='object')return JSON.stringify(Object.keys(value).sort());
@@ -1644,6 +1678,7 @@ function queueRecordDeltaSave(key,before,after){
 }
 const recordSyncAcknowledgedOperations=new Set();
 async function recordSyncPush(){
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY)return 0;
  if(!recordSyncReady())return 0;
  let q=recordSyncOutbox(),sent=0;
  while(q.length){const op=q[0],s=await cloudEnsureSession();if(!s)break;const data=await cloudRequest('/rest/v1/rpc/warehouse_apply_operation',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_operation_id:op.operation_id,p_dataset_key:op.dataset_key,p_record_id:op.record_id,p_payload:op.payload,p_base_version:op.base_version,p_delete:op.delete,p_device_id:op.device_id})});const status=data?.status;if(!['ok','duplicate'].includes(status)){const reason=String(data?.reason||data?.error||data?.message||'server did not acknowledge operation').slice(0,160);const safeStatus=String(status??'missing').slice(0,40);const issue=`Record sync paused: ${safeStatus} (${reason}); ${q.length} operation(s) retained. No queued operations were discarded.`;localStorage.setItem(CLOUD_LAST_ERROR_KEY,issue);console.warn(issue);break;}
@@ -1672,13 +1707,14 @@ async function recordSyncBootstrap(){
  return rows.length
 }
 async function recordSyncPull(){
+ if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY)return refreshWarehouseCloud();
  if(recordSyncOutbox().length)throw new Error('Pending offline operations: cloud pull paused to preserve device data.');
  const s=await cloudEnsureSession();if(!s)return 0;
  const reset=recordSyncPrepareGeneration();if(reset||localStorage.getItem(RECORD_SYNC_BOOTSTRAP_KEY)!=='1')await recordSyncBootstrap();
  let cursor=Number(localStorage.getItem(RECORD_SYNC_CURSOR_KEY)||0),count=0;
  while(true){const rows=await cloudRequest('/rest/v1/rpc/warehouse_get_delta',{method:'POST',headers:cloudHeaders(s.access_token),body:JSON.stringify({p_after_seq:cursor,p_limit:500})});if(!Array.isArray(rows)||!rows.length)break;cloudApplying=true;try{for(const r of rows){if(!DATA_KEYS.includes(r.dataset_key))continue;const list=load(r.dataset_key),idx=recordSyncFindExistingIndex(list,r.record_id);if(r.deleted_at){if(idx>=0)list.splice(idx,1)}else{const payload=await cloudHydratePayload(r.payload,s),hydrated={...payload,_cloudVersion:Number(r.version||0),_cloudChangeSeq:Number(r.change_seq||0),_cloudRecordId:String(r.record_id||'')};if(idx>=0)list[idx]=hydrated;else list.push(hydrated)}localStorage.setItem(r.dataset_key,JSON.stringify(list));cursor=Math.max(cursor,Number(r.change_seq||0));count++}localStorage.setItem(RECORD_SYNC_CURSOR_KEY,String(cursor))}finally{cloudApplying=false}if(rows.length<500)break}return count
 }
-async function recordSyncNow(silent=true){if(cloudSyncBusy||!cloudSession())return;try{cloudSyncBusy=true;const reset=recordSyncPrepareGeneration();if(reset||!recordSyncReady())await recordSyncBootstrap();if(recordSyncReady())await recordSyncPush();const remainingOutbox=recordSyncOutbox().length;const canPull=!remainingOutbox&&!protectedInputActive();if(canPull)await recordSyncPull();localStorage.setItem(CLOUD_ENABLED_KEY,'1');if(canPull){localStorage.removeItem(CLOUD_LAST_ERROR_KEY);localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());}if(!silent){renderDashboard();renderProducts();renderInventory();renderCarpetInventory()}}catch(e){console.error('Warehouse record sync failed:',e);try{localStorage.setItem(CLOUD_LAST_ERROR_KEY,String(e?.message||e))}catch(storageError){console.error('Warehouse sync error could not be persisted; preserve device data:',storageError)}}finally{cloudSyncBusy=false;try{updateHeaderCloudPill('auto')}catch(statusError){console.error('Warehouse sync status update failed:',statusError)}}}
+async function recordSyncNow(silent=true){if(typeof window!=='undefined'&&window.RUNLU_CLOUD_ONLY)return refreshWarehouseCloud();if(cloudSyncBusy||!cloudSession())return;try{cloudSyncBusy=true;const reset=recordSyncPrepareGeneration();if(reset||!recordSyncReady())await recordSyncBootstrap();if(recordSyncReady())await recordSyncPush();const remainingOutbox=recordSyncOutbox().length;const canPull=!remainingOutbox&&!protectedInputActive();if(canPull)await recordSyncPull();localStorage.setItem(CLOUD_ENABLED_KEY,'1');if(canPull){localStorage.removeItem(CLOUD_LAST_ERROR_KEY);localStorage.setItem(CLOUD_LAST_OK_KEY,new Date().toISOString());}if(!silent){renderDashboard();renderProducts();renderInventory();renderCarpetInventory()}}catch(e){console.error('Warehouse record sync failed:',e);try{localStorage.setItem(CLOUD_LAST_ERROR_KEY,String(e?.message||e))}catch(storageError){console.error('Warehouse sync error could not be persisted; preserve device data:',storageError)}}finally{cloudSyncBusy=false;try{updateHeaderCloudPill('auto')}catch(statusError){console.error('Warehouse sync status update failed:',statusError)}}}
 
 async function cloudUploadAll(){
  // Cloud is authoritative. Never overwrite it with a stale device-wide snapshot.
@@ -1691,7 +1727,7 @@ async function cloudPutDatasetInitial(){
 async function cloudFetchRows(){const s=await cloudEnsureSession();if(!s)throw new Error('Sign in first.');const rows=await cloudRequest('/rest/v1/user_datasets?select=dataset_key,payload,updated_at,device_id&order=updated_at.asc',{headers:cloudHeaders(s.access_token,false)});cloudRememberSummary(rows);return rows}
 function protectedInputActive(){return ['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].some(id=>!$(id)?.classList.contains('hidden'))}
 async function applyCloudRows(rows,silent=false,keys=null,clearSelectedDirty=false){const s=await cloudEnsureSession(),selected=new Set((keys||DATA_KEYS).filter(k=>DATA_KEYS.includes(k)));if(!selected.size)return;createLocalSnapshot(false);cloudApplying=true;try{for(const row of rows){if(selected.has(row.dataset_key)){const payload=await cloudHydratePayload(row.payload,s);localStorage.setItem(row.dataset_key,JSON.stringify(payload));if(row.updated_at)localStorage.setItem(CLOUD_DATASET_SEEN_PREFIX+row.dataset_key,row.updated_at)}}if(clearSelectedDirty)setCloudDirtyKeys(cloudDirtyKeys().filter(k=>!selected.has(k)));setCloudConflictKeys(cloudConflictKeys().filter(k=>!selected.has(k)));const newest=rows.reduce((m,r)=>Math.max(m,cloudRemoteMs(r)),0);localStorage.setItem(CLOUD_ENABLED_KEY,'1');localStorage.setItem(CLOUD_LAST_PULL_KEY,new Date(newest||Date.now()).toISOString());localStorage.removeItem(CLOUD_LAST_ERROR_KEY)}finally{cloudApplying=false}if(!silent){alert('Cloud data downloaded. The app will reload now.');location.reload()}else{renderCloudStatus();const active=document.querySelector('.page:not(.hidden)')?.id||'home';showPage(active)}}
-async function cloudDownloadAll(silent=false){if(recordSyncReady()){
+async function cloudDownloadAll(silent=false){if(window.RUNLU_CLOUD_ONLY)return refreshWarehouseCloud();if(recordSyncReady()){
   if(silent&&protectedInputActive())return;
   if(recordSyncOutbox().length){if(!silent)alert('Cloud refresh blocked: unsynchronized record operations are pending. Sync Now first.');return}
   if(cloudSyncBusy){if(!silent)alert('Cloud sync is already running. Try again after it finishes.');return}
@@ -1705,12 +1741,13 @@ async function cloudDownloadAll(silent=false){if(recordSyncReady()){
 async function flushCloudDirty(keys=null){const targets=(keys||cloudDirtyKeys()).filter(k=>cloudDirtyKeys().includes(k));let uploaded=0,conflicts=[];for(const key of targets){let value;try{value=JSON.parse(localStorage.getItem(key)||'null')}catch{value=null}if(value===null)continue;try{await cloudPutDataset(key,value);uploaded++}catch(e){if(String(e.message||'').includes('Cloud conflict blocked')){conflicts.push(key);continue}throw e}}return {uploaded,conflicts}}
 function cloudPlanDatasetSync(rows){const byKey=new Map(rows.map(r=>[r.dataset_key,r])),dirty=new Set(cloudDirtyKeys()),device=cloudDeviceId(),upload=[],download=[],conflicts=[];for(const key of DATA_KEYS){const row=byKey.get(key);if(dirty.has(key)){if(row&&row.device_id&&row.device_id!==device&&cloudRemoteChangedSinceSeen(row,key))conflicts.push(key);else upload.push(key);continue}if(!row)continue;if(row.device_id===device){if(row.updated_at)localStorage.setItem(CLOUD_DATASET_SEEN_PREFIX+key,row.updated_at);continue}if(cloudRemoteChangedSinceSeen(row,key))download.push(key)}return {upload,download,conflicts}}
 async function cloudSmartSync(silent=false){const rows=await cloudFetchRows();if(!rows.length)return {empty:true,uploaded:0,downloaded:0,conflicts:[]};const first=cloudPlanDatasetSync(rows),conflicts=new Set(first.conflicts);let uploaded=0;for(const key of first.upload){const result=await flushCloudDirty([key]);uploaded+=result.uploaded;result.conflicts.forEach(k=>conflicts.add(k))}const freshRows=await cloudFetchRows(),freshPlan=cloudPlanDatasetSync(freshRows);freshPlan.conflicts.forEach(k=>conflicts.add(k));const conflictSet=new Set(conflicts),downloadKeys=freshPlan.download.filter(k=>!conflictSet.has(k)&&!cloudDirtyKeys().includes(k));if(downloadKeys.length&&!protectedInputActive())await applyCloudRows(freshRows,true,downloadKeys,false);setCloudConflictKeys([...conflictSet].filter(k=>cloudDirtyKeys().includes(k)));rememberCloudDatasetVersions(freshRows,false,freshRows.filter(r=>r.device_id===cloudDeviceId()&&!cloudDirtyKeys().includes(r.dataset_key)).map(r=>r.dataset_key));return {empty:false,uploaded,downloaded:downloadKeys.length,conflicts:[...conflictSet].filter(k=>cloudDirtyKeys().includes(k)),checked:freshRows.length}}
-async function cloudResolveConflictsFromCloud(){const conflicts=cloudConflictKeys();if(!conflicts.length){alert('No dataset conflict needs review.');return}if(!confirm('Keep the CLOUD copy for these conflicting dataset(s)?\n\n'+conflicts.map(cloudDatasetLabel).join('\n')+'\n\nOnly these dataset(s) will be replaced on this device. A local safety snapshot will be created first.'))return;try{cloudSyncBusy=true;renderCloudStatus('Downloading only the conflicting dataset(s)...');const rows=await cloudFetchRows();await applyCloudRows(rows,true,conflicts,true);setCloudConflictKeys([]);renderCloudStatus();alert('Conflict resolved from cloud. Other local datasets were not replaced.')}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus();alert('Conflict resolution failed: '+e.message)}finally{cloudSyncBusy=false}}
+async function cloudResolveConflictsFromCloud(){if(window.RUNLU_CLOUD_ONLY)return false;const conflicts=cloudConflictKeys();if(!conflicts.length){alert('No dataset conflict needs review.');return}if(!confirm('Keep the CLOUD copy for these conflicting dataset(s)?\n\n'+conflicts.map(cloudDatasetLabel).join('\n')+'\n\nOnly these dataset(s) will be replaced on this device. A local safety snapshot will be created first.'))return;try{cloudSyncBusy=true;renderCloudStatus('Downloading only the conflicting dataset(s)...');const rows=await cloudFetchRows();await applyCloudRows(rows,true,conflicts,true);setCloudConflictKeys([]);renderCloudStatus();alert('Conflict resolved from cloud. Other local datasets were not replaced.')}catch(e){localStorage.setItem(CLOUD_LAST_ERROR_KEY,e.message);renderCloudStatus();alert('Conflict resolution failed: '+e.message)}finally{cloudSyncBusy=false}}
 async function cloudResolveConflictsFromDevice(){
  alert('Legacy whole-dataset upload is disabled. Use Sync Now to synchronize individual records.');
  return false;
 }
 async function syncWarehouseNow(){
+ if(window.RUNLU_CLOUD_ONLY)return refreshWarehouseCloud();
  if(window.runluCloudMasterSync)return window.runluCloudMasterSync({silent:false});
  return syncWarehouseRecords();
 }
@@ -1725,6 +1762,7 @@ async function syncWarehouseRecords(){
  alert('Cloud record sync completed. No pending operations.');
 }
 async function cloudAutoRefresh(immediate=false){
+ if(window.RUNLU_CLOUD_ONLY)return refreshWarehouseCloud();
  updateHeaderCloudPill('auto');
  if(!cloudSession()||protectedInputActive())return;
  if(window.runluCloudMasterSync)await window.runluCloudMasterSync({silent:true});
@@ -1771,6 +1809,11 @@ function migrateV13(){
  localStorage.setItem('runlu_v13_migrated','yes');
 }
 function showPage(id){
+ if(window.RUNLU_CLOUD_ONLY&&['operationEditor','orderEditor','specialOrderEditor','receivingEditor','editor','carpetEditor','scan'].includes(id)){
+  alert('This Cloud Only build is read-only. Legacy forms are paused.');
+  return;
+ }
+
  const target=$(id);
  if(!target){console.error('Unknown page id:',id);alert('This page is not available yet. Returning to Home.');id='home';}
  // Build049: no public Viewer mode. Authorized signed-in administrator devices use full access.
@@ -2785,8 +2828,8 @@ function generalTagHTML(data){const qr=generalTagQR(data.product.id,data.record?
 function generalTagCommonData(){return{type:$('gtType')?.value||'Stock Tag',layout:$('gtLayout')?.value||'letter',ownership:$('gtOwnership')?.value||'STOCK',customer:$('gtCustomer')?.value.trim()||'',po:$('gtPO')?.value.trim()||'',to:$('gtTo')?.value.trim()||'',notes:$('gtNotes')?.value.trim()||''}}
 function generalTagData(side='left'){const right=side==='right',productId=$(right?'gtProductRight':'gtProduct')?.value,recordId=$(right?'gtInventoryRight':'gtInventory')?.value,product=loadMasters().find(p=>String(p.id)===String(productId))||{},record=loadInventoryRecords().find(r=>String(r.id)===String(recordId)),common=generalTagCommonData();if(!right){const lot=$('gtLot')?.value.trim()||record?.lotNumber||'';return{...common,product,record,qty:$('gtQty')?.value||'',unit:$('gtUnit')?.value||product.coverageUnit||'',from:$('gtFrom')?.value.trim()||record?.location||'',lot,po:common.po||record?.poNumber||''}}return{...common,product,record,qty:record?String(Number(record.quantity||0)||''):'',unit:record?.unit||product.coverageUnit||'',from:record?.location||'',lot:record?.lotNumber||'',po:common.po||record?.poNumber||''}}
 function renderGeneralTagHistory(){const box=$('generalTagHistory');if(!box)return;const rows=load(TAGPRINTDB).slice(0,10);box.innerHTML=rows.length?rows.map(x=>`<div class="item"><b>${esc(x.product)}</b> · ${esc(x.type)}<div class="meta">${esc(x.time)} · ${x.copies} ${x.layout==='letter'?'sheet(s)':'copy/copies'} · ${esc(x.ownership)}</div></div>`).join(''):'<div class="empty">No product tags printed yet.</div>'}
-function renderGeneralTags(){if(!$('generalTagPreview')||!$('gtProduct')?.options.length)return;const left=generalTagData('left'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1)),sheets=[];if(left.layout==='letter'){const right=generalTagData('right');for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet letter">${generalTagHTML(left)}${generalTagHTML(right)}</div>`)}else{for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet single">${generalTagHTML(left)}</div>`)}$('generalTagPreview').innerHTML=sheets.join('');renderGeneralTagHistory()}
-function printGeneralTags(){const left=generalTagData('left'),right=generalTagData('right'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1));if(!left.product.id){alert('Choose a Left Label product first.');return}if(left.layout==='letter'&&!right.product.id){alert('Choose a Right Label product first.');return}const leftName=[left.product.name,left.product.color].filter(Boolean).join(' · '),rightName=[right.product.name,right.product.color].filter(Boolean).join(' · '),productLabel=left.layout==='letter'?`${leftName}  +  ${rightName}`:leftName,history=load(TAGPRINTDB);history.unshift({id:Date.now(),time:new Date().toLocaleString(),product:productLabel,type:left.type,copies,ownership:left.ownership,layout:left.layout,masterId:left.product.id,inventoryId:left.record?.id||'',rightMasterId:right.product.id||'',rightInventoryId:right.record?.id||''});save(TAGPRINTDB,history.slice(0,100));renderGeneralTags();document.body.classList.add('printingGeneralTags');const done=()=>document.body.classList.remove('printingGeneralTags');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
+function renderGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){$('generalTagPreview').textContent=cloudOnlyStatusText();return}if(!$('generalTagPreview')||!$('gtProduct')?.options.length)return;const left=generalTagData('left'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1)),sheets=[];if(left.layout==='letter'){const right=generalTagData('right');for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet letter">${generalTagHTML(left)}${generalTagHTML(right)}</div>`)}else{for(let i=0;i<copies;i++)sheets.push(`<div class="generalTagSheet single">${generalTagHTML(left)}</div>`)}$('generalTagPreview').innerHTML=sheets.join('');renderGeneralTagHistory()}
+function printGeneralTags(){if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){alert(cloudOnlyStatusText());return}const left=generalTagData('left'),right=generalTagData('right'),copies=Math.max(1,Math.min(20,Number($('gtCopies').value)||1));if(!left.product.id){alert('Choose a Left Label product first.');return}if(left.layout==='letter'&&!right.product.id){alert('Choose a Right Label product first.');return}const leftName=[left.product.name,left.product.color].filter(Boolean).join(' · '),rightName=[right.product.name,right.product.color].filter(Boolean).join(' · '),productLabel=left.layout==='letter'?`${leftName}  +  ${rightName}`:leftName,history=load(TAGPRINTDB);history.unshift({id:Date.now(),time:new Date().toLocaleString(),product:productLabel,type:left.type,copies,ownership:left.ownership,layout:left.layout,masterId:left.product.id,inventoryId:left.record?.id||'',rightMasterId:right.product.id||'',rightInventoryId:right.record?.id||''});save(TAGPRINTDB,history.slice(0,100));renderGeneralTags();document.body.classList.add('printingGeneralTags');const done=()=>document.body.classList.remove('printingGeneralTags');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
 function openInventoryRecordEditor(identity){
  const records=loadInventoryRecords(),record=findInventoryRecordByIdentity(records,identity);if(!record){alert('The exact inventory record could not be uniquely identified. Refresh and try again.');return}
  const product=loadMasters().find(x=>x.id===record.masterId)||{};editingInventoryRecordId=inventoryRecordIdentity(record);
@@ -2931,9 +2974,10 @@ function renderSearch(){
  const matchedInventory=intent.scope==='all'?inventory.map(r=>({r,m:inventoryProductForRecord(r,masters)})).filter(({r,m})=>has([m.id,m.name,m.brand,m.series,m.color,m.sku,m.category,r.locationType,r.location,r.quantity,r.unit,r.lotNumber,r.poNumber,r.notes].join(' '))):[];
  const inventoryResults=matchedInventory.filter(({r})=>isCurrentGeneralInventoryRecord(r)).map(({r,m})=>globalResult(`${m.name||'Unknown product'}${m.color?' · '+m.color:''}`,`${r.quantity||0} ${r.unit||''} · ${r.location||'No location'}${r.lotNumber?' · Lot '+r.lotNumber:''}`,`openInventoryDetail(${Number(r.id)})`));
  const stagedInventoryResults=matchedInventory.filter(({r})=>!isExternalInventoryRecord(r)&&isCustomerOrderInventoryRecord(r)).map(({r,m})=>globalResult(`PO ${r.poNumber||'—'} · ${m.name||'Unknown product'}${m.color?' · '+m.color:''}`,`${r.quantity||0} ${r.unit||''} staged at ${r.location||'No location'} · Reserved for customer order`,`openInventoryDetail(${Number(r.id)})`));
- const directlyMatchedCarpets=carpets.filter(x=>intent.scope==='carpet'?smartCarpetMatch(intent,x):intent.scope==='all'&&has([x.roll,x.sourceRoll,x.manufacturerRoll,x.lot,x.collection,x.colour,x.location,x.po,x.supplier,x.status,x.measure,x.reviewNote].join(' ')));
+ const exactRollQuery=window.WarehouseCloudOnly?.rollQuery(q);
+ const directlyMatchedCarpets=exactRollQuery?carpets.filter(x=>carpetSearchMatches(x,q)):carpets.filter(x=>intent.scope==='carpet'?smartCarpetMatch(intent,x):intent.scope==='all'&&has([x.roll,x.sourceRoll,x.manufacturerRoll,x.lot,x.collection,x.colour,x.location,x.po,x.supplier,x.status,x.measure,x.reviewNote].join(' ')));
  const relatedRollKeys=new Set();if(intent.scope==='all'){ops.filter(x=>has([x.po,x.customer,x.supplier,x.product,x.collection,x.colour,x.roll,x.notes,JSON.stringify(x.items||[])].join(' '))).forEach(x=>{[x.roll,...(x.items||[]).map(i=>i.roll)].filter(Boolean).forEach(r=>relatedRollKeys.add(normKey(r)))});cuts.filter(x=>has([x.po,x.customer,x.roll,x.collection,x.colour,x.notes].join(' '))).forEach(x=>x.roll&&relatedRollKeys.add(normKey(x.roll)));carpets.forEach(x=>{if(relatedRollKeys.has(normKey(x.roll))||relatedRollKeys.has(normKey(x.sourceRoll))){relatedRollKeys.add(normKey(x.roll));if(x.sourceRoll)relatedRollKeys.add(normKey(x.sourceRoll))}})}
- const carpetMatches=[...directlyMatchedCarpets,...carpets.filter(x=>relatedRollKeys.has(normKey(x.roll))||relatedRollKeys.has(normKey(x.sourceRoll)))].filter((x,i,a)=>a.findIndex(y=>Number(y.id)===Number(x.id))===i);
+ const carpetMatches=[...directlyMatchedCarpets,...(exactRollQuery?[]:carpets.filter(x=>relatedRollKeys.has(normKey(x.roll))||relatedRollKeys.has(normKey(x.sourceRoll))))].filter((x,i,a)=>a.findIndex(y=>Number(y.id)===Number(x.id))===i);
  const carpetResults=carpetMatches.map(x=>globalResult(`Roll ${x.roll} · ${x.colour||'No colour'}`,`${x.collection||'Unnamed carpet'} · ${feetLabel(x.length)} · ${x.location||'No rack'} · ${x.measure||'—'}`,`openCarpetDetail(${Number(x.id)})`));
  const operationResults=ops.filter(x=>intent.scope==='operation'?smartOperationMatch(intent,x):intent.scope==='all'&&has([x.date,x.time,x.type,x.status,x.inventoryMode,x.operator,x.source,x.po,x.customer,x.supplier,x.product,x.collection,x.colour,x.lot,x.roll,x.location,x.notes,JSON.stringify(x.items||[])].join(' '))).map(x=>globalResult(`${x.type||'Operation'} · ${x.status||'Waiting'}`,[x.date,x.po?'PO '+x.po:'',x.roll?'Roll '+x.roll:'',x.manufacturerRoll?'MFG '+x.manufacturerRoll:'',x.collection||x.product,x.colour,x.customer,x.supplier].filter(Boolean).join(' · '),`openOperationSearchResult(${Number(x.id)})`));
  const orderResults=intent.scope==='all'?orders.filter(x=>has([x.date,x.type,x.customer,x.salesperson,x.poNumber,x.soNumber,x.product,x.quantity,x.unit,x.location,x.handledBy,x.notes].join(' '))).map(x=>globalResult(`${x.customer||'Unnamed customer'} · ${x.product||'Order'}`,[x.poNumber?'PO '+x.poNumber:'',x.soNumber?'SO '+x.soNumber:'',x.location,x.date].filter(Boolean).join(' · '),`editCustomerOrder(${Number(x.id)})`)):[];
@@ -3202,7 +3246,7 @@ function renderReceivingHistory(){const a=load(RCVDB);$('receivingList').innerHT
 function deleteReceivingRecord(id){const rows=load(RCVDB),r=rows.find(x=>String(x.id)===String(id));if(!r)return;if(r.inventoryPosted){alert('Delete blocked: this receiving record already increased inventory. Use a correction record instead.');return}if(!confirm(`Delete this pickup / receiving record?\n\nSupplier: ${r.supplier||'—'}\nPO: ${r.poNumber||'—'}\nProduct: ${r.product||'—'}\n\nThis deletion will synchronize to other devices.`))return;createLocalSnapshot(false);if(!save(RCVDB,rows.filter(x=>String(x.id)!==String(r.id))))return;renderReceivingHistory();renderDashboard()}
 
 function dayDiff(dateStr){if(!dateStr)return 0;const d=new Date(dateStr),now=new Date();return Math.max(0,Math.floor((now-d)/86400000))}
-function cleanupSpecialOrders(){const rows=load(SPODB),now=Date.now();const keep=rows.filter(r=>{if(!['Picked Up','Cancelled'].includes(r.status))return true;const base=r.pickedUpAt||r.cancelledAt||r.updatedAt||r.createdAt;if(!base)return true;return (now-new Date(base).getTime())<365*86400000});if(keep.length!==rows.length)save(SPODB,keep);return keep}
+function cleanupSpecialOrders(){const rows=load(SPODB);if(window.RUNLU_CLOUD_ONLY)return rows;const now=Date.now();const keep=rows.filter(r=>{if(!['Picked Up','Cancelled'].includes(r.status))return true;const base=r.pickedUpAt||r.cancelledAt||r.updatedAt||r.createdAt;if(!base)return true;return (now-new Date(base).getTime())<365*86400000});if(keep.length!==rows.length)save(SPODB,keep);return keep}
 function newSpecialOrder(){specialEditId=null;clearSpecialOrder();showPage('specialOrderEditor')}
 function scanNewSpecialOrder(){newSpecialOrder();openAIScan({target:'specialOrder',returnPage:'specialOrderEditor',label:'Special Order'})}
 function clearSpecialOrder(){['spCustomer','spPo','spSupplier','spProduct','spColor','spQty','spWeight','spLocation','spNotes'].forEach(id=>$(id).value='');$('spUnit').value='Carton';$('spStatus').value='Waiting for Arrival';$('spAutoDates').textContent='Received and pickup dates will be recorded automatically when the status changes.';if(!specialEditId)$('deleteSpecialOrderButton')?.classList.add('hidden')}
@@ -3238,7 +3282,13 @@ function operationRecords(){return load(LOGDB).map(x=>{const type=(x.type==='Sup
 function formatOperationDate(date){if(!date)return '';try{return new Date(date+'T12:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric',weekday:'short'})}catch{return date}}
 function operationStatusClass(status){return status==='Completed'||status==='Received'?'done':status==='In Progress'||status==='Picked Up'?'progress':status==='Partial'||status==='Backorder'?'partial':'waiting'}
 function operationProductLabel(p){return [p.name,p.color,p.sku].filter(Boolean).join(' · ')}
-function carpetRecords(){return load(CARPETDB).map(x=>{const length=Number(x.length)||0,manufacturerRoll=cleanManufacturerRoll(x.manufacturerRoll);return {...x,id:Number(x.id)||Date.now(),manufacturerRoll,length,status:x.status||(length>0?(length<3?'Used Up':'Active'):'Check')}})}
+function carpetRecords(){
+ if(window.RUNLU_CLOUD_ONLY)return load(CARPETDB).map(row=>({
+  ...(window.RUNLU_V8_ADAPT_CARPET?.(row)||row),
+  roll:row.roll||row.rollNumber||'',id:row._cloudUiId,
+  canonicalId:row._cloudRecordId,legacyPayloadId:row.id,manufacturerRoll:cleanManufacturerRoll(row.manufacturerRoll),
+ }));
+ return load(CARPETDB).map(x=>{const length=Number(x.length)||0,manufacturerRoll=cleanManufacturerRoll(x.manufacturerRoll);return {...x,id:Number(x.id)||Date.now(),manufacturerRoll,length,status:x.status||(length>0?(length<3?'Used Up':'Active'):'Check')}})}
 // Build055: Active means physically present and available in this warehouse.
 function carpetTransferParts(route=''){const p=String(route||'').split('→').map(x=>x.trim());return {from:p[0]||'',to:p[1]||''}}
 function carpetExternalDestination(value){const k=normKey(value);return ['store','installer','branch','customer','customer site','external destination','transferred out'].includes(k)}
@@ -3808,7 +3858,7 @@ function setOperationStatus(id,status){const a=operationRecords(),x=a.find(r=>r.
 function deleteOperation(id){const x=operationRecords().find(r=>r.id===Number(id));if(x?.impactApplied){alert('This linked operation cannot be deleted because it already changed inventory. Use a correction or reversal record instead.');return}if(!x||!confirm(`Delete this work record?\n\n${x.type}\n${x.collection||x.product||x.roll||x.po||''}\n\nThis action cannot be undone.`))return;save(LOGDB,operationRecords().filter(r=>r.id!==Number(id)));renderOperationsDay();renderDashboard()}
 let carpetQuickFilter='ACTIVE',carpetRackFilter='',carpetViewMode=localStorage.getItem('runlu_carpet_view')||((window.matchMedia&&window.matchMedia('(max-width: 760px)').matches)?'card':'list'),carpetSortMode=localStorage.getItem('runlu_carpet_sort')||'roll';
 function carpetDuplicateKeys(rows=carpetRecords()){
- const counts=new Map();rows.forEach(x=>{const k=normKey(x.roll);if(k)counts.set(k,(counts.get(k)||0)+1)});return new Set([...counts].filter(([,n])=>n>1).map(([k])=>k));
+ const counts=new Map();rows.forEach(x=>{const k=window.WarehouseCloudOnly?.rollKey(x.roll)??normKey(x.roll);if(k)counts.set(k,(counts.get(k)||0)+1)});return new Set([...counts].filter(([,n])=>n>1).map(([k])=>k));
 }
 function carpetDataIssues(x,rows=carpetRecords(),dupes=carpetDuplicateKeys(rows)){
  const issues=[],measure=String(x.measure||'').toUpperCase(),status=String(x.status||'').toUpperCase(),length=Number(x.length||0),usedUp=status==='USED UP';
@@ -3816,16 +3866,20 @@ function carpetDataIssues(x,rows=carpetRecords(),dupes=carpetDuplicateKeys(rows)
  if(!cleanManufacturerRoll(x.manufacturerRoll))issues.push({key:'MISSINGMFG',label:'MFG ROLL UNKNOWN',type:'info'});
  if(!x.originalLength||!x.collection||!x.colour||!x.location||(!usedUp&&!length))issues.push({key:'INCOMPLETE',label:'INCOMPLETE',type:'danger'});
  if(String(x.status||'').toUpperCase()==='CHECK'||String(x.reviewNote||'').trim())issues.push({key:'REVIEW',label:'NEEDS REVIEW',type:''});
- if(dupes.has(normKey(x.roll)))issues.push({key:'DUPLICATE',label:'POSSIBLE DUPLICATE',type:'danger'});
+ if(dupes.has(window.WarehouseCloudOnly?.rollKey(x.roll)??normKey(x.roll)))issues.push({key:'DUPLICATE',label:'POSSIBLE DUPLICATE',type:'danger'});
  return issues;
 }
 function openCarpetTM(id){const x=carpetById(id);if(!x)return;editCarpetRecord(id);$('ceMeasure').value='TM';setTimeout(()=>$('ceLengthFeet')?.focus(),80)}
 function startCarpetREM(roll){startCommandOperation('REM / Remnant Transfer');if(roll){$('operationRoll').value=roll;const x=carpetRecords().find(r=>normKey(r.roll)===normKey(roll));if(x){$('operationCollection').value=x.collection||'';$('operationColour').value=x.colour||'';$('operationLot').value=x.lot||'';$('operationWidth').value=x.width||'12';$('operationLocation').value=x.location||'';}}}
 function startInstallerReturn(roll){startCommandOperation('Installer Return');if(roll){$('operationRoll').value=roll;const x=carpetRecords().find(r=>normKey(r.roll)===normKey(roll));if(x){$('operationCollection').value=x.collection||'';$('operationColour').value=x.colour||'';$('operationLot').value=x.lot||'';$('operationWidth').value=x.width||'12';$('operationLocation').value=x.location||'';}}}
 function startCarpetTransfer(id){startCommandOperation('Inventory Transfer');const x=carpetById(id);if(!x)return;const route=$('operationTransferRoute');if(!isCarpetWarehouseActive(x)&&route){const origin=carpetExternalDestination(x.location)?x.location:(String(x.status||'').toUpperCase()==='AT STORE'?'Store':String(x.status||'').toUpperCase()==='WITH INSTALLER'?'Installer':String(x.status||'').toUpperCase()==='AT BRANCH'?'Branch':String(x.status||'').toUpperCase()==='WITH CUSTOMER'?'Customer':'Store'),wanted=`${origin} → Warehouse`;if([...route.options].some(o=>o.value===wanted))route.value=wanted;}operationTransferRouteChanged();refreshCarpetTransferPicker();$('operationCarpetTransfer').value=String(x.id);operationCarpetTransferChanged();}
-function setCarpetQuickFilter(value){carpetQuickFilter=carpetQuickFilter===value?'':value;if(value==='ALL')carpetQuickFilter='';renderCarpetInventory()}
+function setCarpetQuickFilter(value){
+ carpetQuickFilter=value==='ALL'?'ALL':value;
+ if(value==='ALL')carpetRackFilter='';
+ renderCarpetInventory();
+}
 function setCarpetRackFilter(value){carpetRackFilter=carpetRackFilter===value?'':value;renderCarpetInventory()}
-function carpetMatchesQuickFilter(x,issueRows,issueDupes){const measure=String(x.measure||'').toUpperCase(),length=Number(x.length||0),knownLength=length>0,status=String(x.status||'').toUpperCase(),warehouseActive=isCarpetWarehouseActive(x),external=x.warehouseScope==='external'||x.transferredOut===true||carpetExternalDestination(x.location)||['AT STORE','WITH INSTALLER','AT BRANCH','WITH CUSTOMER','TRANSFERRED OUT'].includes(status);if(['NEEDTM','REVIEW','DUPLICATE','MISSINGMFG','INCOMPLETE'].includes(carpetQuickFilter))return warehouseActive&&carpetDataIssues(x,issueRows,issueDupes).some(i=>i.key===carpetQuickFilter);if(carpetQuickFilter==='ACTIVE')return warehouseActive;if(carpetQuickFilter==='USEDUP')return status==='USED UP';if(carpetQuickFilter==='TRANSFERRED')return external;if(carpetQuickFilter==='FULL')return warehouseActive&&measure==='FULL';if(carpetQuickFilter==='CAL')return warehouseActive&&measure.startsWith('CAL');if(carpetQuickFilter==='TM')return warehouseActive&&measure==='TM';if(carpetQuickFilter==='UNDER15')return warehouseActive&&knownLength&&length<=15;if(carpetQuickFilter==='UNDER30')return warehouseActive&&knownLength&&length<=30;if(carpetQuickFilter==='UNDER50')return warehouseActive&&knownLength&&length<=50;return true}
+function carpetMatchesQuickFilter(x,issueRows,issueDupes){const measure=String(x.measure||'').toUpperCase(),length=Number(x.length||0),knownLength=length>0,status=String(x.status||'').toUpperCase(),warehouseActive=isCarpetWarehouseActive(x),external=x.warehouseScope==='external'||x.transferredOut===true||carpetExternalDestination(x.location)||['AT STORE','WITH INSTALLER','AT BRANCH','WITH CUSTOMER','TRANSFERRED OUT'].includes(status);if(carpetQuickFilter==='DUPLICATE')return carpetDataIssues(x,issueRows,issueDupes).some(i=>i.key==='DUPLICATE');if(['NEEDTM','REVIEW','MISSINGMFG','INCOMPLETE'].includes(carpetQuickFilter))return warehouseActive&&carpetDataIssues(x,issueRows,issueDupes).some(i=>i.key===carpetQuickFilter);if(carpetQuickFilter==='ACTIVE')return warehouseActive;if(carpetQuickFilter==='USEDUP')return status==='USED UP';if(carpetQuickFilter==='TRANSFERRED')return external;if(carpetQuickFilter==='FULL')return warehouseActive&&measure==='FULL';if(carpetQuickFilter==='CAL')return warehouseActive&&measure.startsWith('CAL');if(carpetQuickFilter==='TM')return warehouseActive&&measure==='TM';if(carpetQuickFilter==='UNDER15')return warehouseActive&&knownLength&&length<=15;if(carpetQuickFilter==='UNDER30')return warehouseActive&&knownLength&&length<=30;if(carpetQuickFilter==='UNDER50')return warehouseActive&&knownLength&&length<=50;return true}
 function carpetRackCapacity(rack){const caps={'2A':9,'2B':6,'2C':12,'3A':5,'4A':5,'5A':5,'6A':5,'3B':3,'3C':3,'3D':3,'4B':3,'4C':3,'4D':3,'5B':3,'6B':3,'6C':3,'6D':3,'5C':8,'7A':9,'7B':5,'7C':5,'7D':5,'11B':5,'12B':5,'12C':5,'12D':5};return caps[String(rack||'').toUpperCase()]||0}
 function carpetRackState(count,capacity){if(!capacity)return'';if(count>=capacity)return'full';if(count>=Math.max(1,capacity-1))return'near';return'open'}
 function showCarpetLocate(id){const x=carpetById(id);if(!x)return;activeCarpetId=Number(id);const rack=x.location||'UNASSIGNED',count=carpetRecords().filter(r=>isCarpetWarehouseActive(r)&&normKey(r.location)===normKey(rack)).length,cap=carpetRackCapacity(rack);$('carpetDetailContent').innerHTML=`<button class="back" onclick="openCarpetDetail(${Number(id)})">‹ Roll Details</button><div class="meta" style="margin-top:15px">LOCATE THIS ROLL</div><div class="detailRoll">${esc(x.roll)}</div><div class="detailColour">${esc(x.colour||'NO COLOUR')}</div><div class="detailProduct">${esc(x.collection||'Unnamed carpet')}</div><div class="locatePanel"><div class="meta">GO TO RACK</div><div class="locateRack">${esc(rack)}</div><div class="locateMeta">Current roll: ${feetLabel(x.length)} · ${esc(x.measure||'—')}${cap?` · Rack load ${count} / ${cap}`:''}</div></div><div class="actions"><button class="green" onclick="startCarpetCut('${esc(x.roll)}',${Number(x.id)})">✂ Cut This Roll</button><button class="primary" onclick="openCarpetDetail(${Number(id)})">View Full Record</button></div>`;showPage('carpetDetail')}
@@ -3837,9 +3891,19 @@ function carpetCardHTML(x,all,dupes){const measure=String(x.measure||'').toUpper
 function carpetListHTML(rows,all,dupes){return `<div class="carpetListWrap"><table class="carpetListTable"><thead><tr><th>Roll</th><th>Product / Colour</th><th>Size</th><th>Rack</th><th>Measure</th><th>Status</th><th>MFG Roll</th><th>Attention</th><th>Actions</th></tr></thead><tbody>${rows.map(x=>{const issues=carpetDataIssues(x,all,dupes),known=Number(x.length)>0,warehouseActive=isCarpetWarehouseActive(x),need=warehouseActive&&known&&Number(x.length)<=50&&String(x.measure||'').toUpperCase().startsWith('CAL');return `<tr><td class="rollCell"><button onclick="openCarpetDetail(${Number(x.id)})">${esc(x.roll)}</button></td><td><b>${esc(x.collection||'Unnamed')}</b><br><span class="meta">${esc(x.colour||'—')}${x.lot?' · Lot '+esc(x.lot):''}</span></td><td>${known?`${esc(x.width||'12')} × ${feetLabel(x.length)}`:'Pending'}</td><td><button onclick="setCarpetRackFilter('${esc(x.location||'Unassigned')}')">${esc(x.location||'—')}</button></td><td><span class="measureBadge ${String(x.measure||'').toUpperCase().startsWith('CAL')?'cal':''}">${esc(x.measure||'—')}</span></td><td>${esc(x.status||'—')}</td><td>${esc(cleanManufacturerRoll(x.manufacturerRoll)||'—')}</td><td>${need?'<span class="workBadge danger">NEED TM</span>':''}${issues.slice(0,2).map(i=>`<span class="dataIssueBadge ${i.type||''}">${i.label}</span>`).join('')}</td><td><div class="rowActions">${warehouseActive?`<button onclick="showCarpetLocate(${Number(x.id)})">Locate</button>`:`<button disabled>External</button>`}${known&&warehouseActive?`<button class="green" onclick="startCarpetCut('${esc(x.roll)}',${Number(x.id)})">Cut</button>`:''}<button onclick="openCarpetDetail(${Number(x.id)})">Open</button></div></td></tr>`}).join('')}</tbody></table></div>`}
 function carpetInventoryMapHTML(rows){const groups={};rows.forEach(x=>{const rack=String(x.location||'Unassigned').trim()||'Unassigned';(groups[rack]||(groups[rack]=[])).push(x)});const known=new Set([...Object.keys(groups),...'2A 2B 2C 3A 3B 3C 3D 4A 4B 4C 4D 5A 5B 5C 6A 6B 6C 6D 7A 7B 7C 7D 11B 12B 12C 12D'.split(' ')]);return `<div class="inventoryRackGrid">${[...known].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(r=>{const items=groups[r]||[],cap=carpetRackCapacity(r),state=items.length===0?'empty':carpetRackState(items.length,cap)||'empty';return `<button class="inventoryRackCard ${state}" onclick="setCarpetRackFilter('${esc(r)}')"><b>${esc(r)}</b><span>${items.length}${cap?' / '+cap:''} roll(s)</span><small>${items.slice(0,4).map(x=>esc(x.roll)).join(' · ')||'No active rolls'}${items.length>4?' · +'+(items.length-4):''}</small></button>`}).join('')}</div>`}
 
+function carpetSearchMatches(row,query){
+ const cloud=window.WarehouseCloudOnly;
+ if(cloud?.rollQuery(query))return cloud.matchesRoll(row,query);
+ return normKey([row.roll,row.manufacturerRoll,row.lot,row.collection,row.colour,row.location,row.po,row.status,row.measure].join(' ')).includes(query);
+}
 function renderCarpetInventory(){
- const snapshot=carpetRecords(),snapshotDupes=carpetDuplicateKeys(snapshot),all=snapshot.filter(x=>!['Split to RAM','Split to REM'].includes(x.status)),q=normKey(($('carpetFilter')||{}).value||'');let rows=all.filter(x=>carpetMatchesQuickFilter(x,snapshot,snapshotDupes)).filter(x=>!carpetRackFilter||normKey(x.location)===normKey(carpetRackFilter)).filter(x=>!q||normKey([x.roll,x.sourceRoll,x.manufacturerRoll,x.lot,x.collection,x.colour,x.location,x.po,x.status,x.measure].join(' ')).includes(q));rows=sortCarpetRows(rows,snapshot,snapshotDupes);
- document.querySelectorAll('#carpetQuickFilters button,#carpetStatusFilters button,#carpetQualityFilters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===carpetQuickFilter));
+ if(window.RUNLU_CLOUD_ONLY&&cloudOnlySnapshot?.status!=='ready'){
+  $('carpetTotalBanner').textContent=cloudOnlyStatusText();
+  for(const id of ['carpetStats','carpetRackFilters','carpetCount','carpetInventoryList','cuttingLogList','ramList'])$(id).textContent='';
+  return;
+ }
+ const snapshot=carpetRecords(),snapshotDupes=carpetDuplicateKeys(snapshot),all=snapshot.filter(x=>!['Split to RAM','Split to REM'].includes(x.status)),q=normKey(($('carpetFilter')||{}).value||'');let rows=all.filter(x=>carpetMatchesQuickFilter(x,snapshot,snapshotDupes)).filter(x=>!carpetRackFilter||normKey(x.location)===normKey(carpetRackFilter)).filter(x=>!q||carpetSearchMatches(x,q));rows=sortCarpetRows(rows,snapshot,snapshotDupes);
+ document.querySelectorAll('#carpetQuickFilters button,#carpetStatusFilters button,#carpetQualityFilters button').forEach(b=>{const selected=b.dataset.filter===carpetQuickFilter;b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected))});
  if($('carpetTotalBanner'))$('carpetTotalBanner').innerHTML=`<b>${all.length}</b> total carpet rolls · <b>${rows.length}</b> shown${carpetRackFilter?' · Rack '+esc(carpetRackFilter):''}`;
  const active=all.filter(isCarpetWarehouseActive),needTM=active.filter(x=>Number(x.length)>0&&Number(x.length)<=50&&String(x.measure||'').toUpperCase().startsWith('CAL')),under50=active.filter(x=>Number(x.length)>0&&Number(x.length)<=50),rackGroups={};active.forEach(x=>{const r=String(x.location||'Unassigned').trim()||'Unassigned';rackGroups[r]=(rackGroups[r]||0)+1});const available=Object.entries(rackGroups).filter(([r,c])=>{const cap=carpetRackCapacity(r);return cap&&c<cap}).length;
  const dupes=carpetDuplicateKeys(all),review=active.filter(x=>carpetDataIssues(x,all,dupes).some(i=>['REVIEW','INCOMPLETE','DUPLICATE','MISSINGMFG'].includes(i.key))),missingMfg=active.filter(x=>!cleanManufacturerRoll(x.manufacturerRoll));if($('carpetStats'))$('carpetStats').innerHTML=`<button class="carpetStat" onclick="setCarpetQuickFilter('ALL')"><b>${active.length}</b><span>Active Rolls</span></button><button class="carpetStat alert" onclick="setCarpetQuickFilter('NEEDTM')"><b>${needTM.length}</b><span>Need TM</span></button><button class="carpetStat warn" onclick="setCarpetQuickFilter('REVIEW')"><b>${review.length}</b><span>Needs Review</span></button><button class="carpetStat purple" onclick="setCarpetQuickFilter('DUPLICATE')"><b>${dupes.size}</b><span>Duplicate Roll #</span></button><button class="carpetStat info" onclick="setCarpetQuickFilter('MISSINGMFG')"><b>${missingMfg.length}</b><span>Unknown MFG Roll</span></button><button class="carpetStat alert" onclick="setCarpetQuickFilter('UNDER50')"><b>${under50.length}</b><span>Under 50′</span></button><button class="carpetStat good" onclick="document.getElementById('carpetRackFilters').scrollIntoView({behavior:'smooth'})"><b>${available}</b><span>Available Racks</span></button><button class="carpetStat" onclick="showPage('warehouseMap')"><b>${Object.keys(rackGroups).length}</b><span>Rack Locations</span></button>`;
@@ -3866,73 +3930,82 @@ function deleteCarpetRecord(){const x=carpetById(activeCarpetId);if(!x||!confirm
 function startCarpetCut(roll,carpetRecordId=''){activeCutCarpetRecordId=carpetRecordId||'';showCarpetOrderPicker(roll)}
 function startCutPieceReturn(roll){activeOperationsDate='';newOperation();$('operationType').value='Cut Piece Return';$('operationInventoryMode').value='Stock';updateOperationForm();$('operationRoll').value=roll;$('operationUnit').value='Foot';const source=carpetRecords().find(x=>normKey(x.roll)===normKey(roll));if(source){$('operationCollection').value=source.collection||'';$('operationColour').value=source.colour||'';$('operationLot').value=source.lot||'';$('operationWidth').value=source.width||'12';$('operationLocation').value=source.location||''}}
 function isCarpetLabelEligible(x){if(!x)return false;const status=String(x.status||'').toUpperCase();if(status==='PENDING')return x.warehouseScope!=='external'&&x.transferredOut!==true&&!carpetExternalDestination(x.location);return isCarpetWarehouseActive(x)}
-let cloudLabelRows=null;
-let cloudLabelReady=false;
-let cloudLabelCuts=[];
-let cloudLabelRequestSeq=0;
-function carpetLabelRows(){return cloudLabelRows||carpetRecords()}
-function carpetLabelById(id){return carpetLabelRows().find(x=>String(x.id)===String(id))}
-function carpetLabelCutRows(){return cloudLabelReady?cloudLabelCuts:cuttingRecords()}
-function labelOptions(selected){return carpetLabelRows().filter(isCarpetLabelEligible).sort((a,b)=>String(a.roll).localeCompare(String(b.roll),undefined,{numeric:true})).map(x=>`<option value="${esc(String(x.id))}" ${String(x.id)===String(selected)?'selected':''}>${esc(x.roll)} — ${esc(x.collection)} ${esc(x.colour)}</option>`).join('')}
-function carpetCloudLabelMessage(message){const el=$('carpetCloudLabelStatus');if(el)el.textContent=message}
-async function loadCarpetLabelsFromCloud(){
- const requestSeq=++cloudLabelRequestSeq;
- cloudLabelReady=false;
- let session;
- try{session=await cloudEnsureSession()}catch(error){carpetCloudLabelMessage('Cloud sign-in error: '+String(error.message||error));return}
- if(!session?.access_token){carpetCloudLabelMessage('Cloud labels unavailable: sign in to Warehouse Cloud first. Local list is not authoritative.');return}
- carpetCloudLabelMessage('Loading current carpet rolls directly from Supabase (read-only)...');
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
- try{
-  const fetchDataset=async key=>{const url=CLOUD_URL+'/rest/v1/warehouse_records?dataset_key=eq.'+encodeURIComponent(key)+'&deleted_at=is.null&select=record_id,payload&limit=1000';const response=await fetch(url,{headers:cloudHeaders(session.access_token,false),signal:controller.signal});if(!response.ok)throw new Error('Cloud '+key+' query failed ('+response.status+')');return response.json()};
-  const [result,cutResult]=await Promise.all([fetchDataset(CARPETDB),fetchDataset(CUTDB)]);
-  if(requestSeq!==cloudLabelRequestSeq)return;
-  if(!Array.isArray(result))throw new Error('Cloud returned invalid inventory data');
-  if(result.length===1000)throw new Error('Cloud carpet result reached 1000 records; pagination required');
-  if(!Array.isArray(cutResult)||cutResult.length===1000)throw new Error('Cloud cutting history unavailable or truncated; printing blocked');
-  const rows=result.map(r=>({...r.payload,id:r.payload?.id??r.record_id})).filter(x=>x&&x.roll);
-  const eligible=rows.filter(isCarpetLabelEligible);
-  if(!eligible.length)throw new Error('No eligible cloud carpet rolls found');
-  for(const roll of ['RC2376','RC2377','RC2378']){const matches=eligible.filter(x=>x.roll===roll);if(matches.length>1)throw new Error('Duplicate new arrival roll '+roll+'; printing blocked')}
-  const duplicateIds=new Set(),seenIds=new Set();
-  for(const x of eligible){const id=String(x.id);if(seenIds.has(id))duplicateIds.add(id);seenIds.add(id)}
-  if(duplicateIds.size)throw new Error('Duplicate internal roll IDs detected in cloud; printing blocked for safety');
-  cloudLabelRows=rows;
-  cloudLabelCuts=cutResult.map(r=>r.payload).filter(Boolean);
-  cloudLabelReady=true;
-  const left=eligible.find(x=>x.roll==='RC2376')||eligible[0];
-  const right=eligible.find(x=>x.roll==='RC2377')||eligible.find(x=>String(x.id)!==String(left.id))||left;
-  $('labelLeft').innerHTML=labelOptions(left.id);$('labelRight').innerHTML=labelOptions(right.id);
-  carpetCloudLabelMessage('CLOUD LIVE · '+eligible.length+' printable rolls · Read-only · No browser inventory cache written');
-  renderCarpetLabels();
- }catch(error){
-  if(requestSeq!==cloudLabelRequestSeq)return;
-  cloudLabelRows=null;
-  cloudLabelCuts=[];
-  cloudLabelReady=false;
-  carpetCloudLabelMessage('Cloud refresh FAILED: '+String(error.message||error)+'. Do not use old local labels for new arrivals.');
-  console.error('Carpet label cloud fetch failed',error);
- }finally{clearTimeout(timer)}
+function cloudOnlyStatusText(){
+ if(!cloudOnlySnapshot)return 'Cloud reader did not load.';
+ if(cloudOnlySnapshot.status==='error')return 'Cloud unavailable: '+cloudOnlySnapshot.issue;
+ if(cloudOnlySnapshot.status==='ready')return 'Cloud Live · Supabase · Read-only';
+ return cloudSession()?'Loading warehouse records from Supabase…':'Sign in to read live warehouse data.';
 }
-function openCarpetLabelMaker(preselect){
- ++cloudLabelRequestSeq;
- cloudLabelRows=null;
- cloudLabelCuts=[];
- cloudLabelReady=false;
- $('labelLeft').innerHTML='';
- $('labelRight').innerHTML='';
+let cloudOnlyRefresh=null,cloudOnlyDeepLinkHandled=false;
+async function refreshWarehouseCloud(){
+ if(cloudOnlyRefresh)return cloudOnlyRefresh;
+ cloudOnlyRefresh=(async()=>{
+  let session=null;
+  try{session=await cloudEnsureSession()}catch{}
+  if(!session?.access_token||!session.user?.id)cloudOnlySnapshot?.clear();
+  const pull=session?.access_token&&session.user?.id&&cloudOnlySnapshot?.refresh(session);
+  renderCloudStatus();
+  if(pull)await pull;
+  renderCloudStatus();
+  for(const [name,render] of Object.entries({renderDashboard,renderProducts,renderInventory,renderCarpetInventory,renderSearch,renderMap,refreshProducts,renderOpenCarpetLabels}))safeStartupStep(name,render);
+  if(cloudOnlySnapshot?.status==='ready'&&!cloudOnlyDeepLinkHandled){
+   cloudOnlyDeepLinkHandled=true;
+   openCarpetFromURL();
+   openInventoryFromURL();
+  }
+  return cloudOnlySnapshot?.status==='ready';
+ })().finally(()=>{cloudOnlyRefresh=null});
+ return cloudOnlyRefresh;
+}
+function carpetLabelRows(){return carpetRecords()}
+function carpetLabelCutRows(){return cuttingRecords()}
+function labelOptions(rows,dupes){
+ return rows.map(x=>{
+  const duplicate=dupes.has(WarehouseCloudOnly.rollKey(x.roll));
+  return `<option value="${esc(x._cloudRecordId)}" ${duplicate?'disabled':''}>${esc(x.roll)} — ${esc(x.collection)} ${esc(x.colour)}${duplicate?' · Duplicate roll, printing blocked':''}</option>`;
+ }).join('');
+}
+function carpetLabelById(id){
+ if(cloudOnlySnapshot?.status!=='ready')return null;
+ const rows=carpetLabelRows(),record=rows.find(x=>x._cloudRecordId===id);
+ return isCarpetLabelEligible(record)&&!carpetDuplicateKeys(rows).has(WarehouseCloudOnly.rollKey(record.roll))?record:null;
+}
+function renderOpenCarpetLabels(){
+ if($('carpetLabelMaker').classList.contains('hidden'))return;
+ const rows=carpetLabelRows(),dupes=carpetDuplicateKeys(rows);
+ const eligible=rows.filter(x=>x.roll&&isCarpetLabelEligible(x)).sort((a,b)=>String(a.roll).localeCompare(String(b.roll),undefined,{numeric:true}));
+ const printable=eligible.filter(x=>!dupes.has(WarehouseCloudOnly.rollKey(x.roll)));
+ const live=cloudOnlySnapshot?.status==='ready';
+ for(const [i,id] of ['labelLeft','labelRight'].entries()){
+  const select=$(id), prior=select.value;
+  select.innerHTML=live?'<option value="">Select a roll</option>'+labelOptions(eligible,dupes):'';
+  select.value=printable.some(x=>x._cloudRecordId===prior)?prior:printable[i%printable.length]?._cloudRecordId||'';
+ }
+ $('carpetCloudLabelStatus').textContent=live?`CLOUD LIVE · ${printable.length} printable rolls · ${eligible.length-printable.length} eligible rows blocked for duplicate roll numbers`:cloudOnlyStatusText();
+ renderCarpetLabels();
+}
+async function loadCarpetLabelsFromCloud(){await refreshWarehouseCloud()}
+function openCarpetLabelMaker(){
  showPage('carpetLabelMaker');
- $('carpetLabelPreview').innerHTML='<div class="notice">Waiting for verified live cloud inventory and cutting history. Printing is disabled.</div>';
- carpetCloudLabelMessage('Loading live cloud records. Printing is disabled until CLOUD LIVE appears.');
- void loadCarpetLabelsFromCloud();
+ renderOpenCarpetLabels();
+ void refreshWarehouseCloud();
 }
-function cutRowsForTag(x){const cuts=carpetLabelCutRows().filter(c=>cutBelongsToRoll(c,x)).slice(0,5);return Array.from({length:5},(_,i)=>{const c=cuts[i];return c?`<tr><td>${esc(c.date||'')}</td><td>${esc(c.po||'')}</td><td>${esc(c.customer||'')}</td><td>${esc(c.operator||'')}</td><td>${feetLabel(c.cutLength)}</td><td>${feetLabel(c.remainingLength)}</td></tr>`:'<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>'}).join('')}
+function cutRowsForTag(x){const cuts=carpetLabelCutRows().filter(c=>{
+ const ref=c.carpetRecordId??c.rollRecordId;
+ return ref!=null&&String(ref)!==''?String(ref)===x._cloudRecordId||String(ref)===String(x.legacyPayloadId):WarehouseCloudOnly.rollKey(c.roll)===WarehouseCloudOnly.rollKey(x.roll);
+ }).slice(0,5);return Array.from({length:5},(_,i)=>{const c=cuts[i];return c?`<tr><td>${esc(c.date||'')}</td><td>${esc(c.po||'')}</td><td>${esc(c.customer||'')}</td><td>${esc(c.operator||'')}</td><td>${feetLabel(c.cutLength)}</td><td>${feetLabel(c.remainingLength)}</td></tr>`:'<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>'}).join('')}
 function carpetTagHTML(x,back=false){if(!x)return'<div class="carpetTag"></div>';const qr=carpetQRImage(x);if(!back)return`<div class="carpetTag"><div class="tagRoll">${esc(x.roll)}</div><div class="tagProduct">${esc(x.collection)}</div><div class="tagColour">${esc(x.colour)}</div><div class="tagMeta">LOT: <b>${esc(x.lot||'')}</b><br>SIZE: <b>${esc(x.width||'CHECK WIDTH')}×${feetLabel(x.length)}</b><br>MFG ROLL: <b class="tagMfgRoll">${esc((cleanManufacturerRoll(x.manufacturerRoll)||'').slice(-4)||'—')}</b></div><div class="tagQR"><img src="${qr}"></div><div class="tagScan">SCAN TO VIEW &amp; EDIT</div></div>`;return`<div class="carpetTag tagBack"><div class="tagRoll">${esc(x.roll)}</div><div class="tagOriginal">(ORIGINAL SIZE: ${feetLabel(x.originalLength)})</div><table class="cutTable"><thead><tr><th>DATE</th><th>PO</th><th>NAME</th><th>SALES</th><th>CUT</th><th>BAL.</th></tr></thead><tbody>${cutRowsForTag(x)}</tbody></table><div class="tagQR"><img src="${qr}"></div></div>`}
 function renderCarpetLabels(){const l=carpetLabelById($('labelLeft').value),r=carpetLabelById($('labelRight').value);$('carpetLabelPreview').innerHTML=`<div class="labelPage labelFront">${carpetTagHTML(l)}${carpetTagHTML(r)}</div><div class="labelPage labelBack">${carpetTagHTML(r,true)}${carpetTagHTML(l,true)}</div>`}
-function printCarpetLabels(){if(!cloudLabelReady){alert('Live cloud labels are not ready. Printing is blocked to avoid outdated roll numbers.');return}renderCarpetLabels();document.body.classList.add('printingCarpetLabels');const done=()=>document.body.classList.remove('printingCarpetLabels');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
-function downloadCarpetLabelsWord(){if(!cloudLabelReady){alert('Live cloud labels are not ready. Download is blocked to avoid outdated roll numbers.');return}renderCarpetLabels();const content=$('carpetLabelPreview').innerHTML,css=`@page{size:11in 8.5in;margin:.25in}body{font-family:Arial,sans-serif}.labelPage{width:10.5in;height:8in;display:table;page-break-after:always}.carpetTag{display:table-cell;width:50%;padding:.34in .45in;text-align:center;vertical-align:top;border-right:1px dashed #aaa;position:relative}.carpetTag:before{content:"";position:absolute;inset:.16in;border:1.4px solid #222;border-radius:16px}.tagRoll{font-size:46pt;font-weight:bold;margin-top:5pt}.tagProduct{font-size:21pt;font-weight:bold;margin-top:14pt}.tagColour{font-size:29pt;font-weight:bold;margin-top:12pt;padding:8pt 2pt;border-top:1px solid #555;border-bottom:1px solid #555}.tagMeta{font-size:15pt;line-height:1.5;margin-top:14pt}.tagMfgRoll{font-size:26pt;font-weight:900;letter-spacing:.035em}.tagQR{position:absolute;left:50%;transform:translateX(-50%);bottom:22pt}.tagQR img{width:74pt;height:74pt}.tagScan{position:absolute;left:50%;transform:translateX(-50%);bottom:7pt;width:150pt;font-size:7pt;font-weight:bold;letter-spacing:1pt}.tagBack .tagQR{left:auto;right:20pt;transform:none}.tagOriginal{font-size:14pt;font-weight:bold;margin:12pt}.cutTable{width:100%;border-collapse:collapse;font-size:8pt}.cutTable th,.cutTable td{border:1px solid #111;height:28pt}`;const html=`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${content}</body></html>`,blob=new Blob(['\ufeff',html],{type:'application/msword'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Runlu_Carpet_Tags_${$('labelLeft').selectedOptions[0].text.split(' — ')[0]}_${$('labelRight').selectedOptions[0].text.split(' — ')[0]}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+function printCarpetLabels(){if(!carpetLabelById($('labelLeft').value)||!carpetLabelById($('labelRight').value)){alert('Live cloud labels are not ready. Printing is blocked to avoid outdated roll numbers.');return}renderCarpetLabels();document.body.classList.add('printingCarpetLabels');const done=()=>document.body.classList.remove('printingCarpetLabels');window.addEventListener('afterprint',done,{once:true});setTimeout(()=>window.print(),80);setTimeout(done,30000)}
+function downloadCarpetLabelsWord(){if(!carpetLabelById($('labelLeft').value)||!carpetLabelById($('labelRight').value)){alert('Live cloud labels are not ready. Download is blocked to avoid outdated roll numbers.');return}renderCarpetLabels();const content=$('carpetLabelPreview').innerHTML,css=`@page{size:11in 8.5in;margin:.25in}body{font-family:Arial,sans-serif}.labelPage{width:10.5in;height:8in;display:table;page-break-after:always}.carpetTag{display:table-cell;width:50%;padding:.34in .45in;text-align:center;vertical-align:top;border-right:1px dashed #aaa;position:relative}.carpetTag:before{content:"";position:absolute;inset:.16in;border:1.4px solid #222;border-radius:16px}.tagRoll{font-size:46pt;font-weight:bold;margin-top:5pt}.tagProduct{font-size:21pt;font-weight:bold;margin-top:14pt}.tagColour{font-size:29pt;font-weight:bold;margin-top:12pt;padding:8pt 2pt;border-top:1px solid #555;border-bottom:1px solid #555}.tagMeta{font-size:15pt;line-height:1.5;margin-top:14pt}.tagMfgRoll{font-size:26pt;font-weight:900;letter-spacing:.035em}.tagQR{position:absolute;left:50%;transform:translateX(-50%);bottom:22pt}.tagQR img{width:74pt;height:74pt}.tagScan{position:absolute;left:50%;transform:translateX(-50%);bottom:7pt;width:150pt;font-size:7pt;font-weight:bold;letter-spacing:1pt}.tagBack .tagQR{left:auto;right:20pt;transform:none}.tagOriginal{font-size:14pt;font-weight:bold;margin:12pt}.cutTable{width:100%;border-collapse:collapse;font-size:8pt}.cutTable th,.cutTable td{border:1px solid #111;height:28pt}`;const html=`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${content}</body></html>`,blob=new Blob(['\ufeff',html],{type:'application/msword'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Runlu_Carpet_Tags_${$('labelLeft').selectedOptions[0].text.split(' — ')[0]}_${$('labelRight').selectedOptions[0].text.split(' — ')[0]}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
 function exportCarpetCSV(){const headers=['Roll','Product','Colour','Current Feet','Location','Measure','Status','LOT','Width','Original Feet','Manufacturer Roll','Review Note','Updated At'],rows=carpetRecords().map(x=>[x.roll,x.collection,x.colour,x.length,x.location,x.measure,x.status,x.lot,x.width,x.originalLength,x.manufacturerRoll,x.reviewNote,x.updatedAt]);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n'),blob=new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Runlu_Carpet_Inventory_${todayISO()}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function openCarpetFromURL(){const roll=new URLSearchParams(location.search).get('carpet');if(!roll)return;const x=carpetRecords().find(r=>normKey(r.roll)===normKey(roll));if(x)setTimeout(()=>openCarpetDetail(x.id),100)}
+function openCarpetFromURL(){
+ const roll=new URLSearchParams(location.search).get('carpet');
+ if(!roll)return;
+ const matches=carpetRecords().filter(row=>WarehouseCloudOnly.matchesRoll(row,roll));
+ if(matches.length===1)openCarpetDetail(matches[0].id);
+ else if(matches.length>1){$('carpetFilter').value=roll;setCarpetQuickFilter('ALL');showPage('carpetInventory')}
+}
 function openInventoryFromURL(){const params=new URLSearchParams(location.search),inventoryId=params.get('inventory'),productId=params.get('product');if(inventoryId){const record=findInventoryRecordByIdentity(loadInventoryRecords(),inventoryId);if(record)setTimeout(()=>openInventoryManager(record.masterId),100)}else if(productId&&loadMasters().some(p=>String(p.id)===String(productId)))setTimeout(()=>openInventoryManager(productId),100)}
 
 function renderDashboard(){
@@ -4019,6 +4092,7 @@ function exportBackup(isUpgrade=false){
  renderBackupStatus();
 }
 function createLocalSnapshot(showMessage=false,reason='manual'){
+ if(window.RUNLU_CLOUD_ONLY)return false;
  try{
   const used=localStorageBytes();
   if(used>STORAGE_SOFT_LIMIT_BYTES){
@@ -4044,6 +4118,7 @@ function automaticDailySnapshot(){
  return false;
 }
 function applyBackupData(d){
+ if(window.RUNLU_CLOUD_ONLY)return false;
  if(d.productMaster){save(PMDB,d.productMaster||[]);save(INVDB,d.inventory||[])}
  else if(d.products){save(DB,d.products||[]);localStorage.removeItem('runlu_v21_migrated');migrateToV21()}
  else throw new Error('Missing product data');
@@ -4332,6 +4407,7 @@ async function checkForUpdate(fromSettings=false){
 }
 function compareVersions(a,b){const pa=String(a).split('.').map(x=>parseInt(x,10)||0),pb=String(b).split('.').map(x=>parseInt(x,10)||0),n=Math.max(pa.length,pb.length);for(let i=0;i<n;i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return d>0?1:-1}return 0;}
 function resetV20Data(){
+ if(window.RUNLU_CLOUD_ONLY)return false;
  if(!confirm('Reset all V5.0 products, inventory, count sessions, orders and settings in this browser? The original Carpet Management system will not be affected.'))return;
  if(!confirm('Final confirmation: have you exported a backup?'))return;
  [DB,PMDB,INVDB,ODB,RCVDB,TASKDB,SPODB,SETTINGS,COUNTDB,SNAPDB,PROTECTDB,LOGDB,HEALTHDB,'runlu_v13_migrated','runlu_v21_migrated','runlu_v30_seed_initialized','runlu_v516_dataset_applied','runlu_v516_preupgrade_backup'].forEach(k=>localStorage.removeItem(k));
@@ -5164,7 +5240,7 @@ function hasWarehouseCloudCache(){
   'runlu_cloud_master_last_sync_v680','runlu_cloud_master_offline_queue_v680'].some(key=>localStorage.getItem(key)!==null);
 }
 
-if($('headerVersion'))$('headerVersion').textContent='V'+APP_VERSION;
+if($('headerVersion'))$('headerVersion').textContent='Cloud Only';
 document.querySelectorAll('#operationEditor input,#operationEditor select,#operationEditor textarea').forEach(el=>{el.addEventListener('input',scheduleOperationDraft);el.addEventListener('change',scheduleOperationDraft)});
 window.addEventListener('beforeunload',()=>{const editor=$('operationEditor');if(editor&&!editor.classList.contains('hidden'))saveOperationDraftNow()});
 window.addEventListener('online',()=>cloudAutoRefresh(true));
@@ -5189,49 +5265,10 @@ function safeStartupStep(name,fn){
 document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));
 if($('home'))$('home').classList.remove('hidden');
 document.body.classList.remove('formEntry');
-[
- ['earlyStorageCleanup',()=>{pruneLocalApplicationCache(true);if(localStorageBytes()>STORAGE_SOFT_LIMIT_BYTES)aggressiveSafeStorageCleanup()}],
- ['migrateV13',()=>migrateV13()],
- ['migrateToV21',()=>migrateToV21()],
- ['migrateInventoryLifecycle',()=>migrateInventoryLifecycle()],
- ['migrateOperationsV52',()=>migrateOperationsV52()],
- ['migrateLegacyCarpetData',()=>({retired:true,reason:'Cloud Master snapshot owns carpet bootstrap'} )],
- ['repairMissingCarpetRollsFromReceiving',()=>repairMissingCarpetRollsFromReceiving(true)],
- ['recoverOrderLibraries',()=>recoverOrderLibraries(false)],
- ['restoreConversationOrders',()=>restoreConversationOrders(false)],
- ['autoInitializeSeed',()=>autoInitializeSeed()],
- ['applyV516WarehouseDataset',()=>applyV516WarehouseDataset(false)],
- ['applyV5515FieldProducts',()=>applyV5515FieldProducts(false)],
- ['applyV5522UnderlaymentSpecs',()=>applyV5522UnderlaymentSpecs(false)],
- ['repairCompletedStockTransfers',()=>repairCompletedStockTransfers(true)],
- ['dedupeOpenOperationDrafts',()=>dedupeOpenOperationDrafts(true)],
- ['reconcileCompletedCustomerOrderInventory',()=>reconcileCompletedCustomerOrderInventory(true)],
- ['reconcileTransferredCarpetStatuses',()=>reconcileTransferredCarpetStatuses(false)],
- ['v8InstallCompatibility',()=>v8InstallCompatibility()],
- ['renderDashboard',()=>renderDashboard()],
- ['renderProducts',()=>renderProducts()],
- ['renderInventory',()=>renderInventory()],
- ['renderOrders',()=>renderOrders()],
- ['renderReceivingHistory',()=>renderReceivingHistory()],
- ['renderTasks',()=>renderTasks()],
- ['renderMap',()=>renderMap()],
- ['refreshMemory',()=>refreshMemory()],
- ['loadSettings',()=>loadSettings()],
- ['renderOrderDataStatus',()=>renderOrderDataStatus()],
- ['runDatabaseHealth',()=>runDatabaseHealth(false)],
- ['openCarpetFromURL',()=>openCarpetFromURL()],
- ['openInventoryFromURL',()=>openInventoryFromURL()],
- ['bindVoiceAssistant',()=>bindVoiceAssistant()],
- ['startCloudPolling',()=>startCloudPolling()]
-].forEach(([name,fn])=>{
- const historicalWrites=['migrateV13','migrateToV21','migrateInventoryLifecycle','migrateOperationsV52',
-  'repairMissingCarpetRollsFromReceiving','recoverOrderLibraries','restoreConversationOrders','autoInitializeSeed',
-  'applyV516WarehouseDataset','applyV5515FieldProducts','applyV5522UnderlaymentSpecs','repairCompletedStockTransfers',
-  'dedupeOpenOperationDrafts','reconcileCompletedCustomerOrderInventory','reconcileTransferredCarpetStatuses'];
- // Cloud-backed startup must render the saved cache without seeding or repairing it.
- if(!historicalWrites.includes(name)||!hasWarehouseCloudCache())safeStartupStep(name,fn);
-});
+safeStartupStep('loadSettings',loadSettings);
+safeStartupStep('bindVoiceAssistant',bindVoiceAssistant);
+safeStartupStep('renderCarpetInventory',renderCarpetInventory);
+safeStartupStep('startCloudPolling',startCloudPolling);
 </script>
-<script src="v8-compat.js?r=v8.0.1-cut-preflight-20261005" onload="try{v8InstallCompatibility();var h=window.RUNLU_V8_CARPET_HEALTH&&RUNLU_V8_CARPET_HEALTH();window.RUNLU_V8_RELEASE_GATE={checkedAt:new Date().toISOString(),health:h||null,ready:!!(h&&h.ok)};renderDashboard();renderCarpetInventory()}catch(e){console.error('[V8 Pilot] late install recovery',e)}"></script>
 </body>
 </html>
