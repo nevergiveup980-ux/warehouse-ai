@@ -32,7 +32,11 @@ begin
 end;
 $$;
 create schema warehouse_v7;
-create table warehouse_v7.carpet_roll(tenant_id uuid,id uuid primary key,remaining_sixteenths bigint,version bigint,original_sixteenths bigint default 9600,measure_status text default 'CAL',lifecycle text default 'active',updated_at timestamptz default now());
+create table warehouse_v7.location(tenant_id uuid,id uuid primary key,code text,lifecycle text default 'active');
+create table warehouse_v7.product(tenant_id uuid,id uuid primary key,name text,colour text,lifecycle text default 'active');
+create function warehouse_v7.assert_command_identity(t uuid, u uuid) returns void language plpgsql as $$
+begin if u is distinct from auth.uid() then raise exception 'Actor mismatch'; end if; end; $$;
+create table warehouse_v7.carpet_roll(tenant_id uuid,id uuid primary key,roll_number text,manufacturer_roll text,source_roll text,product_id uuid,location_id uuid,remaining_sixteenths bigint,version bigint,original_sixteenths bigint default 9600,measure_status text default 'CAL',lifecycle text default 'active',updated_at timestamptz default now());
 grant usage on schema warehouse_v7 to authenticated;
 grant select,update on warehouse_v7.carpet_roll to authenticated;
 -- Synthetic implementation of the paired cut RPC contract.

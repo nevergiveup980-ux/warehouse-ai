@@ -327,6 +327,36 @@ def main():
             assert page.locator("#inventoryManagerList details").first.count()
             page.evaluate("id=>deleteInventoryRecordSafely(id)", STOCK_ID)
             assert records[(INVENTORY, STOCK_ID)]["deleted"]
+            assert "Build 128" in page.locator("#headerVersion").inner_text()
+            other_stock = "different-cloud-id"
+            multi_order = {"id": 347, "type": "Shipping", "po": "other", "status": "Completed",
+                           "quantity": 10, "unit": "Box", "impactApplied": True, "items": [
+                               {"quantity": 10, "unit": "Box", "inventoryEffects": [
+                                   {"recordId": other_stock, "delta": -10, "unit": "Box"}]},
+                               {"quantity": 20, "unit": "SY", "stockQuantity": 2, "inventoryEffects": [
+                                   {"recordId": other_stock, "delta": -2, "unit": "Box"}]},
+                           ]}
+            records[(operations, "multi-order")] = {"dataset_key": operations, "record_id": "multi-order",
+                                                   "version": 1, "payload": multi_order}
+            assert page.evaluate("refreshWarehouseCloud()")
+            page.evaluate("id=>openInventoryDetail(id)", other_stock)
+            correction = page.locator("#inventoryRelatedOrders details").filter(has_text="Shipping · PO other")
+            correction.locator("summary").click()
+            correction.locator('[name="quantity0"]').fill("8")
+            correction.locator('[name="quantity1"]').fill("30")
+            correction.locator('[name="stock1"]').fill("3")
+            correction.get_by_role("button",name="Save Correction").click()
+            page.wait_for_function("!warehouseWriteBusy")
+            assert records[(INVENTORY, other_stock)]["payload"]["quantity"] == 24, messages[-4:]
+            posted = records[(operations, "multi-order")]["payload"]["items"]
+            assert [x["inventoryEffects"][0]["delta"] for x in posted] == [-8,-3]
+            correction.locator("summary").click()
+            correction.get_by_role("button",name="Save Correction").click()
+            page.wait_for_function("!warehouseWriteBusy")
+            assert records[(INVENTORY, other_stock)]["payload"]["quantity"] == 24
+            operation("REM / Remnant Transfer", "RC2600", 2)
+            assert any(r["payload"].get("sourceRoll") == "RC2600" for (dataset,_),r in records.items()
+                       if dataset == "runlu_remnants_v55")
             # Field case: legacy payload IDs repeat on unrelated rows, canonical keys are distinct.
             extra = [carpet("roll-target", "RC2280", "Active", length=22 + 7 / 12,
                             originalLength=22 + 7 / 12, measure="TM", id=1872098562),

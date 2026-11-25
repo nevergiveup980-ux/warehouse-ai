@@ -53,6 +53,29 @@ create trigger warehouse_cloud_unique_business_roll
 before insert or update of payload, deleted_at, user_id, dataset_key on public.warehouse_records
 for each row execute function public.warehouse_cloud_guard_roll();
 
+-- Existing V7 tenant-member policies remain in force.
+grant select on warehouse_v7.location, warehouse_v7.product to authenticated;
+grant insert on warehouse_v7.carpet_roll to authenticated;
+
+create function public.warehouse_cloud_v7_location(p_tenant uuid, p_code text)
+returns uuid language plpgsql security invoker set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_code text := lower(btrim(coalesce(p_code,'')));
+begin
+  if v_code in ('installer returns','returned cut pieces','customer returns') then v_code := 'receiving'; end if;
+  select id into strict v_id from warehouse_v7.location
+  where tenant_id=p_tenant and lower(btrim(code))=v_code and lifecycle='active';
+  return v_id;
+exception when no_data_found or too_many_rows then
+  raise exception 'Choose a unique active V7 warehouse location for this roll';
+end;
+$$;
+
+revoke execute on function public.warehouse_cloud_v7_location(uuid,text) from public, anon;
+grant execute on function public.warehouse_cloud_v7_location(uuid,text) to authenticated;
+
 create function public.warehouse_cloud_commit(p_request_id uuid, p_changes jsonb)
 returns jsonb language plpgsql security invoker set search_path = ''
 as $$
@@ -73,6 +96,13 @@ declare
   v_measurement boolean;
   v_remaining bigint;
   v_expected bigint;
+  v_original bigint;
+  v_location uuid;
+  v_product uuid;
+  v_child uuid;
+  v_lifecycle text;
+  v_parent_id text;
+  v_measure text;
 begin
   if v_uid is null or p_request_id is null then raise exception 'Sign-in and request ID are required'; end if;
   if jsonb_typeof(p_changes) is distinct from 'array' then raise exception 'Expected a change list'; end if;
@@ -94,6 +124,7 @@ begin
     v_delete := coalesce((v_change->>'delete')::boolean,false);
     v_payload := v_change->'payload';
     v_cut := coalesce((v_change->>'cut')::boolean,false);
+    v_parent_id := nullif(v_payload->>'sourceCloudRecordId','');
     v_measurement := coalesce((v_change->>'measurement')::boolean,false);
     if v_dataset is null or v_dataset not in (
       'runlu_product_master_v21','runlu_inventory_records_v21','runlu_carpet_inventory_v52',
@@ -119,11 +150,47 @@ begin
       v_payload := v_payload || '{"_runluDeleteIntent":"explicit-user-delete"}'::jsonb;
     end if;
 
+    if v_dataset='runlu_carpet_inventory_v52' and v_version=0 and v_parent_id is not null then
+      select p.payload->>'canonicalId' into v_parent_id from public.warehouse_records p
+      where p.user_id=v_uid and p.dataset_key=v_dataset and p.record_id=v_parent_id and p.deleted_at is null;
+      if not found then raise exception 'Parent carpet record is unavailable'; end if;
+      if coalesce(v_parent_id,'') ~* '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' then
+        select * into v_link from warehouse_v7.carpet_roll where id=v_parent_id::uuid for update;
+        if not found then raise exception 'Linked V7 parent could not be verified'; end if;
+        perform warehouse_v7.assert_command_identity(v_link.tenant_id,v_uid);
+        v_location := public.warehouse_cloud_v7_location(v_link.tenant_id,v_payload->>'location');
+        v_remaining := round((v_payload->>'length')::numeric*192);
+        v_original := round((v_payload->>'originalLength')::numeric*192);
+        if v_remaining is null or v_remaining <= 0 or v_original is null or v_original<v_remaining then
+          raise exception 'Invalid linked child roll length';
+        end if;
+        v_child := gen_random_uuid();
+        v_lifecycle := case
+          when v_payload->>'warehouseScope'='external' then 'transferred-out'
+          when lower(v_payload->>'status')='used up' then 'consumed' else 'active' end;
+        insert into warehouse_v7.carpet_roll(
+          tenant_id,id,roll_number,manufacturer_roll,source_roll,product_id,location_id,
+          original_sixteenths,remaining_sixteenths,measure_status,version,lifecycle
+        ) values (
+          v_link.tenant_id,v_child,v_payload->>'roll',nullif(v_payload->>'manufacturerRoll',''),v_link.roll_number,
+          v_link.product_id,v_location,v_original,v_remaining,coalesce(v_payload->>'measure','TM'),1,v_lifecycle
+        );
+        v_payload := v_payload || jsonb_build_object('canonicalId',v_child,'canonicalVersion',1,
+          'length',v_remaining::numeric/192,'remainingSixteenths',v_remaining,'originalSixteenths',v_original,
+          'locationId',v_location,'measureStatus',coalesce(v_payload->>'measure','TM'),
+          'lifecycle',v_lifecycle,'lifecycleStatus',upper(v_lifecycle));
+      end if;
+    end if;
+
     if v_dataset = 'runlu_carpet_inventory_v52' and v_version > 0 then
       if coalesce(v_current.payload->>'canonicalId','') ~* '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' then
         select * into v_link from warehouse_v7.carpet_roll
         where id = (v_current.payload->>'canonicalId')::uuid for update;
         if not found then raise exception 'Linked V7 roll could not be verified'; end if;
+        perform warehouse_v7.assert_command_identity(v_link.tenant_id,v_uid);
+        if upper(btrim(v_link.roll_number)) is distinct from upper(btrim(v_current.payload->>'roll')) then
+          raise exception 'The paired roll identifiers disagree. Reconcile before editing';
+        end if;
         v_expected := round((v_current.payload->>'length')::numeric * 192);
         v_remaining := round((v_payload->>'length')::numeric * 192);
         if v_measurement and not v_delete and not v_cut then
@@ -167,7 +234,48 @@ begin
             'lifecycle',case when v_remaining=0 then 'consumed' else 'active' end
           );
         else
-          raise exception 'This linked V7 roll requires a reviewed paired-record command';
+          if v_expected is distinct from v_link.remaining_sixteenths then
+            raise exception 'The two cloud balances disagree. Reconcile before editing';
+          end if;
+          if v_delete then
+            update warehouse_v7.carpet_roll set lifecycle='archived',version=version+1,updated_at=now()
+            where tenant_id=v_link.tenant_id and id=v_link.id;
+            if not found then raise exception 'Linked V7 roll could not be archived'; end if;
+          else
+            v_original := coalesce(round((v_payload->>'originalLength')::numeric*192),v_link.original_sixteenths);
+            v_measure := coalesce(nullif(v_payload->>'measure',''),v_link.measure_status);
+            if v_remaining is null or v_remaining<0 or v_original<v_remaining or v_measure not in ('FULL','CAL','TM') then
+              raise exception 'Invalid paired roll length or measurement status';
+            end if;
+            v_location := v_link.location_id;
+            if v_payload->>'location' is distinct from v_current.payload->>'location'
+               and lower(coalesce(v_payload->>'status','')) not in ('split to rem','split to ram') then
+              v_location := public.warehouse_cloud_v7_location(v_link.tenant_id,v_payload->>'location');
+            end if;
+            v_product := v_link.product_id;
+            if v_payload->>'collection' is distinct from v_current.payload->>'collection'
+               or v_payload->>'colour' is distinct from v_current.payload->>'colour' then
+              select id into strict v_product from warehouse_v7.product
+              where tenant_id=v_link.tenant_id and lifecycle='active'
+                and lower(btrim(name))=lower(btrim(v_payload->>'collection'))
+                and lower(btrim(coalesce(colour,'')))=lower(btrim(coalesce(v_payload->>'colour','')));
+            end if;
+            v_lifecycle := case
+              when v_payload->>'warehouseScope'='external' or v_payload->>'transferredOut'='true' then 'transferred-out'
+              when lower(coalesce(v_payload->>'status','')) in ('split to rem','split to ram','archived') then 'archived'
+              when v_remaining=0 or lower(v_payload->>'status')='used up' then 'consumed'
+              when lower(v_payload->>'status') in ('pending','check') then lower(v_payload->>'status')
+              else 'active' end;
+            update warehouse_v7.carpet_roll set roll_number=v_payload->>'roll',
+              manufacturer_roll=nullif(v_payload->>'manufacturerRoll',''),product_id=v_product,location_id=v_location,
+              original_sixteenths=v_original,remaining_sixteenths=v_remaining,measure_status=v_measure,
+              lifecycle=v_lifecycle,version=version+1,updated_at=now()
+            where tenant_id=v_link.tenant_id and id=v_link.id returning version into v_expected;
+            if not found then raise exception 'Linked V7 roll could not be updated'; end if;
+            v_payload := v_payload || jsonb_build_object('canonicalId',v_link.id,'canonicalVersion',v_expected,
+              'length',v_remaining::numeric/192,'remainingSixteenths',v_remaining,'originalSixteenths',v_original,
+              'locationId',v_location,'measureStatus',v_measure,'lifecycle',v_lifecycle,'lifecycleStatus',upper(v_lifecycle));
+          end if;
         end if;
       elsif v_cut and (v_delete or (v_payload->>'length')::numeric is null
              or (v_payload->>'length')::numeric < 0
