@@ -1,7 +1,7 @@
 {
   "version": "8.0.2",
-  "build": "129",
+  "build": "130",
   "date": "2026-11-25",
   "channel": "cloud-only",
-  "notes": "Restore Cloud Only inventory loading with legacy empty settings."
+  "notes": "Add workspace membership support for Deerfoot."
 }

@@ -75,10 +75,14 @@ def main():
                     if file.is_relative_to(ROOT) and file.is_file():
                         return route.fulfill(path=file)
                 if url.hostname == "ekrnknlawekeoszzkamd.supabase.co":
+                    if request.method == "GET" and url.path == "/rest/v1/rpc/warehouse_workspace_owner":
+                        return route.fulfill(json="fake")
                     if request.method == "GET" and url.path == "/rest/v1/warehouse_records":
                         if fail:
                             return route.fulfill(status=503, json={"message": "synthetic outage"})
-                        offset = int(parse_qs(url.query)["offset"][0])
+                        query = parse_qs(url.query)
+                        assert query["user_id"] == ["eq.fake"]
+                        offset = int(query["offset"][0])
                         live = [row for _, row in sorted(records.items()) if not row.get("deleted")]
                         return route.fulfill(json=live[offset:offset + 2])
                     if request.method == "POST" and url.path == "/rest/v1/rpc/warehouse_cloud_commit":
@@ -116,8 +120,9 @@ def main():
                 OUTBOXES[0]: '[{"operation_id":"legacy"}]',
                 OUTBOXES[1]: '[{"id":"pending"}]',
             }
-            session = json.dumps({"access_token": "test", "expires_at": 4102444800,
-                                  "user": {"id": "fake", "email": "nevergiveup980@gmail.com"}})
+            user = ({"id": "shared", "email": "deerfoot@runlu.ca"} if options
+                    else {"id": "fake", "email": "nevergiveup980@gmail.com"})
+            session = json.dumps({"access_token": "test", "expires_at": 4102444800, "user": user})
             context.add_init_script(f"""if(location.origin==={json.dumps(ORIGIN)}&&!sessionStorage.getItem('fixture')){{
                 for(const [k,v] of Object.entries({json.dumps({**seed, 'runlu_cloud_session_v54': session})}))localStorage.setItem(k,v);
                 sessionStorage.setItem('fixture','1');
@@ -328,7 +333,7 @@ def main():
             assert page.locator("#inventoryManagerList details").first.count()
             page.evaluate("id=>deleteInventoryRecordSafely(id)", STOCK_ID)
             assert records[(INVENTORY, STOCK_ID)]["deleted"]
-            assert "Build 129" in page.locator("#headerVersion").inner_text()
+            assert "Build 130" in page.locator("#headerVersion").inner_text()
             other_stock = "different-cloud-id"
             multi_order = {"id": 347, "type": "Shipping", "po": "other", "status": "Completed",
                            "quantity": 10, "unit": "Box", "impactApplied": True, "items": [
