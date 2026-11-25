@@ -70,6 +70,7 @@ declare
   v_payload jsonb;
   v_link warehouse_v7.carpet_roll%rowtype;
   v_cut boolean;
+  v_measurement boolean;
   v_remaining bigint;
   v_expected bigint;
 begin
@@ -93,6 +94,7 @@ begin
     v_delete := coalesce((v_change->>'delete')::boolean,false);
     v_payload := v_change->'payload';
     v_cut := coalesce((v_change->>'cut')::boolean,false);
+    v_measurement := coalesce((v_change->>'measurement')::boolean,false);
     if v_dataset is null or v_dataset not in (
       'runlu_product_master_v21','runlu_inventory_records_v21','runlu_carpet_inventory_v52',
       'runlu_cutting_log_v52','runlu_operations_log_v52','runlu_event_history_v52',
@@ -122,30 +124,51 @@ begin
         select * into v_link from warehouse_v7.carpet_roll
         where id = (v_current.payload->>'canonicalId')::uuid for update;
         if not found then raise exception 'Linked V7 roll could not be verified'; end if;
-        if not v_cut or v_delete then
-          raise exception 'This linked V7 roll requires a reviewed paired-record command';
-        end if;
         v_expected := round((v_current.payload->>'length')::numeric * 192);
         v_remaining := round((v_payload->>'length')::numeric * 192);
-        if v_expected is distinct from v_link.remaining_sixteenths
-           or v_remaining is null or v_remaining < 0 or v_remaining >= v_expected then
-          raise exception 'The two cloud balances disagree. Refresh or reconcile before cutting';
+        if v_measurement and not v_delete and not v_cut then
+          if v_payload - array['length','measure','tmRequired','updatedAt'] is distinct from
+             v_current.payload - array['length','measure','tmRequired','updatedAt'] then
+            raise exception 'A paired measurement cannot change other roll fields';
+          end if;
+          if v_link.lifecycle <> 'active' or v_expected is distinct from v_link.remaining_sixteenths
+             or v_remaining is null or v_remaining <= 0 or v_remaining > v_link.original_sixteenths
+             or coalesce(v_payload->>'measure','') not in ('TM','CAL') then
+            raise exception 'Paired measurement could not be verified against the current roll';
+          end if;
+          update warehouse_v7.carpet_roll
+          set remaining_sixteenths=v_remaining,measure_status=v_payload->>'measure',
+              version=version+1,updated_at=now()
+          where tenant_id=v_link.tenant_id and id=v_link.id and version=v_link.version
+          returning version into v_expected;
+          if not found then raise exception 'Paired roll changed during measurement' using errcode='40001'; end if;
+          v_payload := v_payload || jsonb_build_object(
+            'length',v_remaining::numeric/192,'remainingSixteenths',v_remaining,
+            'measureStatus',v_payload->>'measure','canonicalVersion',v_expected
+          );
+        elsif v_cut and not v_delete then
+          if v_expected is distinct from v_link.remaining_sixteenths
+             or v_remaining is null or v_remaining < 0 or v_remaining >= v_expected then
+            raise exception 'The two cloud balances disagree. Refresh or reconcile before cutting';
+          end if;
+          v_result := warehouse_v7.cut_carpet_roll(
+            v_link.tenant_id, md5(p_request_id::text || ':' || v_record_id)::uuid, v_link.id,
+            v_link.version, v_expected-v_remaining, '{}'::jsonb, v_uid, 'cloud-only'
+          );
+          if v_result->>'status' is distinct from 'committed'
+             or (v_result->>'remaining_sixteenths')::bigint is distinct from v_remaining then
+            raise exception 'V7 cut did not confirm the expected balance';
+          end if;
+          v_payload := v_payload || jsonb_build_object(
+            'canonicalId',v_current.payload->>'canonicalId','length',v_remaining::numeric/192,'remainingSixteenths',v_remaining,
+            'canonicalVersion',(v_result->>'new_version')::bigint,
+            'measureStatus',v_payload->>'measure',
+            'lifecycleStatus',case when v_remaining=0 then 'CONSUMED' else 'ACTIVE' end,
+            'lifecycle',case when v_remaining=0 then 'consumed' else 'active' end
+          );
+        else
+          raise exception 'This linked V7 roll requires a reviewed paired-record command';
         end if;
-        v_result := warehouse_v7.cut_carpet_roll(
-          v_link.tenant_id, md5(p_request_id::text || ':' || v_record_id)::uuid, v_link.id,
-          v_link.version, v_expected-v_remaining, '{}'::jsonb, v_uid, 'cloud-only'
-        );
-        if v_result->>'status' is distinct from 'committed'
-           or (v_result->>'remaining_sixteenths')::bigint is distinct from v_remaining then
-          raise exception 'V7 cut did not confirm the expected balance';
-        end if;
-        v_payload := v_payload || jsonb_build_object(
-          'canonicalId',v_current.payload->>'canonicalId','length',v_remaining::numeric/192,'remainingSixteenths',v_remaining,
-          'canonicalVersion',(v_result->>'new_version')::bigint,
-          'measureStatus',v_payload->>'measure',
-          'lifecycleStatus',case when v_remaining=0 then 'CONSUMED' else 'ACTIVE' end,
-          'lifecycle',case when v_remaining=0 then 'consumed' else 'active' end
-        );
       elsif v_cut and (v_delete or (v_payload->>'length')::numeric is null
              or (v_payload->>'length')::numeric < 0
              or (v_payload->>'length')::numeric >= (v_current.payload->>'length')::numeric) then

@@ -32,7 +32,7 @@ begin
 end;
 $$;
 create schema warehouse_v7;
-create table warehouse_v7.carpet_roll(tenant_id uuid,id uuid primary key,remaining_sixteenths bigint,version bigint);
+create table warehouse_v7.carpet_roll(tenant_id uuid,id uuid primary key,remaining_sixteenths bigint,version bigint,original_sixteenths bigint default 9600,measure_status text default 'CAL',lifecycle text default 'active',updated_at timestamptz default now());
 grant usage on schema warehouse_v7 to authenticated;
 grant select,update on warehouse_v7.carpet_roll to authenticated;
 -- Synthetic implementation of the paired cut RPC contract.

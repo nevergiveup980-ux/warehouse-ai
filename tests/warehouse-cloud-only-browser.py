@@ -59,11 +59,14 @@ def main():
             rejected = []
             fail = False
             drop_confirmation = False
+            reject_write = False
+            fail_read_after_write = False
             receipts = {}
             posts = []
             records = {(row["dataset_key"], row["record_id"]): dict(row) for row in ROWS}
 
             def intercept(route):
+                nonlocal fail
                 request = route.request
                 url = urlparse(request.url)
                 if url.hostname == "warehouse-isolated.test":
@@ -81,6 +84,8 @@ def main():
                         body = request.post_data_json
                         request_id = body["p_request_id"]
                         posts.append(request_id)
+                        if reject_write:
+                            return route.fulfill(status=409, json={"message": "Fixture rejected stale write"})
                         if request_id in receipts:
                             assert body == receipts[request_id]
                             return route.fulfill(json={"status": "confirmed", "replayed": True})
@@ -95,6 +100,8 @@ def main():
                                            "payload": change["payload"], "deleted": change.get("delete", False)}
                         records.update(staged)
                         receipts[request_id] = body
+                        if fail_read_after_write:
+                            fail = True
                         if drop_confirmation:
                             return route.abort()
                         return route.fulfill(json={"status": "confirmed"})
@@ -320,6 +327,52 @@ def main():
             assert page.locator("#inventoryManagerList details").first.count()
             page.evaluate("id=>deleteInventoryRecordSafely(id)", STOCK_ID)
             assert records[(INVENTORY, STOCK_ID)]["deleted"]
+            # Field case: legacy payload IDs repeat on unrelated rows, canonical keys are distinct.
+            extra = [carpet("roll-target", "RC2280", "Active", length=22 + 7 / 12,
+                            originalLength=22 + 7 / 12, measure="TM", id=1872098562),
+                     carpet("roll-unrelated-a", "RC2701", "Active", id=202611162359),
+                     carpet("roll-unrelated-b", "RC2702", "Active", id=202611162359)]
+            records.update({(row["dataset_key"], row["record_id"]): row for row in extra})
+            assert page.evaluate("refreshWarehouseCloud()")
+            page.evaluate("openCarpetTM(carpetRecords().find(r=>r.roll==='RC2280').id)")
+            page.locator("#ceLengthFeet").fill("5")
+            page.locator("#ceLengthInches").fill("9")
+            reject_write = True
+            before = len(messages)
+            page.evaluate("saveCarpetEdit()")
+            assert live_roll("RC2280")[0]["length"] == 22 + 7 / 12
+            assert page.locator("#carpetEditor").is_visible()
+            assert all("saved and verified" not in m for m in messages[before:])
+            reject_write = False
+            fail_read_after_write = True
+            before = len(messages)
+            page.evaluate("saveCarpetEdit()")
+            assert live_roll("RC2280")[0]["length"] == 5.75
+            assert page.locator("#carpetEditor").is_visible()
+            assert all("saved and verified" not in m for m in messages[before:])
+            assert page.evaluate("warehousePendingCommand.confirmed")
+            writes = len(posts)
+            fail = False
+            fail_read_after_write = False
+            assert page.evaluate("sendWarehouseCommand()")
+            assert len(posts) == writes
+            cmd = receipts[posts[-1]]
+            assert [x["recordId"] for x in cmd["p_changes"]] == ["roll-target"]
+            assert cmd["p_changes"][0]["measurement"] is True
+            assert live_roll("RC2701")[0]["length"] == 50
+            assert live_roll("RC2702")[0]["length"] == 50
+            page.reload(wait_until="load")
+            page.wait_for_function("cloudOnlySnapshot.status==='ready'")
+            assert page.evaluate("carpetRecords().find(r=>r.roll==='RC2280').length") == 5.75
+            peer_options = pw.devices["iPhone 13"] if not options else {}
+            peer = browser.new_context(service_workers="block", storage_state=context.storage_state(), **peer_options)
+            peer.route("**/*", intercept)
+            peer_page = peer.new_page()
+            peer_page.goto(ORIGIN, wait_until="load")
+            peer_page.wait_for_function("cloudOnlySnapshot.status==='ready'")
+            assert peer_page.evaluate("carpetRecords().find(r=>r.roll==='RC2280').length") == 5.75
+            peer.close()
+
 
             assert page.evaluate("keys=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))", list(seed)) == seed
             assert not rejected, rejected

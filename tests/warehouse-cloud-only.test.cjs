@@ -49,3 +49,13 @@ test('command diff updates canonical identity and only the fields the form chang
     {dataset:'carpet',recordId:'canonical',version:3,payload:{id:'legacy',roll:'RC1',locationId:'cloud-location',location:'5A'}}
   ]);
 });
+
+test('a canonical edit ignores other rows with identical legacy IDs', () => {
+  const rows = ['target','other-1','other-2'].map((key,i)=>({
+    id: 202611162359, _cloudRecordId:key, _cloudVersion:3, length:20+i,
+  }));
+  const next = rows.map(row=>row._cloudRecordId==='target'?{...row,length:5.75}:row);
+  assert.deepEqual(global.WarehouseCloudOnly.commandChanges('carpet',rows,next,rows),[
+    {dataset:'carpet',recordId:'target',version:3,payload:{id:202611162359,length:5.75}},
+  ]);
+});

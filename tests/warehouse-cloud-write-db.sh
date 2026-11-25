@@ -29,12 +29,18 @@ if sql -qAt -c "$actor select warehouse_cloud_commit('10000000-0000-0000-0000-00
  {\"dataset\":\"runlu_carpet_inventory_v52\",\"recordId\":\"one\",\"version\":1,\"delete\":true,\"payload\":{}}]');"; then
   exit 1
 fi
-sql -qAt -c "insert into warehouse_v7.carpet_roll values ('10000000-0000-0000-0000-000000000000','20000000-0000-0000-0000-000000000000',9600,1);
+sql -qAt -c "insert into warehouse_v7.carpet_roll(tenant_id,id,remaining_sixteenths,version) values ('10000000-0000-0000-0000-000000000000','20000000-0000-0000-0000-000000000000',9600,1);
  update warehouse_records set payload=payload||'{\"canonicalId\":\"20000000-0000-0000-0000-000000000000\"}' where record_id='one';"
 sql -qAt -c "$actor select warehouse_cloud_commit('10000000-0000-0000-0000-000000000005','[
  {\"dataset\":\"runlu_carpet_inventory_v52\",\"recordId\":\"one\",\"version\":1,\"cut\":true,\"payload\":{\"roll\":\"RC100\",\"length\":40}}]');" | grep -q '"confirmed"'
 test "$(sql -qAt -c 'select remaining_sixteenths from warehouse_v7.carpet_roll')" = 7680
 test "$(sql -qAt -c "select payload->>'length' from warehouse_records where record_id='one'" | cut -d. -f1)" = 40
+
+sql -qAt -c "$actor select warehouse_cloud_commit('10000000-0000-0000-0000-000000000010',jsonb_build_array(jsonb_build_object(
+ 'dataset','runlu_carpet_inventory_v52','recordId','one','version',2,'measurement',true,
+ 'payload',(select payload||'{\"length\":5.75,\"measure\":\"TM\"}' from warehouse_records where record_id='one'))));" | grep -q '"confirmed"'
+test "$(sql -qAt -c 'select remaining_sixteenths from warehouse_v7.carpet_roll')" = 1104
+test "$(sql -qAt -c "select payload->>'measure' from warehouse_records where record_id='one'")" = TM
 
 new_roll 10000000-0000-0000-0000-000000000008 disposable RC150 | grep -q '"confirmed"'
 sql -qAt -c "$actor set test.email='nevergiveup980@gmail.com'; select warehouse_cloud_commit('10000000-0000-0000-0000-000000000009','[
@@ -48,4 +54,4 @@ success=0
 if wait "$a"; then success=$((success+1)); fi
 if wait "$b"; then success=$((success+1)); fi
 test "$success" = 1
-printf 'PASS: duplicate roll race, request replay, atomic rollback, administrator guard and paired cut\n'
+printf 'PASS: duplicate roll race, request replay, atomic rollback, administrator guard, paired cut and paired measurement\n'
