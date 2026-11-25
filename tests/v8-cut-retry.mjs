@@ -17,6 +17,6 @@ c.v8ExecuteCutCommand=async()=>({status:'rejected'});
 await assert.rejects(()=>c.v8CommitCutOperation(x,roll),/rejected/);assert.equal(storage.size,0);
 storage.clear();c.localStorage.setItem=()=>{throw Error('quota')};const sentBefore=sent.length;
 await assert.rejects(()=>c.v8CommitCutOperation(x,roll),/quota/);assert.equal(sent.length,sentBefore);
-assert.ok(html.includes('if(window.__v8OperationSaving)return;'));
-assert.ok(html.includes('finally{window.__v8OperationSaving=false}'));
+assert.match(html,/if\(window\.__v8OperationSaving\|\|\(window\.RUNLU_CLOUD_ONLY&&!beginWarehouseWrite\(\)\)\)return;/);
+assert.match(html,/finally\{warehouseWriteDraft=null;window\.__v8OperationSaving=false\}/);
 console.log('V8 cut timeout retry, changed-input guard, storage failure and save lock: PASS');

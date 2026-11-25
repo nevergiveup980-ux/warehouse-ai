@@ -1,7 +1,7 @@
 {
-  "version": "8.0.1",
-  "build": "127",
-  "date": "2026-10-02",
-  "channel": "stable",
-  "notes": "V8 inventory identity bridge: preserves cloud record identity, resolves migrated Product Master links, and suppresses exact legacy shadow duplicates from live inventory without deleting warehouse data."
+  "version": "8.0.2",
+  "build": "128",
+  "date": "2026-11-25",
+  "channel": "cloud-only",
+  "notes": "Cloud Only warehouse reads and versioned business commands."
 }

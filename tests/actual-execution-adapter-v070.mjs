@@ -33,7 +33,7 @@ function extractFunction(name){
 }
 
 const functionNames=[
-  'load','save','validateRecordSave','recordSyncId','normalizeText','normKey','loadMasters','loadInventoryRecords','inventoryRecordIdentity','findInventoryRecordByIdentity',
+  'load','save','validateRecordSave','recordSyncId','normalizeText','normKey','loadMasters','loadInventoryRecords','inventoryRecordIdentity','historicalInventoryAlias','inventoryIdentityMatches','findInventoryRecordByIdentity',
   'ensureOperationProductLink','operationStockQuantity','operationStockUnit','carpetTransferParts','validateOperationForImpact','applyInventoryDelta',
   'applyInventoryTransfer','updateLinkedOrder','applySingleOperationImpact'
 ];

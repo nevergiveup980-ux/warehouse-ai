@@ -128,7 +128,14 @@ assert.equal(JSON.parse(store.get(Q)).length,1);
 assert.equal(JSON.parse(store.get(V))['runlu_product_master_v21::PRD-1'],7);
 
 const release=(loader.match(/const RELEASE='(\d+)'/)||[])[1];
-assert.equal(release,version.build,'release loader token must match version manifest build');
+if(version.channel==='cloud-only'){
+  const app=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const build=app.match(/APP_BUILD\s*=\s*['"]?(\d+)/)?.[1];
+  assert.equal(build,version.build,'the active Cloud Only build must match version.json');
+  assert.match(app,new RegExp('warehouse-cloud-only\\.js\\?[^"\\s]*cloud-only-'+build));
+}else{
+  assert.equal(release,version.build,'release loader token must match version manifest build');
+}
 assert.match(loader,/build120-carpet-receiving-cloud-identity\.js/);
 assert.match(loader,/build124-shared-carpet-physical-identity\.js/);
 
