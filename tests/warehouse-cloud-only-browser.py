@@ -20,6 +20,7 @@ def carpet(key, roll, status, **fields):
 
 
 ROWS = [
+    {"dataset_key": "runlu_settings_v20", "record_id": "__document__", "version": 1, "payload": [[]]},
     carpet("a", "RC2358", "Pending"),
     carpet("b", "RC2358", "Pending", collection="Conflict"),
     carpet("c", "RC2388", "Active", sourceRoll="RC2358", rollNumber="RC2358"),
@@ -327,7 +328,7 @@ def main():
             assert page.locator("#inventoryManagerList details").first.count()
             page.evaluate("id=>deleteInventoryRecordSafely(id)", STOCK_ID)
             assert records[(INVENTORY, STOCK_ID)]["deleted"]
-            assert "Build 128" in page.locator("#headerVersion").inner_text()
+            assert "Build 129" in page.locator("#headerVersion").inner_text()
             other_stock = "different-cloud-id"
             multi_order = {"id": 347, "type": "Shipping", "po": "other", "status": "Completed",
                            "quantity": 10, "unit": "Box", "impactApplied": True, "items": [

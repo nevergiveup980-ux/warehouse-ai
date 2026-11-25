@@ -41,16 +41,21 @@
           if (!Array.isArray(page)) throw new Error('Invalid warehouse response.');
           if (!page.length) break;
           for (const row of page) {
-            if (!next.has(row.dataset_key) || !row.record_id || !row.payload ||
-                typeof row.payload !== 'object' || Array.isArray(row.payload)) {
+            const { payload } = row;
+            const settings = row.dataset_key === documentKey;
+            // The legacy snapshot importer stored empty settings as [[]].
+            const emptyLegacySettings = settings && Array.isArray(payload) &&
+              (payload.length === 0 || (payload.length === 1 && Array.isArray(payload[0]) && !payload[0].length));
+            if (!next.has(row.dataset_key) || !row.record_id || !payload ||
+                typeof payload !== 'object' || (Array.isArray(payload) && !emptyLegacySettings)) {
               throw new Error('Invalid warehouse record.');
             }
             const key = JSON.stringify([row.dataset_key, row.record_id]);
             if (seen.has(key)) throw new Error('Repeated cloud record identity; refresh required.');
             seen.add(key);
-            if (row.dataset_key === documentKey) {
+            if (settings) {
               if (row.record_id !== '__document__') throw new Error('Unexpected settings record.');
-              next.set(documentKey, row.payload);
+              next.set(documentKey, emptyLegacySettings ? {} : payload);
               continue;
             }
             if (!uiIds.has(key)) uiIds.set(key, ++nextUiId);

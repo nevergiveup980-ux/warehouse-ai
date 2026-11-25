@@ -59,3 +59,22 @@ test('a canonical edit ignores other rows with identical legacy IDs', () => {
     {dataset:'carpet',recordId:'target',version:3,payload:{id:202611162359,length:5.75}},
   ]);
 });
+
+test('legacy empty settings preserve paginated inventory and object settings', async () => {
+  for (const [payload, expected] of [[[], {}], [[[]], {}], [{ carpetUrl: 'example' }, { carpetUrl: 'example' }]]) {
+    const pages = [[carpet('a', 'RC2358')], [{ dataset_key: 'settings', record_id: '__document__', payload }], []];
+    const reader = createSnapshot({ keys: ['carpet', 'settings'], documentKey: 'settings',
+      fetchPage: async (_, offset) => pages[offset] });
+    assert.equal(await reader.refresh({}), true);
+    assert.equal(reader.status, 'ready');
+    assert.equal(reader.read('carpet')[0].roll, 'RC2358');
+    assert.deepEqual(reader.read('settings'), expected);
+  }
+});
+
+test('empty array payloads in inventory still fail validation', async () => {
+  const reader = createSnapshot({ keys: ['carpet', 'settings'], documentKey: 'settings',
+    fetchPage: async () => [{ ...carpet('a', 'RC2358'), payload: [[]] }] });
+  assert.equal(await reader.refresh({}), false);
+  assert.match(reader.issue, /Invalid warehouse record/);
+});
