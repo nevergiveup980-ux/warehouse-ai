@@ -77,3 +77,17 @@ if wait "$a"; then success=$((success+1)); fi
 if wait "$b"; then success=$((success+1)); fi
 test "$success" = 1
 printf 'PASS: duplicate roll race, request replay, atomic rollback, administrator guard, paired cut and paired measurement\n'
+
+# Reuse the isolated Cloud Only database to verify shared membership on both sides of RLS.
+sql -c 'alter table public.warehouse_records add column device_id text, add column origin text, add column updated_at timestamptz;'
+sql < supabase/migrations/20261125170000_warehouse_shared_workspace.sql
+sql -c "insert into warehouse_private.workspace_member values ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001');"
+shared="set role authenticated; set test.actor='00000000-0000-0000-0000-000000000002';"
+test "$(sql -qAt -c "$shared select warehouse_workspace_owner();")" = 00000000-0000-0000-0000-000000000001
+sql -qAt -c "$shared select warehouse_cloud_commit('10000000-0000-0000-0000-000000000099','[{\"dataset\":\"runlu_inventory_records_v21\",\"recordId\":\"shared-stock\",\"version\":0,\"payload\":{\"quantity\":8}}]');" | grep -q '"confirmed"'
+test "$(sql -qAt -c "$actor select payload->>'quantity' from warehouse_records where record_id='shared-stock';")" = 8
+test "$(sql -qAt -c "$shared select device_id from warehouse_records where record_id='shared-stock';")" = shared:00000000-0000-0000-0000-000000000002
+sql -qAt -c "$shared select warehouse_cloud_commit('10000000-0000-0000-0000-000000000098','[{\"dataset\":\"runlu_inventory_records_v21\",\"recordId\":\"shared-stock\",\"version\":1,\"delete\":true,\"payload\":{}}]');" | grep -q '"confirmed"'
+sql -c "delete from warehouse_private.workspace_member;"
+test "$(sql -qAt -c "$shared select count(*) from warehouse_records where record_id='shared-stock';")" = 0
+echo 'PASS: shared workspace visibility, writer identity, delete, and revocation'

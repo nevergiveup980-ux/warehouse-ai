@@ -12,6 +12,7 @@ on:
       - 'tests/warehouse-cloud-only.test.cjs'
       - 'tests/warehouse-cloud-write-*'
       - 'supabase/migrations/*warehouse_cloud_only_commands.sql'
+      - 'supabase/migrations/*warehouse_shared_workspace.sql'
       - '.github/workflows/hotfix-sync-regression.yml'
   workflow_dispatch:
 jobs:
